@@ -49,50 +49,59 @@ def master_slave_assign_contours(contours, master, buffer_x=10, buffer_y=70):
     master_contour = contours[0]
     from shapely.geometry import Polygon
     import numpy as np
-    # Buffer the master contour to get the forbidden area shape
+    # Use a fixed 30mm buffer radius around every point in the contour
+    buffer_radius = 30
     master_poly = Polygon(master_contour)
-    buffer_width = max(buffer_x, buffer_y)
-    forbidden_poly = master_poly.buffer(buffer_width)
-    # Add a 'tail' in the forbidden direction (comet-style), width matches buffer diameter
+    forbidden_poly = master_poly.buffer(buffer_radius)
+    # Add a 'tail' in the forbidden direction, width matches buffer (60mm)
     xs = [p[0] for p in master_contour]
     ys = [p[1] for p in master_contour]
     min_x, max_x = min(xs), max(xs)
     min_y, max_y = min(ys), max(ys)
-    # Extend tail all the way to the end of the sheet (workspace)
     SHEET_LIMIT = 1e4  # Large value, should be bigger than any real sheet
     if master == "right":
         # Tail to the left, width matches buffer, goes to far left
         tail_poly = Polygon([
-            (-SHEET_LIMIT, min_y - buffer_width),
-            (min_x, min_y - buffer_width),
-            (min_x, max_y + buffer_width),
-            (-SHEET_LIMIT, max_y + buffer_width)
+            (-SHEET_LIMIT, min_y - buffer_radius),
+            (min_x, min_y - buffer_radius),
+            (min_x, max_y + buffer_radius),
+            (-SHEET_LIMIT, max_y + buffer_radius)
         ])
     else:
         # Tail to the right, width matches buffer, goes to far right
         tail_poly = Polygon([
-            (max_x, min_y - buffer_width),
-            (SHEET_LIMIT, min_y - buffer_width),
-            (SHEET_LIMIT, max_y + buffer_width),
-            (max_x, max_y + buffer_width)
+            (max_x, min_y - buffer_radius),
+            (SHEET_LIMIT, min_y - buffer_radius),
+            (SHEET_LIMIT, max_y + buffer_radius),
+            (max_x, max_y + buffer_radius)
         ])
     forbidden_poly = forbidden_poly.union(tail_poly)
-    # Find a slave contour that does not overlap forbidden area (polygon intersection)
+    # Find the first slave contour that is completely outside forbidden area (no intersection at all)
+    from shapely.geometry import Polygon
     slave_contour = None
     for c in contours[1:]:
-        if not contour_overlaps_forbidden(c, forbidden_poly):
+        # Convert to polygon (buffer if needed)
+        if len(c) < 3:
+            slave_poly = Polygon(c).buffer(1.0)
+        else:
+            slave_poly = Polygon(c)
+        # Only assign if there is NO intersection at all
+        if not forbidden_poly.intersects(slave_poly):
             slave_contour = c
             break
     # Remove assigned contours from list
     assigned = [master_contour]
     if slave_contour:
         assigned.append(slave_contour)
+    # All other contours remain for next steps
     remaining = [c for c in contours if c not in assigned]
     # Find unassigned contours that are completely outside forbidden area (free for next step)
     unassigned = []
     for c in remaining:
         if not contour_overlaps_forbidden(c, forbidden_poly):
             unassigned.append(c)
+    # Ensure slave is only assigned if it does NOT overlap forbidden area
+    # (already enforced above, but this is explicit)
     return master_contour, slave_contour, remaining, unassigned, forbidden_poly
 """
 Coordinate transformation module for Robot Drawing System.

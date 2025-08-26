@@ -25,6 +25,48 @@ from visualizer import DrawingVisualizer
 
 
 class RobotDrawer:
+    def draw_dual(self, buffer_x=10, buffer_y=70, progress_callback=None):
+        """
+        Dual-arm drawing: assigns contours to right/left arms step by step using forbidden area logic, then draws with both robots in sync.
+        Args:
+            buffer_x, buffer_y: Forbidden area buffer parameters (mm)
+            progress_callback: Optional callback for progress updates
+        Returns:
+            True if drawing completed successfully, False otherwise
+        """
+        from coordinate_transformer import master_slave_assign_contours
+        if not self.drawing_points or len(self.drawing_points) < 2:
+            print("Not enough contours for dual-arm drawing.")
+            return False
+        # Prepare assignment lists for each step
+        remaining = self.drawing_points[:]
+        master_role = 'right'
+        right_actions = []
+        left_actions = []
+        step = 0
+        while remaining:
+            # Use the latest master_slave_assign_contours (should return forbidden_poly as last value, ignore it)
+            result = master_slave_assign_contours(remaining, master=master_role, buffer_x=buffer_x, buffer_y=buffer_y)
+            if len(result) == 5:
+                master, slave, rest, unassigned, _ = result
+            else:
+                master, slave, rest, unassigned = result
+            # Assign contours to each arm for this step
+            if master_role == 'right':
+                right_actions.append(master)
+                left_actions.append(slave if slave else 'wait')
+            else:
+                left_actions.append(master)
+                right_actions.append(slave if slave else 'wait')
+            remaining = rest
+            master_role = 'left' if master_role == 'right' else 'right'
+            step += 1
+        print(f"Prepared {len(right_actions)} steps for dual-arm drawing.")
+        # Remove any None actions (shouldn't happen, but for safety)
+        right_actions = [a if a is not None else 'wait' for a in right_actions]
+        left_actions = [a if a is not None else 'wait' for a in left_actions]
+        # Start dual-arm drawing
+        return self.robot.draw_paths_dual(right_actions, left_actions, progress_callback=progress_callback)
     """
     Main orchestrator class for the Robot Drawing System.
     
