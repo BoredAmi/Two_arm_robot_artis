@@ -1,0 +1,11 @@
+{
+  "robot_ip": "192.168.125.1",
+  "robot_port": "1025",
+  "use_center_origin": false,
+  "enable_logo": true,
+  "logo_size": 20,
+  "max_x": 290,
+  "max_y": 210,
+  "margin_x": 10,
+  "margin_y": 10
+}
