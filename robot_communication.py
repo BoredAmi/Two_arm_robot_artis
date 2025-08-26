@@ -22,6 +22,117 @@ import time
 
 
 class RobotController:
+    def send_wait(self, target='right'):
+        """Send wait command to robot (pause execution until next command)"""
+        return self._send_command("WAIT\n", target=target)
+    def draw_paths_dual(self, right_actions, left_actions, move_delay=0.02, use_batching=None, batch_size=8, progress_callback=None):
+        """
+        Asynchronous dual-robot drawing: both robots draw contours in parallel, synchronizing after each contour (or wait action).
+        Each robot starts its contour as soon as possible, and after finishing, waits for the other to finish before proceeding.
+        Args:
+            right_actions: List of contours or 'wait' for the right robot
+            left_actions: List of contours or 'wait' for the left robot
+            move_delay: Delay between moves for individual mode
+            use_batching: Override batch mode setting (None = use current setting)
+            batch_size: Points per batch when using batch mode
+            progress_callback: Function to call with progress updates
+        Returns:
+            True if both robots finish successfully, False otherwise
+        """
+        if not self.socket or not self.socket2:
+            print("Both robots must be connected (right:1025, left:1026). Use connect() first.")
+            return False
+
+        import threading
+        from itertools import zip_longest
+        actual_batching = use_batching if use_batching is not None else self.use_batch_mode
+        mode_text = "batch" if actual_batching else "individual"
+        print(f"Starting dual-robot drawing using {mode_text} mode with async contour sync...")
+
+        barrier = threading.Barrier(2)
+        results = {'right': True, 'left': True}
+
+        def do_action_list(actions, target):
+            for action in actions:
+                if not results['right'] if target == 'right' else not results['left']:
+                    break
+                ok = True
+                if action == 'wait':
+                    print(f"[{target}] Waiting...")
+                    ok = self.send_wait(target=target)
+                elif not action:
+                    ok = True
+                else:
+                    try:
+                        self.send_pen_up(target=target)
+                        time.sleep(0.02)
+                        if actual_batching:
+                            contour = action
+                            start_x, start_y = contour[0]
+                            if not self.send_move(start_x, start_y, target=target):
+                                print(f"[{target}] Failed to move to start of contour")
+                                ok = False
+                            else:
+                                self.send_pen_down(target=target)
+                                time.sleep(0.02)
+                                if len(contour) > 1:
+                                    if not self.send_batch_moves(contour[1:], batch_size=batch_size, target=target):
+                                        print(f"[{target}] Failed to send batch moves")
+                                        ok = False
+                                self.send_pen_up(target=target)
+                                time.sleep(0.02)
+                        else:
+                            contour = action
+                            start_x, start_y = contour[0]
+                            if not self.send_move(start_x, start_y, target=target):
+                                print(f"[{target}] Failed to move to start of contour")
+                                ok = False
+                            else:
+                                self.send_pen_down(target=target)
+                                time.sleep(move_delay)
+                                for x, y in contour[1:]:
+                                    if not self.send_move(x, y, target=target):
+                                        print(f"[{target}] Failed to send point")
+                                        ok = False
+                                        break
+                                    if move_delay > 0:
+                                        time.sleep(move_delay)
+                                self.send_pen_up(target=target)
+                                time.sleep(move_delay)
+                    except Exception as e:
+                        print(f"[{target}] Error during drawing: {e}")
+                        self.send_pen_up(target=target)
+                        self.send_stop(target=target)
+                        ok = False
+                if not ok:
+                    if target == 'right':
+                        results['right'] = False
+                    else:
+                        results['left'] = False
+                    break
+                try:
+                    barrier.wait()
+                except threading.BrokenBarrierError:
+                    break
+            self.send_stop(target=target)
+
+        # Pad shorter list with None for zip_longest
+        max_len = max(len(right_actions), len(left_actions))
+        right_padded = list(right_actions) + [None] * (max_len - len(right_actions))
+        left_padded = list(left_actions) + [None] * (max_len - len(left_actions))
+
+        t_right = threading.Thread(target=do_action_list, args=(right_padded, 'right'))
+        t_left = threading.Thread(target=do_action_list, args=(left_padded, 'left'))
+        t_right.start()
+        t_left.start()
+        t_right.join()
+        t_left.join()
+
+        if not results['right'] or not results['left']:
+            print("Error in dual-robot drawing step.")
+            return False
+        print("Dual-robot drawing with async contour sync completed!")
+        return True
     """
     TCP/IP communication controller for ABB robots.
     
@@ -88,14 +199,12 @@ class RobotController:
             self.socket2 = None
             return False
     
-    def send_move(self, x, y, wait_response=True, target='primary'):
+    def send_move(self, x, y, wait_response=True, target='right'):
         """Send movement command to robot with coordinate system awareness"""
-        # When using corner coordinates, send them directly to robot
-        # The robot will handle the coordinate system based on START vs START_CORNER
         cmd = f"MOVE,{x:.2f},{y:.2f}\n"
         return self._send_command(cmd, wait_response, target=target)
     
-    def send_batch_moves(self, points, batch_size=3, max_batch_size=6, target='primary'):
+    def send_batch_moves(self, points, batch_size=3, max_batch_size=6, target='right'):
         """
         Send multiple coordinates in batches with dynamic sizing optimization.
         
@@ -169,29 +278,29 @@ class RobotController:
         print(f"Optimal batch size calculated: {optimal_size} (length-limited: {max_points_by_length})")
         return optimal_size
 
-    def _get_socket(self, target='primary'):
-        """Return socket object(s) for target: 'primary', 'secondary', or 'both'.
+    def _get_socket(self, target='right'):
+        """Return socket object(s) for target: 'right', 'left', or 'both'.
 
-        Returns a tuple (primary_socket, secondary_socket) where missing sockets are None.
+        Returns a tuple (right_socket, left_socket) where missing sockets are None.
         """
-        primary = self.socket
-        secondary = getattr(self, 'socket2', None)
-        if target == 'primary':
-            return (primary, None)
-        if target == 'secondary':
-            return (None, secondary)
+        right = self.socket
+        left = getattr(self, 'socket2', None)
+        if target == 'right':
+            return (right, None)
+        if target == 'left':
+            return (None, left)
         # both
-        return (primary, secondary)
+        return (right, left)
     
-    def send_pen_up(self, target='primary'):
+    def send_pen_up(self, target='right'):
         """Send pen up command (lift drawing tool)"""
         return self._send_command("PEN_UP\n", target=target)
-    
-    def send_pen_down(self, target='primary'):
+
+    def send_pen_down(self, target='right'):
         """Send pen down command (lower drawing tool)"""
         return self._send_command("PEN_DOWN\n", target=target)
 
-    def send_stop(self, target='primary'):
+    def send_stop(self, target='right'):
         """Send stop command"""
         return self._send_command("STOP\n", target=target)
     
@@ -249,7 +358,7 @@ class RobotController:
             print("Sending START_CORNER command (corner coordinates) - robot may take up to 90 seconds to initialize...")
             return self._send_command("START_CORNER\n", wait_response=True, timeout=self.START_COMMAND_TIMEOUT)
     
-    def _send_command(self, cmd, wait_response=True, timeout=None, target='primary'):
+    def _send_command(self, cmd, wait_response=True, timeout=None, target='right'):
         """
         Internal command sender with configurable timeout.
         
