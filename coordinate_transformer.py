@@ -1,3 +1,99 @@
+from shapely.geometry import Polygon, box
+
+def polygons_overlap(contour1, contour2):
+    """
+    Returns True if two contours (as point lists) overlap (intersect) using shapely polygons.
+    Handles open contours by buffering them slightly.
+    """
+    if len(contour1) < 3:
+        poly1 = Polygon(contour1).buffer(1.0)
+    else:
+        poly1 = Polygon(contour1)
+    if len(contour2) < 3:
+        poly2 = Polygon(contour2).buffer(1.0)
+    else:
+        poly2 = Polygon(contour2)
+    return poly1.intersects(poly2)
+
+def contour_overlaps_forbidden(contour, forbidden_poly):
+    """
+    Returns True if the contour (as point list) overlaps the forbidden area polygon.
+    """
+    if len(contour) < 3:
+        poly = Polygon(contour).buffer(1.0)
+    else:
+        poly = Polygon(contour)
+    return poly.intersects(forbidden_poly)
+def get_contour_bounds(contour, buffer_x=0, buffer_y=0):
+    xs = [p[0] for p in contour]
+    ys = [p[1] for p in contour]
+    min_x, max_x = min(xs) - buffer_x, max(xs) + buffer_x
+    min_y, max_y = min(ys) - buffer_y, max(ys) + buffer_y
+    return min_x, max_x, min_y, max_y
+
+def contours_overlap(bounds1, bounds2):
+    min_x1, max_x1, min_y1, max_y1 = bounds1
+    min_x2, max_x2, min_y2, max_y2 = bounds2
+    overlap_x = max_x1 >= min_x2 and max_x2 >= min_x1
+    overlap_y = max_y1 >= min_y2 and max_y2 >= min_y1
+    return overlap_x and overlap_y
+
+def master_slave_assign_contours(contours, master, buffer_x=10, buffer_y=70):
+    """
+    Assigns contours to master and slave arms for dual-arm drawing with buffer zones.
+    Returns (master_contour, slave_contour, remaining_contours).
+    """
+    if not contours:
+        return None, None, [], []
+    # Master picks the first available contour
+    master_contour = contours[0]
+    from shapely.geometry import Polygon
+    import numpy as np
+    # Buffer the master contour to get the forbidden area shape
+    master_poly = Polygon(master_contour)
+    buffer_width = max(buffer_x, buffer_y)
+    forbidden_poly = master_poly.buffer(buffer_width)
+    # Add a 'tail' in the forbidden direction (comet-style), width matches buffer diameter
+    xs = [p[0] for p in master_contour]
+    ys = [p[1] for p in master_contour]
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+    # Extend tail all the way to the end of the sheet (workspace)
+    SHEET_LIMIT = 1e4  # Large value, should be bigger than any real sheet
+    if master == "right":
+        # Tail to the left, width matches buffer, goes to far left
+        tail_poly = Polygon([
+            (-SHEET_LIMIT, min_y - buffer_width),
+            (min_x, min_y - buffer_width),
+            (min_x, max_y + buffer_width),
+            (-SHEET_LIMIT, max_y + buffer_width)
+        ])
+    else:
+        # Tail to the right, width matches buffer, goes to far right
+        tail_poly = Polygon([
+            (max_x, min_y - buffer_width),
+            (SHEET_LIMIT, min_y - buffer_width),
+            (SHEET_LIMIT, max_y + buffer_width),
+            (max_x, max_y + buffer_width)
+        ])
+    forbidden_poly = forbidden_poly.union(tail_poly)
+    # Find a slave contour that does not overlap forbidden area (polygon intersection)
+    slave_contour = None
+    for c in contours[1:]:
+        if not contour_overlaps_forbidden(c, forbidden_poly):
+            slave_contour = c
+            break
+    # Remove assigned contours from list
+    assigned = [master_contour]
+    if slave_contour:
+        assigned.append(slave_contour)
+    remaining = [c for c in contours if c not in assigned]
+    # Find unassigned contours that are completely outside forbidden area (free for next step)
+    unassigned = []
+    for c in remaining:
+        if not contour_overlaps_forbidden(c, forbidden_poly):
+            unassigned.append(c)
+    return master_contour, slave_contour, remaining, unassigned, forbidden_poly
 """
 Coordinate transformation module for Robot Drawing System.
 
@@ -640,7 +736,7 @@ class CoordinateTransformer:
         
         print(f"Path optimization complete - estimated total travel: {total_saved_distance:.1f}mm")
         return optimized
-    
+        
     def _smooth_path_bezier(self, path, smoothness=0.3):
         """
         Smooth path using quadratic Bezier curves between path segments.
