@@ -20,6 +20,7 @@ access to advanced features for power users.
 Version: 1.0
 """
 import tkinter as tk
+import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import threading
 import time
@@ -81,6 +82,9 @@ class SimpleRobotGUI:
         self.root.title("Robot Drawing System")
         self.root.geometry(f"{self.WINDOW_WIDTH}x{self.WINDOW_HEIGHT}")
         self.root.configure(bg=self.COLORS['background'])
+
+        # Dual-arm mode state (must be after tk.Tk() and self is defined)
+        self.dual_arm_mode = tk.BooleanVar(master=self.root, value=False)
 
         # Initialize robot drawer with TSP enabled by default and default dimensions
         self.drawer = RobotDrawer(max_x=290, max_y=210, enable_tsp=True, use_center_origin=True, margin_x=10, margin_y=10)
@@ -345,14 +349,21 @@ class SimpleRobotGUI:
         coord_logo_frame = tk.Frame(parent, bg='white')
         coord_logo_frame.pack(fill=tk.X, pady=(10, 0))
         
+
         # Coordinate system section
         tk.Label(coord_logo_frame, text="Coordinate System:", font=('Arial', 10, 'bold'), 
-                bg='white').pack(side=tk.LEFT)
-        
+            bg='white').pack(side=tk.LEFT)
+
         coord_checkbox = tk.Checkbutton(coord_logo_frame, text="Center Origin", 
-                                       variable=self.use_center_origin, bg='white', font=('Arial', 9),
-                                       activebackground='white', command=self.on_coordinate_system_change)
-        coord_checkbox.pack(side=tk.LEFT, padx=(10, 20))
+                        variable=self.use_center_origin, bg='white', font=('Arial', 9),
+                        activebackground='white', command=self.on_coordinate_system_change)
+        coord_checkbox.pack(side=tk.LEFT, padx=(10, 10))
+
+        # Dual-arm mode checkbox (placed next to coordinate system)
+        dual_arm_checkbox = tk.Checkbutton(coord_logo_frame, text="Dual-arm drawing mode (split & sync)",
+                        variable=self.dual_arm_mode, bg='white', font=('Arial', 9, 'bold'),
+                        activebackground='white')
+        dual_arm_checkbox.pack(side=tk.LEFT, padx=(10, 20))
         
         # Logo section (same row)
         tk.Label(coord_logo_frame, text="Logo:", font=('Arial', 10, 'bold'), 
@@ -505,74 +516,80 @@ class SimpleRobotGUI:
         # Preview area
         preview_frame = tk.Frame(parent, bg='white')
         preview_frame.pack(fill=tk.BOTH, expand=True)
-        
+
         # Three panels: left preview, middle actions, right preview
         left_panel = tk.Frame(preview_frame, bg='white')
         left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
-        
+
         # Middle panel for buttons and progress
         middle_panel = tk.Frame(preview_frame, bg='white', width=180)
         middle_panel.pack(side=tk.LEFT, fill=tk.Y, padx=5)
         middle_panel.pack_propagate(False)
-        
+
         right_panel = tk.Frame(preview_frame, bg='white')
         right_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(10, 0))
-        
+
         # Original image preview (left)
         tk.Label(left_panel, text="Original Image", font=('Arial', 10, 'bold'), 
-                bg='white').pack(pady=(0, 5))
-        
+            bg='white').pack(pady=(0, 5))
+
         self.original_canvas = tk.Canvas(left_panel, bg='#f8f8f8', 
-                                        width=300, height=200, relief='solid', bd=1)
+                        width=300, height=200, relief='solid', bd=1)
         self.original_canvas.pack()
         self.original_canvas.create_text(150, 100, text="No image loaded", 
-                                        font=('Arial', 10), fill='#999')
-        
+                        font=('Arial', 10), fill='#999')
+
         # Middle panel content (buttons and progress)
+        # Dual-arm mode checkbox
+        dual_arm_checkbox = tk.Checkbutton(middle_panel, text="Dual-arm drawing mode (split & sync)",
+                        variable=self.dual_arm_mode, bg='white', font=('Arial', 9, 'bold'),
+                        activebackground='white')
+        dual_arm_checkbox.pack(pady=(10, 10))
+
         # Face Drawing button
         self.face_drawing_btn = tk.Button(middle_panel, text="👤 Face\nDrawing", 
-                                         command=self.convert_to_face_drawing,
-                                         bg='#E91E63', fg='white', font=('Arial', 9, 'bold'),
-                                         relief='flat', padx=15, pady=10, cursor='hand2',
-                                         state='disabled', width=12)
-        self.face_drawing_btn.pack(pady=(20, 5))
+                        command=self.convert_to_face_drawing,
+                        bg='#E91E63', fg='white', font=('Arial', 9, 'bold'),
+                        relief='flat', padx=15, pady=10, cursor='hand2',
+                        state='disabled', width=12)
+        self.face_drawing_btn.pack(pady=(10, 5))
 
         # Caricature button
         self.caricature_btn = tk.Button(middle_panel, text="🎭 Caricature", 
-                                       command=self.convert_to_caricature,
-                                       bg='#FF9800', fg='white', font=('Arial', 9, 'bold'),
-                                       relief='flat', padx=15, pady=10, cursor='hand2',
-                                       state='disabled', width=12)
+                        command=self.convert_to_caricature,
+                        bg='#FF9800', fg='white', font=('Arial', 9, 'bold'),
+                        relief='flat', padx=15, pady=10, cursor='hand2',
+                        state='disabled', width=12)
         self.caricature_btn.pack(pady=5)
 
         # Draw button
         self.draw_btn = tk.Button(middle_panel, text="🎨 Start\nDrawing", 
-                                 command=self.start_robot_drawing,
-                                 bg='#4CAF50', fg='white', font=('Arial', 9, 'bold'),
-                                 relief='flat', padx=15, pady=10, cursor='hand2',
-                                 state='disabled', width=12)
+                    command=self.start_robot_drawing,
+                    bg='#4CAF50', fg='white', font=('Arial', 9, 'bold'),
+                    relief='flat', padx=15, pady=10, cursor='hand2',
+                    state='disabled', width=12)
         self.draw_btn.pack(pady=5)
 
         # Zoom viewer button
         zoom_btn = tk.Button(middle_panel, text="🔍 Zoom\nViewer",
-                            command=self.open_detailed_path_window,
-                            bg='#607D8B', fg='white', font=('Arial', 9, 'bold'),
-                            relief='flat', padx=15, pady=10, cursor='hand2',
-                            width=12)
+                    command=self.open_detailed_path_window,
+                    bg='#607D8B', fg='white', font=('Arial', 9, 'bold'),
+                    relief='flat', padx=15, pady=10, cursor='hand2',
+                    width=12)
         zoom_btn.pack(pady=5)
         
         # Emergency stop button (initially hidden)
         self.stop_btn = tk.Button(middle_panel, text="⏹ Stop", 
-                                 command=self.emergency_stop,
-                                 bg='#f44336', fg='white', font=('Arial', 9, 'bold'),
-                                 relief='flat', padx=15, pady=8, width=12)
+                    command=self.emergency_stop,
+                    bg='#f44336', fg='white', font=('Arial', 9, 'bold'),
+                    relief='flat', padx=15, pady=8, width=12)
         
         self.drawing_active = False
-        
+
         # Robot path preview
         tk.Label(right_panel, text="Robot Drawing Path", font=('Arial', 10, 'bold'), 
-                bg='white').pack(pady=(0, 5))
-        
+            bg='white').pack(pady=(0, 5))
+
         # Matplotlib figure for robot path with dynamic coordinate system
         # Calculate figure size to match drawing area aspect ratio
         drawing_aspect_ratio = self.max_x.get() / self.max_y.get()
