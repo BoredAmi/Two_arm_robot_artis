@@ -5,7 +5,7 @@ from PIL import Image
 import tempfile
 import os
 
-client = OpenAI(api_key="MyAPIKey")
+client = OpenAI(api_key="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")
 
 # Predefined prompts for different styles
 PROMPTS = {

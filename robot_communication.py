@@ -76,8 +76,9 @@ class RobotController:
                                 start_x, start_y = contour[0]
 
                                 # Move to contour start
-                                if not self.send_move(start_x, start_y, target=target):
-                                    print(f"[{target}] Failed to move to start of contour")
+                                # Use two-step transition to start (offset then real start)
+                                if not self._transition_to_start(start_x, start_y, target=target):
+                                    print(f"[{target}] Failed to transition to start of contour")
                                     ok = False
                                 else:
                                     # Pen down to draw
@@ -94,14 +95,18 @@ class RobotController:
                                         if not self.send_pen_up(target=target):
                                             print(f"[{target}] Failed to send PEN_UP (after contour)")
                                             ok = False
+                                        else:
+                                            # Notify robot between contours so RAPID can perform a retreat/back-off
+                                            self.send_between_command(target=target)
                                         time.sleep(0.02)
 
                             else:
                                 contour = action
                                 start_x, start_y = contour[0]
 
-                                if not self.send_move(start_x, start_y, target=target):
-                                    print(f"[{target}] Failed to move to start of contour")
+                                # Transition to start with side-specific X offset
+                                if not self._transition_to_start(start_x, start_y, target=target):
+                                    print(f"[{target}] Failed to transition to start of contour")
                                     ok = False
                                 else:
                                     if not self.send_pen_down(target=target):
@@ -119,6 +124,9 @@ class RobotController:
                                         if not self.send_pen_up(target=target):
                                             print(f"[{target}] Failed to send PEN_UP (after contour)")
                                             ok = False
+                                        else:
+                                            # Send between-contour command to allow robot-side retreat
+                                            self.send_between_command(target=target)
                                         time.sleep(move_delay)
 
                     except Exception as e:
@@ -178,6 +186,8 @@ class RobotController:
     DEFAULT_PORT = 1025
     DEFAULT_TIMEOUT = 5.0
     DEFAULT_PORT_L = 1026
+    # Default transition offset in X (mm) applied before moving to contour start
+    DEFAULT_TRANSITION_OFFSET_X = 50
 
     # Command response settings
     RESPONSE_TIMEOUT = 20.0
@@ -198,6 +208,42 @@ class RobotController:
         self.socket2 = None  # For second port (1026)
         self.use_batch_mode = True  # Default to batch mode for speed
         self.use_center_origin = True  # Default to center-based coordinates (current system)
+        # Transition offset in X direction (positive moves to +X, negative to -X)
+        self.transition_offset_x = self.DEFAULT_TRANSITION_OFFSET_X
+
+    def set_transition_offset_x(self, mm):
+        """Set the transition X offset (mm). Positive values move toward +X for left arm, negative for right arm."""
+        try:
+            self.transition_offset_x = float(mm)
+        except Exception:
+            pass
+
+    def _transition_to_start(self, start_x, start_y, target='right'):
+        """Perform a two-step transition: move to an X-offset point, then to the true start.
+
+        For `target=='right'` the offset is -transition_offset_x, for `target=='left'` it's +transition_offset_x.
+        Returns True on success, False on failure.
+        """
+        # Determine side bias: right -> negative offset, left -> positive offset
+        try:
+            off = float(self.transition_offset_x)
+        except Exception:
+            off = float(self.DEFAULT_TRANSITION_OFFSET_X)
+
+        if target == 'right':
+            x_off = -abs(off)
+        else:
+            x_off = abs(off)
+
+        # Move first to the offset point, then to the actual start
+        if not self.send_move(start_x + x_off, start_y, target=target):
+            print(f"[{target}] Failed to move to offset start ({start_x + x_off:.1f}, {start_y:.1f})")
+            return False
+        time.sleep(0.02)
+        if not self.send_move(start_x, start_y, target=target):
+            print(f"[{target}] Failed to move to actual start ({start_x:.1f}, {start_y:.1f})")
+            return False
+        return True
     
     def connect(self):
         """
@@ -323,6 +369,18 @@ class RobotController:
     def send_pen_up(self, target='right'):
         """Send pen up command (lift drawing tool)"""
         return self._send_command("PEN_UP\n", target=target)
+
+    def send_between_command(self, cmd=None, target='right', wait_response=True, timeout=None):
+        """Send a simple between-contour command for the robot to interpret.
+
+        By default this sends "RETREAT\n". The robot RAPID/task should implement
+        handling for this command (e.g. local back-off or move-to-edge).
+
+        This helper forwards wait_response and timeout to _send_command so the
+        caller can ensure the Python side blocks until the robot replies OK.
+        """
+        command = cmd if cmd is not None else "RETREAT\n"
+        return self._send_command(command, wait_response=wait_response, timeout=timeout, target=target)
 
     def send_pen_down(self, target='right'):
         """Send pen down command (lower drawing tool)"""
@@ -554,8 +612,9 @@ class RobotController:
             
             # Move to start of contour with pen up
             start_x, start_y = contour[0]
-            if not self.send_move(start_x, start_y):
-                print(f"Failed to move to start of contour {contour_idx + 1}")
+            # Transition to start using X offset strategy (right arm moves left first, left arm moves right first)
+            if not self._transition_to_start(start_x, start_y):
+                print(f"Failed to transition to start of contour {contour_idx + 1}")
                 return False
             time.sleep(move_delay)
             
@@ -574,6 +633,8 @@ class RobotController:
             
             # Lift pen after finishing this contour
             self.send_pen_up()
+            # Send between-contour command so robot can retreat or reposition as implemented on the robot
+            self.send_between_command()
             time.sleep(move_delay)
         
         # Send stop command when done
@@ -610,8 +671,9 @@ class RobotController:
                 travel_distance = ((start_x - current_position[0])**2 + (start_y - current_position[1])**2)**0.5
                 print(f"  Travel distance: {travel_distance:.1f}mm")
             
-            if not self.send_move(start_x, start_y):
-                print(f"Failed to move to start of contour {contour_idx + 1}")
+            # Transition to start using offset
+            if not self._transition_to_start(start_x, start_y):
+                print(f"Failed to transition to start of contour {contour_idx + 1}")
                 return False
             time.sleep(0.02)  # Ultra-minimal delay
             
