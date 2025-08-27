@@ -5,7 +5,7 @@ from PIL import Image
 import tempfile
 import os
 
-client = OpenAI(api_key="MyAPIKey")
+client = OpenAI(api_key="***REMOVED-OPENAI-KEY***")
 
 # Predefined prompts for different styles
 PROMPTS = {
