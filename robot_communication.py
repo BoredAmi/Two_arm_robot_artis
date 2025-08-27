@@ -64,45 +64,73 @@ class RobotController:
                     ok = True
                 else:
                     try:
-                        self.send_pen_up(target=target)
-                        time.sleep(0.02)
-                        if actual_batching:
-                            contour = action
-                            start_x, start_y = contour[0]
-                            if not self.send_move(start_x, start_y, target=target):
-                                print(f"[{target}] Failed to move to start of contour")
-                                ok = False
-                            else:
-                                self.send_pen_down(target=target)
-                                time.sleep(0.02)
-                                if len(contour) > 1:
-                                    if not self.send_batch_moves(contour[1:], batch_size=batch_size, target=target):
-                                        print(f"[{target}] Failed to send batch moves")
-                                        ok = False
-                                self.send_pen_up(target=target)
-                                time.sleep(0.02)
+                        # Ensure PEN_UP acknowledged before moving
+                        if not self.send_pen_up(target=target):
+                            print(f"[{target}] Failed to send PEN_UP")
+                            ok = False
                         else:
-                            contour = action
-                            start_x, start_y = contour[0]
-                            if not self.send_move(start_x, start_y, target=target):
-                                print(f"[{target}] Failed to move to start of contour")
-                                ok = False
-                            else:
-                                self.send_pen_down(target=target)
-                                time.sleep(move_delay)
-                                for x, y in contour[1:]:
-                                    if not self.send_move(x, y, target=target):
-                                        print(f"[{target}] Failed to send point")
+                            time.sleep(0.02)
+
+                            if actual_batching:
+                                contour = action
+                                start_x, start_y = contour[0]
+
+                                # Move to contour start
+                                if not self.send_move(start_x, start_y, target=target):
+                                    print(f"[{target}] Failed to move to start of contour")
+                                    ok = False
+                                else:
+                                    # Pen down to draw
+                                    if not self.send_pen_down(target=target):
+                                        print(f"[{target}] Failed to send PEN_DOWN")
                                         ok = False
-                                        break
-                                    if move_delay > 0:
+                                    else:
+                                        time.sleep(0.02)
+                                        if len(contour) > 1:
+                                            if not self.send_batch_moves(contour[1:], batch_size=batch_size, target=target):
+                                                print(f"[{target}] Failed to send batch moves")
+                                                ok = False
+                                        # Lift pen after contour
+                                        if not self.send_pen_up(target=target):
+                                            print(f"[{target}] Failed to send PEN_UP (after contour)")
+                                            ok = False
+                                        time.sleep(0.02)
+
+                            else:
+                                contour = action
+                                start_x, start_y = contour[0]
+
+                                if not self.send_move(start_x, start_y, target=target):
+                                    print(f"[{target}] Failed to move to start of contour")
+                                    ok = False
+                                else:
+                                    if not self.send_pen_down(target=target):
+                                        print(f"[{target}] Failed to send PEN_DOWN")
+                                        ok = False
+                                    else:
                                         time.sleep(move_delay)
-                                self.send_pen_up(target=target)
-                                time.sleep(move_delay)
+                                        for x, y in contour[1:]:
+                                            if not self.send_move(x, y, target=target):
+                                                print(f"[{target}] Failed to send point")
+                                                ok = False
+                                                break
+                                            if move_delay > 0:
+                                                time.sleep(move_delay)
+                                        if not self.send_pen_up(target=target):
+                                            print(f"[{target}] Failed to send PEN_UP (after contour)")
+                                            ok = False
+                                        time.sleep(move_delay)
+
                     except Exception as e:
                         print(f"[{target}] Error during drawing: {e}")
-                        self.send_pen_up(target=target)
-                        self.send_stop(target=target)
+                        try:
+                            self.send_pen_up(target=target)
+                        except Exception:
+                            pass
+                        try:
+                            self.send_stop(target=target)
+                        except Exception:
+                            pass
                         ok = False
                 if not ok:
                     if target == 'right':
@@ -382,6 +410,11 @@ class RobotController:
                 return False
 
         primary_sock, secondary_sock = self._get_socket(target)
+        # Normalize: if primary is None but secondary exists for a single-target call
+        # (e.g. target == 'left'), treat the available socket as primary.
+        if primary_sock is None and secondary_sock is not None and target != 'both':
+            primary_sock = secondary_sock
+            secondary_sock = None
 
         try:
             print(f"Sending: {cmd.strip()} to {target}")
@@ -394,28 +427,60 @@ class RobotController:
             if secondary_sock:
                 secondary_sock.sendall(cmd.encode())
 
-            # Only wait for response from primary socket
+            # Only wait for response(s) from socket(s)
             if wait_response and primary_sock:
-                if timeout is not None:
-                    original_timeout = primary_sock.gettimeout()
-                    primary_sock.settimeout(timeout)
-                    print(f"Using extended timeout: {timeout}s for command response")
+                # Helper: receive a single line (terminated by \n) from a socket within timeout
+                def _recv_line(sock, timeout_secs):
+                    orig_to = sock.gettimeout()
+                    try:
+                        sock.settimeout(timeout_secs if timeout_secs is not None else self.RESPONSE_TIMEOUT)
+                        data = b""
+                        while True:
+                            chunk = sock.recv(1024)
+                            if not chunk:
+                                # connection closed
+                                break
+                            data += chunk
+                            if b"\n" in data or b"\r" in data:
+                                break
+                        try:
+                            return data.decode(errors='ignore').strip()
+                        except Exception:
+                            return data.decode('utf-8', errors='ignore').strip()
+                    finally:
+                        try:
+                            sock.settimeout(orig_to)
+                        except Exception:
+                            pass
 
-                try:
-                    response = primary_sock.recv(1024).decode().strip()
-                    print(f"Robot response: {response}")
-                    success = response == "OK"
+                # If we sent to both sockets, wait for both responses
+                if secondary_sock and (target == 'both' or target is None):
+                    print("Waiting for responses from both robots...")
+                    # Wait for primary
+                    try:
+                        resp1 = _recv_line(primary_sock, timeout)
+                    except socket.timeout:
+                        print(f"Primary socket timeout after {timeout or self.RESPONSE_TIMEOUT}s")
+                        return False
+                    # Wait for secondary
+                    try:
+                        resp2 = _recv_line(secondary_sock, timeout)
+                    except socket.timeout:
+                        print(f"Secondary socket timeout after {timeout or self.RESPONSE_TIMEOUT}s")
+                        return False
 
-                    if timeout is not None:
-                        primary_sock.settimeout(original_timeout)
+                    print(f"Robot responses: primary='{resp1}', secondary='{resp2}'")
+                    return (resp1 == 'OK') and (resp2 == 'OK')
+                else:
+                    # Single-socket target (primary only)
+                    try:
+                        resp = _recv_line(primary_sock, timeout)
+                    except socket.timeout:
+                        print(f"Command timeout after {timeout or self.RESPONSE_TIMEOUT}s - no response from robot")
+                        return False
 
-                    return success
-
-                except socket.timeout:
-                    print(f"Command timeout after {timeout or self.RESPONSE_TIMEOUT}s - no response from robot")
-                    if timeout is not None:
-                        primary_sock.settimeout(original_timeout)
-                    return False
+                    print(f"Robot response: {resp}")
+                    return resp == 'OK'
 
             return True
 

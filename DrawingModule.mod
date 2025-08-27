@@ -9,13 +9,6 @@ MODULE DrawingModule
     VAR socketdev server_socket;        ! Server socket listener
     VAR string received_string;         ! Buffer for incoming commands
     
-    ! Camera integration paths
-    VAR string campath;                 ! Camera image source path
-    VAR string controllerpath;          ! Controller destination path
-    CONST string myjob := "face_photo.job"; ! Camera job configuration
-    CONST string find_job:="find_sheet.job";
-    VAR cameratarget mycameratarget;
-    
     ! Z-axis positions for pen control
     CONST num z_down:=0;                ! Pen touching paper (drawing)
     CONST num z_up:=-10;                ! Pen lifted (moving)
@@ -31,10 +24,10 @@ MODULE DrawingModule
     PERS wobjdata current_wobject;
     
     ! Movement parameters - optimized for smooth, precise drawing
-    CONST speeddata move_speed := v7000;   ! Increased drawing speed for faster operation
-    CONST speeddata fast_speed := v7000;   ! Increased batch speed for faster moves
-    CONST zonedata move_zone := z200;        ! Larger zone for faster, blended corners
-    CONST zonedata batch_zone := z200;       ! Same larger zone for batch moves
+    CONST speeddata move_speed := v500;   ! Increased drawing speed for faster operation
+    CONST speeddata fast_speed := v500;   ! Increased batch speed for faster moves
+    CONST zonedata move_zone := z0;        ! Larger zone for faster, blended corners
+    CONST zonedata batch_zone := z0;       ! Same larger zone for batch moves
     CONST num z_height := 0;               ! Fixed Z for drawing plane
     
     
@@ -44,13 +37,8 @@ MODULE DrawingModule
     PROC main()
         ! Suppress corner path warnings to prevent stop points
         
-        ! Setup camera for image capture
-        CamSetProgramMode cam_left;
-        CamLoadJob cam_left, myjob;
-        CamSetRunMode cam_left;
-        
         MotionSup \Off;
-    AccSet 100, 80;  ! higher acceleration for faster movement
+    AccSet 100, 100;  ! higher acceleration for faster movement
         ! Initialize robot to base position
         target_position:=base_position;
         
@@ -117,16 +105,6 @@ MODULE DrawingModule
                 RETURN;
             ENDIF
         
-!    ERROR
-!        ! Handle timeout gracefully - keep connection alive
-!        IF ERRNO = ERR_SOCK_TIMEOUT THEN
-!            TPWrite "Client timeout - keeping connection";
-!            RETRY;
-!        ELSE
-!            ! Other errors - allow reconnection
-!            TPWrite "Connection error: " + NumToStr(ERRNO, 0);
-!            RETURN;
-!        ENDIF
     ENDPROC
     
     !==================================================
@@ -135,7 +113,6 @@ MODULE DrawingModule
     PROC ParseAndExecuteCommand(string cmd)
         ! Clean input - remove line endings from Python
         cmd := StrMap(cmd, "\0A\0D", "");
-        
         ! Route commands to appropriate handlers
         TEST cmd
         DEFAULT:
@@ -147,22 +124,21 @@ MODULE DrawingModule
                 HandleBatchCommand cmd;
             ELSEIF StrMatch(cmd, 1, "PEN_UP") = 1 THEN
                 ! Lift pen for non-drawing moves - use moderate speed with smooth zone
-                current_z:=z_up;
-                MoveL Offs(target_position,0,0,current_z),fast_speed,move_zone,Servo \WObj:=current_wobject;
+                current_z:=z_up; 
+                MoveL Offs(target_position,0,0,current_z),fast_speed,move_zone,tool1 \WObj:=current_wobject;
                 SendResponse("OK");
             ELSEIF StrMatch(cmd, 1, "PEN_DOWN") = 1 THEN
                 ! Lower pen to start drawing - use moderate speed with smooth zone
                 current_z:=z_down;
-                MoveL Offs(target_position,0,0,current_z),fast_speed,move_zone,Servo \WObj:=current_wobject;
+                MoveL Offs(target_position,0,0,current_z),fast_speed,move_zone,tool1 \WObj:=current_wobject;
                 SendResponse("OK");
-            ELSEIF StrMatch(cmd, 1, "get_pic") = 1 THEN
-                ! Capture image from robot camera
-                get_pic_to_draw;
+            ELSEIF StrMatch(cmd, 1, "START") = 1 THEN
+                setup_corner;
             ELSEIF StrMatch(cmd, 1, "START_CORNER") = 1 THEN
                 setup_corner;
-            ELSEIF StrMatch(cmd, 1, "START")=1 THEN
-                ! Capture image from robot camera
-                find_sheet;
+            ELSEIF StrMatch(cmd, 1, "WAIT") = 1 THEN
+                MoveL Offs(base_position,0,0,current_z),fast_speed,move_zone,tool1 \WObj:=current_wobject;
+                SendResponse("OK"); 
             ELSE
                 SendResponse("ERROR: Unknown command");
             ENDIF
@@ -243,7 +219,7 @@ MODULE DrawingModule
         FOR point_idx FROM 1 TO batch_count DO
             target_position := batch_targets{point_idx};
             ! Use consistent smooth movement for all batch points to avoid corner stops
-            MoveL target_position, fast_speed, batch_zone, Servo \WObj:=current_wobject;
+            MoveL target_position, fast_speed, batch_zone, tool1 \WObj:=current_wobject ;
         ENDFOR
         
         SendResponse("OK");
@@ -288,7 +264,7 @@ MODULE DrawingModule
         
         ! Execute movement relative to base_position with precise movement
         target_position := offs(base_position, x_coord, y_coord, current_z);
-        MoveL target_position, fast_speed, move_zone, Servo \WObj:=current_wobject;
+        MoveL target_position, fast_speed, move_zone, tool1 \WObj:=current_wobject;
         
         SendResponse("OK");
     ENDPROC
@@ -300,7 +276,7 @@ MODULE DrawingModule
         TPWrite "Stop command received";
         ! Return to base position safely with smooth movement
         target_position := base_position;
-        MoveL Offs(target_position, 0, 0, current_z), fast_speed, move_zone, Servo \WObj:=current_wobject;
+        MoveL Offs(target_position, 0, 0, current_z), fast_speed, move_zone, tool1 \WObj:=current_wobject;
         SendResponse("STOPPED");
     ENDPROC
     
@@ -308,46 +284,16 @@ MODULE DrawingModule
     ! RESPONSE SENDER - Sends status back to Python
     !==================================================
     PROC SendResponse(string msg)
-        SocketSend client_socket \Str:=msg;
+    ! Send the response and terminate with CRLF so the Python client can read a full line (OK\r\n)
+    SocketSend client_socket \Str:=msg;
+    ! Send CRLF separately to avoid relying on string concatenation semantics
+    SocketSend client_socket \Str:="\0D\0A";
     ENDPROC
     
-    !==================================================
-    ! CAMERA INTEGRATION - Captures workspace image
-    !==================================================
-    PROC get_pic_to_draw()
-
-        ! Capture and save image
-        CamReqImage cam_left;
-        campath := CamGetName(cam_left) + ":/" + "image.bmp";
-        controllerpath := "/hd0a/14000-500767/HOME/image.bmp";
-        
-        ! Clean up previous image and copy new one
-        RemoveFile(controllerpath);
-        CopyFile campath, controllerpath;
-        SendResponse("OK");
-    ENDPROC
-    PROC find_sheet()
-        ! Setup camera for image capture
-        base_position:=[[0,0,-1],[0.680053,-2.14198E-07,4.64696E-07,-0.733163],[0,-1,0,4],[-127.732,9E+09,9E+09,9E+09,9E+09,9E+09]];
-        current_wobject:=const_znaleziona_kartka;
-        MoveJ cam_pos_r, fast_speed,fine,Servo;
-        WaitRob \InPos;
-        CamSetProgramMode cam_right;
-        CamLoadJob cam_right, find_job;
-        CamSetRunMode cam_right;
-        
-        ! Capture image and find sheet
-        CamReqImage cam_right;
-        CamGetResult cam_right, mycameratarget;
-        current_wobject.oframe := mycameratarget.cframe;
-        MoveJ Offs(base_position,0,0,-10),fast_speed,fine,Servo\WObj:=current_wobject;
-        SendResponse("OK");
-        
-    ENDPROC
     PROC setup_corner()
         current_wobject:=const_kartka;
-        base_position:= [[0,20,2],[0.02244,-0.70675,0.0224411,-0.706751],[1,0,-2,4],[159.113,9E+09,9E+09,9E+09,9E+09,9E+09]];
-        MoveL Offs(base_position,0,0,0),fast_speed,fine,Servo\WObj:=current_wobject;
+        base_position:= [[20.52,14.06,95.45],[0.0224413,-0.70675,0.022442,-0.706751],[1,0,-2,4],[159.113,9E+09,9E+09,9E+09,9E+09,9E+09]];
+        Movej Offs(base_position,0,0,0),fast_speed,fine,tool1\WObj:=current_wobject;
         SendResponse("OK");
     ENDPROC
 ENDMODULE
