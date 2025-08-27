@@ -38,7 +38,7 @@ def contours_overlap(bounds1, bounds2):
     overlap_y = max_y1 >= min_y2 and max_y2 >= min_y1
     return overlap_x and overlap_y
 
-def master_slave_assign_contours(contours, master, buffer_x=10, buffer_y=70):
+def master_slave_assign_contours(contours, master, buffer_radius=40, buffer_x=10, buffer_y=70):
     """
     Assigns contours to master and slave arms for dual-arm drawing with buffer zones.
     Returns (master_contour, slave_contour, remaining_contours).
@@ -58,8 +58,8 @@ def master_slave_assign_contours(contours, master, buffer_x=10, buffer_y=70):
     master_contour = sorted_contours[0]
     from shapely.geometry import Polygon
     import numpy as np
-    # Use a fixed 30mm buffer radius around every point in the contour
-    buffer_radius = 30
+    # Use the caller-specified buffer_radius around the contour
+    # (default is 40 mm)
     master_poly = Polygon(master_contour)
     forbidden_poly = master_poly.buffer(buffer_radius)
     # Add a 'tail' in the forbidden direction, width matches buffer (60mm)
