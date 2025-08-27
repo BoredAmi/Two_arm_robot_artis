@@ -7,5 +7,6 @@
   "max_x": 290,
   "max_y": 210,
   "margin_x": 10,
-  "margin_y": 10
+  "margin_y": 10,
+  "forbidden_buffer": 40
 }

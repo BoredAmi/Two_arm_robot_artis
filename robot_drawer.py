@@ -25,7 +25,7 @@ from visualizer import DrawingVisualizer
 
 
 class RobotDrawer:
-    def draw_dual(self, buffer_x=10, buffer_y=70, progress_callback=None):
+    def draw_dual(self, buffer_radius=40, buffer_x=10, buffer_y=70, progress_callback=None):
         """
         Dual-arm drawing: assigns contours to right/left arms step by step using forbidden area logic, then draws with both robots in sync.
         Args:
@@ -45,8 +45,8 @@ class RobotDrawer:
         left_actions = []
         step = 0
         while remaining:
-            # Use the latest master_slave_assign_contours (should return forbidden_poly as last value, ignore it)
-            result = master_slave_assign_contours(remaining, master=master_role, buffer_x=buffer_x, buffer_y=buffer_y)
+            # Use the latest master_slave_assign_contours (returns forbidden_poly as last value)
+            result = master_slave_assign_contours(remaining, master=master_role, buffer_radius=buffer_radius, buffer_x=buffer_x, buffer_y=buffer_y)
             if len(result) == 5:
                 master, slave, rest, unassigned, _ = result
             else:

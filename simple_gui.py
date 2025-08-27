@@ -115,6 +115,20 @@ class SimpleRobotGUI:
         # Create the user interface
         self.create_simple_interface()
 
+        # Restore forbidden buffer from config (created during UI setup)
+        if self.config.get("forbidden_buffer") is not None:
+            try:
+                if hasattr(self, 'forbidden_buffer_var'):
+                    self.forbidden_buffer_var.set(int(self.config.get("forbidden_buffer", 40)))
+            except Exception:
+                pass
+
+        # Autosave on window close: ensure config persisted and robot disconnected
+        try:
+            self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+        except Exception:
+            pass
+
     def _load_config(self):
         try:
             import json, os
@@ -139,6 +153,12 @@ class SimpleRobotGUI:
                 "margin_x": self.margin_x.get(),
                 "margin_y": self.margin_y.get()
             }
+            # Persist forbidden buffer if present
+            try:
+                config["forbidden_buffer"] = int(self.forbidden_buffer_var.get()) if hasattr(self, 'forbidden_buffer_var') else 40
+            except Exception:
+                config["forbidden_buffer"] = 40
+
             with open(self.config_path, "w") as f:
                 json.dump(config, f, indent=2)
         except Exception:
@@ -468,6 +488,15 @@ class SimpleRobotGUI:
                                         bg='#e0e0e0', font=('Arial', 8), relief='flat', 
                                         padx=8, pady=2, cursor='hand2')
             margin_preset_btn.pack(side=tk.LEFT, padx=(2, 0))
+
+        # Forbidden buffer radius (for dual-arm forbidden zones)
+        buffer_frame = tk.Frame(parent, bg='white')
+        buffer_frame.pack(fill=tk.X, pady=(8, 0))
+        tk.Label(buffer_frame, text="Forbidden buffer (mm):", font=('Arial', 10, 'bold'), bg='white').pack(side=tk.LEFT)
+        self.forbidden_buffer_var = tk.IntVar(value=40)
+        buffer_spin = tk.Spinbox(buffer_frame, from_=0, to=200, width=5, textvariable=self.forbidden_buffer_var, font=('Arial', 9), command=lambda: None)
+        buffer_spin.pack(side=tk.LEFT, padx=(8, 5))
+        tk.Label(buffer_frame, text="mm", font=('Arial', 9), bg='white').pack(side=tk.LEFT)
     
     def create_connection_section(self, parent):
         """Create robot connection section"""
@@ -715,8 +744,10 @@ class SimpleRobotGUI:
             steps = []
             remaining = contours[:]
             master_role = 'right'
+            # Read forbidden buffer from GUI control (default 40 mm)
+            buf_mm = int(self.forbidden_buffer_var.get()) if hasattr(self, 'forbidden_buffer_var') else 40
             while remaining:
-                result = master_slave_assign_contours(remaining, master=master_role)
+                result = master_slave_assign_contours(remaining, master=master_role, buffer_radius=buf_mm)
                 if len(result) == 5:
                     master, slave, rest, unassigned, forbidden_poly = result
                 else:
@@ -741,6 +772,10 @@ class SimpleRobotGUI:
                 ys = list(ys) + [ys[0]]
                 ax.plot(xs, ys, color=color, lw=lw, alpha=alpha, zorder=zorder)
 
+            # Add a small label to show current step / total steps
+            step_label = tk.Label(self.detail_window, text="Step 0 / 0", bg='white', font=('Arial', 10, 'bold'))
+            step_label.pack(side=tk.TOP)
+
             def update(frame):
                 # Clear and set labels
                 ax.clear()
@@ -762,6 +797,11 @@ class SimpleRobotGUI:
                 if margin_x > 0 or margin_y > 0:
                     ax.plot(effective_boundary_x, effective_boundary_y, 'g-', linewidth=1.5, alpha=0.7, label='Drawing Area (with margins)')
                 ax.set_title(f'Step {frame+1} / {len(steps)}')
+                # Update step label text
+                try:
+                    step_label.config(text=f"Step {frame+1} / {len(steps)}")
+                except Exception:
+                    pass
                 ax.legend(handles=legend_handles)
 
                 remaining, master_role, master, slave, forbidden_poly = steps[frame]
@@ -1644,6 +1684,31 @@ class SimpleRobotGUI:
         self.get_pic_btn.config(state='disabled')  # Disable get picture button
         self.status_text.set("Connection error")
         messagebox.showerror("Error", f"Connection error: {error}")
+
+    def _on_close(self):
+        """Handler run when the main window is closed: save config and disconnect robot."""
+        try:
+            # Save GUI settings
+            self._save_config()
+        except Exception:
+            pass
+        try:
+            # Attempt a graceful robot disconnect
+            if hasattr(self, 'drawer') and getattr(self.drawer, 'robot', None):
+                try:
+                    self.drawer.disconnect()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        try:
+            self.root.destroy()
+        except Exception:
+            try:
+                import sys
+                sys.exit(0)
+            except Exception:
+                pass
     
     def get_picture_from_robot(self):
         """Get picture from robot camera"""
@@ -2169,7 +2234,8 @@ class SimpleRobotGUI:
                 # Start the optimized drawing process with progress tracking
                 if self.dual_arm_mode.get():
                     print("Starting dual-arm drawing flow (draw_dual)")
-                    success = self.drawer.draw_dual(progress_callback=progress_callback)
+                    buf_mm = int(self.forbidden_buffer_var.get()) if hasattr(self, 'forbidden_buffer_var') else 40
+                    success = self.drawer.draw_dual(buffer_radius=buf_mm, progress_callback=progress_callback)
                 else:
                     success = self.drawer.draw(progress_callback=progress_callback)
                 
@@ -2433,6 +2499,8 @@ def main():
     """Main entry point"""
     app = SimpleRobotGUI()
     app.run()
+
+    
 
 
 if __name__ == "__main__":
