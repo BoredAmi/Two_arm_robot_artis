@@ -45,8 +45,17 @@ def master_slave_assign_contours(contours, master, buffer_x=10, buffer_y=70):
     """
     if not contours:
         return None, None, [], []
-    # Master picks the first available contour
-    master_contour = contours[0]
+    # Prioritize contours by X position for each arm
+    def contour_center_x(contour):
+        xs = [p[0] for p in contour]
+        return sum(xs) / len(xs) if xs else 0
+    if master == "right":
+        # Right arm: pick contour with highest center X (rightmost)
+        sorted_contours = sorted(contours, key=contour_center_x)
+    else:
+        # Left arm: pick contour with lowest center X (leftmost)
+        sorted_contours = sorted(contours, key=contour_center_x, reverse=True)
+    master_contour = sorted_contours[0]
     from shapely.geometry import Polygon
     import numpy as np
     # Use a fixed 30mm buffer radius around every point in the contour

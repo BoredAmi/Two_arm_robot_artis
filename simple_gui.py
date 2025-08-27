@@ -540,11 +540,7 @@ class SimpleRobotGUI:
                         font=('Arial', 10), fill='#999')
 
         # Middle panel content (buttons and progress)
-        # Dual-arm mode checkbox
-        dual_arm_checkbox = tk.Checkbutton(middle_panel, text="Dual-arm drawing mode (split & sync)",
-                        variable=self.dual_arm_mode, bg='white', font=('Arial', 9, 'bold'),
-                        activebackground='white')
-        dual_arm_checkbox.pack(pady=(10, 10))
+    # ...existing code...
 
         # Face Drawing button
         self.face_drawing_btn = tk.Button(middle_panel, text="👤 Face\nDrawing", 
@@ -675,7 +671,6 @@ class SimpleRobotGUI:
         if margin_x > 0 or margin_y > 0:
             ax.plot(effective_boundary_x, effective_boundary_y, 'g-', linewidth=1.5, alpha=0.7, label='Drawing Area (with margins)')
 
-        from matplotlib_anim_helper import animate_paths
         import matplotlib.pyplot as plt
         import numpy as np
         if self.drawer.drawing_points:
@@ -702,34 +697,114 @@ class SimpleRobotGUI:
 
         # --- Animation Button ---
         def start_animation():
-            ax.clear()
-            # Redraw static elements (axes, boundaries, etc.)
-            ax.set_xlabel('X (mm)'); ax.set_ylabel('Y (mm)')
-            ax.grid(True, alpha=0.3)
-            ax.set_aspect('equal', adjustable='box')
-            ax.plot(boundary_x, boundary_y, 'k--', linewidth=2, alpha=0.5, label='Workspace Area')
-            if margin_x > 0 or margin_y > 0:
-                ax.plot(effective_boundary_x, effective_boundary_y, 'g-', linewidth=1.5, alpha=0.7, label='Drawing Area (with margins)')
-            # Animate paths
-            print(f"[DEBUG] Number of paths: {len(self.drawer.drawing_points)}")
-            print(f"[DEBUG] Type of drawing_points: {type(self.drawer.drawing_points)}")
-            if self.drawer.drawing_points:
-                for idx, p in enumerate(self.drawer.drawing_points):
-                    print(f"[DEBUG] Path {idx}: type={type(p)}, length={len(p)}")
-            else:
-                print("[DEBUG] drawing_points is empty or None")
-            if self.drawer.drawing_points and any(len(p) > 0 for p in self.drawer.drawing_points):
-                colors = plt.cm.tab20(np.linspace(0, 1, len(self.drawer.drawing_points)))
-                # Store animation object to prevent garbage collection
-                self._current_anim = animate_paths(
-                    ax, self.drawer.drawing_points, colors=colors, interval=200,
-                    on_frame=lambda f: canvas.draw_idle())
-                canvas.draw_idle()
-            else:
+            # Build dual-assignment steps using master_slave_assign_contours
+            from coordinate_transformer import master_slave_assign_contours
+            from matplotlib.animation import FuncAnimation
+            import matplotlib.patches as mpatches
+
+            contours = self.drawer.drawing_points
+            if not contours or not any(len(c) > 0 for c in contours):
                 import tkinter.messagebox as mb
-                msg = f"No paths to animate. drawing_points type: {type(self.drawer.drawing_points)}, length: {len(self.drawer.drawing_points) if self.drawer.drawing_points is not None else 'None'}\nContent: {self.drawer.drawing_points}"
+                msg = f"No paths to animate. drawing_points type: {type(contours)}, length: {len(contours) if contours is not None else 'None'}\nContent: {contours}"
                 mb.showwarning("No Paths to Animate", msg)
+                ax.clear()
                 ax.text(0, 0, 'No path data to animate!', ha='center', va='center', color='red', fontsize=14)
+                canvas.draw_idle()
+                return
+
+            steps = []
+            remaining = contours[:]
+            master_role = 'right'
+            while remaining:
+                result = master_slave_assign_contours(remaining, master=master_role)
+                if len(result) == 5:
+                    master, slave, rest, unassigned, forbidden_poly = result
+                else:
+                    master, slave, rest, unassigned = result
+                    forbidden_poly = None
+                steps.append((remaining[:], master_role, master, slave, forbidden_poly))
+                remaining = rest
+                master_role = 'left' if master_role == 'right' else 'right'
+
+            # Prepare legend
+            legend_handles = [
+                mpatches.Patch(color='red', alpha=0.15, label='Forbidden zone', hatch='//'),
+                mpatches.Patch(color='red', label='Master'),
+                mpatches.Patch(color='blue', label='Slave'),
+            ]
+
+            def plot_contour(ax, contour, color, lw=2, alpha=1.0, zorder=1):
+                if not contour:
+                    return
+                xs, ys = zip(*contour)
+                xs = list(xs) + [xs[0]]
+                ys = list(ys) + [ys[0]]
+                ax.plot(xs, ys, color=color, lw=lw, alpha=alpha, zorder=zorder)
+
+            def update(frame):
+                # Clear and set labels
+                ax.clear()
+                ax.set_xlabel('X (mm)'); ax.set_ylabel('Y (mm)')
+                ax.grid(True, alpha=0.3)
+                ax.set_aspect('equal', adjustable='box')
+
+                # Force view limits to workspace boundary so huge forbidden tails don't expand view
+                x_min, x_max = min(boundary_x), max(boundary_x)
+                y_min, y_max = min(boundary_y), max(boundary_y)
+                # Add small padding
+                pad_x = max(5.0, (x_max - x_min) * 0.02)
+                pad_y = max(5.0, (y_max - y_min) * 0.02)
+                ax.set_xlim(x_min - pad_x, x_max + pad_x)
+                ax.set_ylim(y_min - pad_y, y_max + pad_y)
+
+                # Draw static workspace outlines
+                ax.plot(boundary_x, boundary_y, 'k--', linewidth=2, alpha=0.5, label='Workspace Area')
+                if margin_x > 0 or margin_y > 0:
+                    ax.plot(effective_boundary_x, effective_boundary_y, 'g-', linewidth=1.5, alpha=0.7, label='Drawing Area (with margins)')
+                ax.set_title(f'Step {frame+1} / {len(steps)}')
+                ax.legend(handles=legend_handles)
+
+                remaining, master_role, master, slave, forbidden_poly = steps[frame]
+                # Show current master (left/right) prominently in the corner
+                master_text = f'Master: {master_role.title()}'
+                ax.text(0.02, 0.95, master_text, transform=ax.transAxes, ha='left', va='top',
+                    fontsize=10, color='black', bbox=dict(facecolor='white', alpha=0.8, edgecolor='none'))
+
+                # Plot remaining contours faint
+                colors_local = plt.cm.tab20(np.linspace(0, 1, max(1, len(remaining))))
+                for i, c in enumerate(remaining):
+                    if c:
+                        plot_contour(ax, c, color=colors_local[i % len(colors_local)], lw=1, alpha=0.4, zorder=1)
+
+                # Plot forbidden area clipped to view box to avoid huge tails
+                if forbidden_poly is not None:
+                    try:
+                        from shapely.geometry import box as shapely_box
+                        view_box = shapely_box(ax.get_xlim()[0], ax.get_ylim()[0], ax.get_xlim()[1], ax.get_ylim()[1])
+                        clipped = forbidden_poly.intersection(view_box)
+                    except Exception:
+                        clipped = forbidden_poly
+
+                    if clipped is not None and not clipped.is_empty:
+                        if clipped.geom_type == 'Polygon':
+                            polys = [clipped]
+                        else:
+                            polys = list(clipped.geoms)
+                        for poly in polys:
+                            if hasattr(poly, 'exterior') and poly.exterior is not None:
+                                x_f, y_f = poly.exterior.xy
+                                ax.fill(x_f, y_f, color='red', alpha=0.15, zorder=2, hatch='//')
+
+                # Plot master and slave
+                if master:
+                    plot_contour(ax, master, color='red', lw=3, alpha=1.0, zorder=3)
+                if slave:
+                    plot_contour(ax, slave, color='blue', lw=3, alpha=1.0, zorder=3)
+
+                canvas.draw_idle()
+
+            # Create and store animation to avoid garbage collection
+            self._current_anim = FuncAnimation(ax.figure, update, frames=len(steps), interval=1200, repeat=False)
             canvas.draw_idle()
 
         anim_btn = tk.Button(self.detail_window, text="Animate Paths", command=start_animation, bg="#2196F3", fg="white", font=("Arial", 10, "bold"))
@@ -2056,7 +2131,14 @@ class SimpleRobotGUI:
             print(f"Sending {command_type} command to robot...")
             self.root.after(0, lambda: self.status_text.set(f"Sending {command_type} command to robot..."))
             
-            success = self.drawer.robot.send_start()  # This automatically chooses START vs START_CORNER
+            # If dual-arm mode is enabled, send the START command to both robot sockets
+            if self.dual_arm_mode.get():
+                # _send_command supports a 'target' argument; using 'both' will send to both sockets
+                print("Dual-arm mode enabled - sending START to both robots (may take up to 90s)...")
+                success = self.drawer.robot._send_command("START\n", wait_response=True, timeout=self.drawer.robot.START_COMMAND_TIMEOUT, target='both')
+            else:
+                success = self.drawer.robot.send_start()  # This automatically chooses START vs START_CORNER
+
             if not success:
                 print(f"Robot did not respond with OK to {command_type} command")
                 raise Exception(f"Failed to receive OK response from robot after {command_type} command. Robot may not be ready.")
@@ -2085,7 +2167,11 @@ class SimpleRobotGUI:
                         self.root.after(0, self._update_progress, points_sent, total_points, percent)
                 
                 # Start the optimized drawing process with progress tracking
-                success = self.drawer.draw(progress_callback=progress_callback)
+                if self.dual_arm_mode.get():
+                    print("Starting dual-arm drawing flow (draw_dual)")
+                    success = self.drawer.draw_dual(progress_callback=progress_callback)
+                else:
+                    success = self.drawer.draw(progress_callback=progress_callback)
                 
                 if success:
                     print("Robot drawing completed!")
