@@ -494,7 +494,7 @@ class SimpleRobotGUI:
         buffer_frame.pack(fill=tk.X, pady=(8, 0))
         tk.Label(buffer_frame, text="Forbidden buffer (mm):", font=('Arial', 10, 'bold'), bg='white').pack(side=tk.LEFT)
         self.forbidden_buffer_var = tk.IntVar(value=40)
-        buffer_spin = tk.Spinbox(buffer_frame, from_=0, to=200, width=5, textvariable=self.forbidden_buffer_var, font=('Arial', 9), command=lambda: None)
+        buffer_spin = tk.Spinbox(buffer_frame, from_=0, to=200, width=5, textvariable=self.forbidden_buffer_var, font=('Arial', 9), command=lambda: self._on_forbidden_buffer_change())
         buffer_spin.pack(side=tk.LEFT, padx=(8, 5))
         tk.Label(buffer_frame, text="mm", font=('Arial', 9), bg='white').pack(side=tk.LEFT)
     
@@ -970,6 +970,11 @@ class SimpleRobotGUI:
         if current_path:
             self.status_text.set("Quality changed - reprocessing...")
             self.auto_process_image()
+            try:
+                if hasattr(self.drawer, 'drawing_points') and self.drawer.drawing_points:
+                    self._regenerate_forbidden_zones()
+            except Exception:
+                pass
     
     def on_tsp_change(self):
         """Handle TSP optimization setting change"""
@@ -1015,6 +1020,11 @@ class SimpleRobotGUI:
             tsp_status = "enabled" if self.enable_tsp.get() else "disabled"
             self.status_text.set(f"TSP optimization {tsp_status} - reprocessing...")
             self.auto_process_image()
+            try:
+                if hasattr(self.drawer, 'drawing_points') and self.drawer.drawing_points:
+                    self._regenerate_forbidden_zones()
+            except Exception:
+                pass
     
     def on_batch_mode_change(self):
         """Handle batch mode setting change"""
@@ -1053,6 +1063,11 @@ class SimpleRobotGUI:
             if current_path:
                 self.status_text.set(f"Coordinate system changed to {origin_text} - reprocessing...")
                 self.auto_process_image()
+                try:
+                    if hasattr(self.drawer, 'drawing_points') and self.drawer.drawing_points:
+                        self._regenerate_forbidden_zones()
+                except Exception:
+                    pass
     
     def on_detection_method_change(self):
         """Handle detection method setting change"""
@@ -1071,6 +1086,11 @@ class SimpleRobotGUI:
             method_name = method_names.get(self.detection_method.get(), "Unknown")
             self.status_text.set(f"Detection method changed to {method_name} - reprocessing...")
             self.auto_process_image()
+            try:
+                if hasattr(self.drawer, 'drawing_points') and self.drawer.drawing_points:
+                    self._regenerate_forbidden_zones()
+            except Exception:
+                pass
     
     def on_logo_setting_change(self):
         """Handle logo setting changes"""
@@ -1090,6 +1110,11 @@ class SimpleRobotGUI:
         
         if current_path:
             self.auto_process_image()
+            try:
+                if hasattr(self.drawer, 'drawing_points') and self.drawer.drawing_points:
+                    self._regenerate_forbidden_zones()
+            except Exception:
+                pass
     
     def on_dimensions_change(self):
         """Handle drawing dimensions change"""
@@ -1137,6 +1162,11 @@ class SimpleRobotGUI:
         if current_path:
             self.status_text.set(f"Drawing area changed to {self.max_x.get()}x{self.max_y.get()}mm - reprocessing...")
             self.auto_process_image()
+            try:
+                if hasattr(self.drawer, 'drawing_points') and self.drawer.drawing_points:
+                    self._regenerate_forbidden_zones()
+            except Exception:
+                pass
     
     def set_dimension_preset(self, width, height):
         """Set dimensions to a preset value"""
@@ -1170,6 +1200,11 @@ class SimpleRobotGUI:
         if current_path:
             self.status_text.set(f"Margins changed to {self.margin_x.get()}x{self.margin_y.get()}mm - reprocessing...")
             self.auto_process_image()
+            try:
+                if hasattr(self.drawer, 'drawing_points') and self.drawer.drawing_points:
+                    self._regenerate_forbidden_zones()
+            except Exception:
+                pass
     
     def _recreate_drawer_with_margins(self):
         """Recreate robot drawer with new margin settings while preserving connection"""
@@ -1976,6 +2011,57 @@ class SimpleRobotGUI:
         
         # Update robot path preview
         self.update_robot_preview()
+        # Regenerate forbidden zones after a successful processing step
+        try:
+            self._regenerate_forbidden_zones()
+        except Exception:
+            pass
+
+    def _on_forbidden_buffer_change(self):
+        """Called when the forbidden buffer Spinbox changes value."""
+        try:
+            if hasattr(self.drawer, 'drawing_points') and self.drawer.drawing_points:
+                self._regenerate_forbidden_zones()
+        except Exception:
+            pass
+
+    def _regenerate_forbidden_zones(self):
+        """Regenerate master/slave assignment steps and forbidden polygons from current drawing points.
+
+        Stores the result in `self.forbidden_steps` as a list of dicts with keys:
+        remaining, master_role, master, slave, forbidden
+        """
+        try:
+            from coordinate_transformer import master_slave_assign_contours
+        except Exception:
+            return
+
+        contours = getattr(self.drawer, 'drawing_points', None)
+        if not contours:
+            self.forbidden_steps = []
+            return
+
+        steps = []
+        remaining = contours[:]
+        master_role = 'right'
+        buf_mm = int(self.forbidden_buffer_var.get()) if hasattr(self, 'forbidden_buffer_var') else 40
+        while remaining:
+            result = master_slave_assign_contours(remaining, master=master_role, buffer_radius=buf_mm)
+            if len(result) == 5:
+                master, slave, rest, unassigned, forbidden_poly = result
+            else:
+                master, slave, rest, unassigned = result
+                forbidden_poly = None
+            steps.append({'remaining': remaining[:], 'master_role': master_role, 'master': master, 'slave': slave, 'forbidden': forbidden_poly})
+            remaining = rest
+            master_role = 'left' if master_role == 'right' else 'right'
+
+        self.forbidden_steps = steps
+        # small visual/status hint
+        try:
+            self.status_text.set(f"Forbidden zones regenerated ({len(steps)} steps)")
+        except Exception:
+            pass
     
     def _process_failed(self):
         """Handle processing failure"""
