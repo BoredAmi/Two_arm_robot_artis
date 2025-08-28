@@ -19,6 +19,7 @@ Version: 1.0
 """
 import socket
 import time
+import math
 
 
 class RobotController:
@@ -53,7 +54,7 @@ class RobotController:
         results = {'right': True, 'left': True}
 
         def do_action_list(actions, target):
-            for action in actions:
+            for idx, action in enumerate(actions):
                 if not results['right'] if target == 'right' else not results['left']:
                     break
                 ok = True
@@ -76,6 +77,20 @@ class RobotController:
                                 start_x, start_y = contour[0]
 
                                 # Move to contour start
+                                # Wait for peer retreat to complete (time-based)
+                                try:
+                                    self._wait_for_peer_retreat(target)
+                                except Exception:
+                                    pass
+                                # If geometry-based collision avoidance is enabled, poll until safe
+                                try:
+                                    start_pt = (start_x, start_y)
+                                    waited = 0.0
+                                    while self._conflicts_with_peer(target, start_pt) and waited < float(self.collision_wait_timeout):
+                                        time.sleep(float(self.collision_check_interval))
+                                        waited += float(self.collision_check_interval)
+                                except Exception:
+                                    pass
                                 # Use two-step transition to start (offset then real start)
                                 if not self._transition_to_start(start_x, start_y, target=target):
                                     print(f"[{target}] Failed to transition to start of contour")
@@ -97,7 +112,17 @@ class RobotController:
                                             ok = False
                                         else:
                                             # Notify robot between contours so RAPID can perform a retreat/back-off
-                                            self.send_between_command(target=target)
+                                            # Determine next contour start from the actions list if available
+                                            next_start = None
+                                            try:
+                                                if idx + 1 < len(actions):
+                                                    nxt = actions[idx + 1]
+                                                    if nxt and nxt != 'wait':
+                                                        if isinstance(nxt, (list, tuple)) and len(nxt) > 0:
+                                                            next_start = nxt[0]
+                                            except Exception:
+                                                next_start = None
+                                            self.send_between_command(target=target, next_start=next_start)
                                         time.sleep(0.02)
 
                             else:
@@ -105,6 +130,18 @@ class RobotController:
                                 start_x, start_y = contour[0]
 
                                 # Transition to start with side-specific X offset
+                                try:
+                                    self._wait_for_peer_retreat(target)
+                                except Exception:
+                                    pass
+                                try:
+                                    start_pt = (start_x, start_y)
+                                    waited = 0.0
+                                    while self._conflicts_with_peer(target, start_pt) and waited < float(self.collision_wait_timeout):
+                                        time.sleep(float(self.collision_check_interval))
+                                        waited += float(self.collision_check_interval)
+                                except Exception:
+                                    pass
                                 if not self._transition_to_start(start_x, start_y, target=target):
                                     print(f"[{target}] Failed to transition to start of contour")
                                     ok = False
@@ -126,7 +163,16 @@ class RobotController:
                                             ok = False
                                         else:
                                             # Send between-contour command to allow robot-side retreat
-                                            self.send_between_command(target=target)
+                                            next_start = None
+                                            try:
+                                                if idx + 1 < len(actions):
+                                                    nxt = actions[idx + 1]
+                                                    if nxt and nxt != 'wait':
+                                                        if isinstance(nxt, (list, tuple)) and len(nxt) > 0:
+                                                            next_start = nxt[0]
+                                            except Exception:
+                                                next_start = None
+                                            self.send_between_command(target=target, next_start=next_start)
                                         time.sleep(move_delay)
 
                     except Exception as e:
@@ -193,6 +239,8 @@ class RobotController:
     RESPONSE_TIMEOUT = 20.0
     START_COMMAND_TIMEOUT = 90.0  # Extended timeout for START command (robot initialization)
     MAX_RETRIES = 3
+    # Default pause after robot reports RETREAT/OK to allow physical retreat (seconds)
+    DEFAULT_POST_RETREAT_DELAY = 0.7
     
     def __init__(self, ip=DEFAULT_IP, port=DEFAULT_PORT):
         """
@@ -210,13 +258,106 @@ class RobotController:
         self.use_center_origin = True  # Default to center-based coordinates (current system)
         # Transition offset in X direction (positive moves to +X, negative to -X)
         self.transition_offset_x = self.DEFAULT_TRANSITION_OFFSET_X
-
+        # Track last known robot positions for each target to enable safer routing
+        self.current_position = {'right': None, 'left': None}
+        # Workspace bounds (mm) - can be tuned via set_bounds
+        self.bounds = {'xmin': -1000.0, 'xmax': 1000.0, 'ymin': -1000.0, 'ymax': 1000.0}
+        # Pause after RETREAT/OK to allow physical retreat before other moves
+        self.post_retreat_delay = self.DEFAULT_POST_RETREAT_DELAY
+        # Track when an arm finished its retreat/positioning (seconds since epoch)
+        self.last_retreat_done = {'right': 0.0, 'left': 0.0}
     def set_transition_offset_x(self, mm):
         """Set the transition X offset (mm). Positive values move toward +X for left arm, negative for right arm."""
         try:
             self.transition_offset_x = float(mm)
         except Exception:
             pass
+
+    def set_bounds(self, xmin, xmax, ymin, ymax):
+        """Set workspace bounds (mm) used to clamp intermediate safety moves."""
+        try:
+            self.bounds['xmin'] = float(xmin)
+            self.bounds['xmax'] = float(xmax)
+            self.bounds['ymin'] = float(ymin)
+            self.bounds['ymax'] = float(ymax)
+        except Exception:
+            pass
+
+    def set_collision_radius(self, mm):
+        try:
+            self.collision_radius = float(mm)
+        except Exception:
+            pass
+
+    def set_collision_wait_timeout(self, seconds):
+        try:
+            self.collision_wait_timeout = float(seconds)
+        except Exception:
+            pass
+
+    def _compute_intermediate_point(self, start_xy, target='right'):
+        """Return the intermediate (post-retreat) X-offset point for a given start (x,y)."""
+        try:
+            nx, ny = start_xy
+            off = float(self.transition_offset_x)
+        except Exception:
+            return None
+        if target == 'right':
+            x_off = -abs(off)
+        else:
+            x_off = abs(off)
+        interm_x = nx + x_off
+        interm_y = ny
+        return self._clamp_to_bounds(interm_x, interm_y)
+
+    def _conflicts_with_peer(self, target, start_xy):
+        """Return True if the computed intermediate point conflicts with peer current position."""
+        try:
+            peer = 'left' if target == 'right' else 'right'
+            peer_pos = self.current_position.get(peer)
+            if not peer_pos:
+                return False
+            interm = self._compute_intermediate_point(start_xy, target=target)
+            if interm is None:
+                return False
+            dx = interm[0] - float(peer_pos[0])
+            dy = interm[1] - float(peer_pos[1])
+            d = math.hypot(dx, dy)
+            return d <= float(self.collision_radius)
+        except Exception:
+            return False
+
+    def set_post_retreat_delay(self, seconds):
+        """Set extra safety pause (seconds) after RETREAT OK before next moves."""
+        try:
+            self.post_retreat_delay = float(seconds)
+        except Exception:
+            pass
+
+    def _wait_for_peer_retreat(self, target):
+        """If peer arm recently requested retreat, wait until its post_retreat_delay has elapsed."""
+        try:
+            peer = 'left' if target == 'right' else 'right'
+            ts = float(self.last_retreat_done.get(peer, 0.0) or 0.0)
+            if ts <= 0:
+                return
+            safe_time = ts + float(getattr(self, 'post_retreat_delay', 0.0))
+            now = time.time()
+            wait = safe_time - now
+            if wait > 0:
+                print(f"[{target}] Waiting for peer {peer} retreat: sleeping {wait:.2f}s")
+                time.sleep(wait)
+        except Exception:
+            return
+
+    def _clamp_to_bounds(self, x, y):
+        """Clamp (x,y) to configured workspace bounds and return the clamped tuple."""
+        try:
+            cx = max(self.bounds['xmin'], min(self.bounds['xmax'], float(x)))
+            cy = max(self.bounds['ymin'], min(self.bounds['ymax'], float(y)))
+            return (cx, cy)
+        except Exception:
+            return (x, y)
 
     def _transition_to_start(self, start_x, start_y, target='right'):
         """Perform a two-step transition: move to an X-offset point, then to the true start.
@@ -276,7 +417,19 @@ class RobotController:
     def send_move(self, x, y, wait_response=True, target='right'):
         """Send movement command to robot with coordinate system awareness"""
         cmd = f"MOVE,{x:.2f},{y:.2f}\n"
-        return self._send_command(cmd, wait_response, target=target)
+        ok = self._send_command(cmd, wait_response, target=target)
+        # Update last-known position for the target on success
+        try:
+            if ok:
+                if target not in ('right', 'left'):
+                    # If caller used 'both' treat it as right for tracking
+                    tkey = 'right'
+                else:
+                    tkey = target
+                self.current_position[tkey] = (float(x), float(y))
+        except Exception:
+            pass
+        return ok
     
     def send_batch_moves(self, points, batch_size=3, max_batch_size=6, target='right'):
         """
@@ -370,17 +523,89 @@ class RobotController:
         """Send pen up command (lift drawing tool)"""
         return self._send_command("PEN_UP\n", target=target)
 
-    def send_between_command(self, cmd=None, target='right', wait_response=True, timeout=None):
+    def send_between_command(self, cmd=None, target='right', wait_response=True, timeout=None, next_start=None):
         """Send a simple between-contour command for the robot to interpret.
 
         By default this sends "RETREAT\n". The robot RAPID/task should implement
         handling for this command (e.g. local back-off or move-to-edge).
 
-        This helper forwards wait_response and timeout to _send_command so the
-        caller can ensure the Python side blocks until the robot replies OK.
+        If `next_start` is provided as a tuple (x, y) this helper will, after
+        receiving the robot ACK for the between-command, issue a MOVE to the
+        intermediate point formed by (next_start_x +/- transition_offset_x, next_start_y).
+
+        This puts the robot at the correct Y of the next contour while keeping
+        the X offset (back-off) in the side-respected direction.
         """
         command = cmd if cmd is not None else "RETREAT\n"
-        return self._send_command(command, wait_response=wait_response, timeout=timeout, target=target)
+        ok = self._send_command(command, wait_response=wait_response, timeout=timeout, target=target)
+
+        # As soon as the robot ACKs the RETREAT command, record the timestamp so
+        # peer threads can observe that a retreat was requested and wait.
+        try:
+            if ok and target in ('right', 'left'):
+                self.last_retreat_done[target] = time.time()
+        except Exception:
+            pass
+
+        # If the robot acknowledged and we were given a next contour start,
+        # move to the intermediate offset point (x +/- offset, y) using a safer two-step route.
+        if ok and next_start is not None:
+            try:
+                nx, ny = next_start
+                try:
+                    off = float(self.transition_offset_x)
+                except Exception:
+                    off = float(self.DEFAULT_TRANSITION_OFFSET_X)
+
+                if target == 'right':
+                    x_off = -abs(off)
+                else:
+                    x_off = abs(off)
+
+                interm_x = nx + x_off
+                interm_y = ny
+
+                # Clamp intermediate target to workspace bounds
+                interm_x, interm_y = self._clamp_to_bounds(interm_x, interm_y)
+
+                # Attempt to use current known position for safer axis-separated routing
+                cur = None
+                try:
+                    cur = self.current_position.get(target)
+                except Exception:
+                    cur = None
+
+                if cur is None:
+                    # No known current position - fallback to direct intermediate move
+                    if not self.send_move(interm_x, interm_y, wait_response=True, target=target):
+                        print(f"[{target}] Failed to move to intermediate post-retreat point ({interm_x:.1f}, {interm_y:.1f})")
+                        return False
+                else:
+                    cur_x, cur_y = cur
+                    # First move in Y to next contour Y while keeping current X (reduces diagonal sweeps)
+                    step1_x, step1_y = self._clamp_to_bounds(cur_x, interm_y)
+                    if not self.send_move(step1_x, step1_y, wait_response=True, target=target):
+                        print(f"[{target}] Failed safety step to ({step1_x:.1f}, {step1_y:.1f})")
+                        return False
+                    # Then move in X to the intermediate offset X at correct Y
+                    step2_x, step2_y = interm_x, interm_y
+                    if not self.send_move(step2_x, step2_y, wait_response=True, target=target):
+                        print(f"[{target}] Failed to move to intermediate post-retreat point ({step2_x:.1f}, {step2_y:.1f})")
+                        return False
+            except Exception as e:
+                print(f"Error handling next_start in send_between_command: {e}")
+                return False
+
+    # (timestamp already set on ACK above)
+
+        # After OK and any intermediate moves, give robot a moment to physically retreat
+        try:
+            if ok and getattr(self, 'post_retreat_delay', 0):
+                time.sleep(float(self.post_retreat_delay))
+        except Exception:
+            pass
+
+        return ok
 
     def send_pen_down(self, target='right'):
         """Send pen down command (lower drawing tool)"""
@@ -634,7 +859,11 @@ class RobotController:
             # Lift pen after finishing this contour
             self.send_pen_up()
             # Send between-contour command so robot can retreat or reposition as implemented on the robot
-            self.send_between_command()
+            # If there's a next contour, move to its Y with side offset after retreat
+            next_start = None
+            if contour_idx + 1 < len(drawing_points) and len(drawing_points[contour_idx + 1]) > 0:
+                next_start = drawing_points[contour_idx + 1][0]
+            self.send_between_command(next_start=next_start)
             time.sleep(move_delay)
         
         # Send stop command when done
@@ -718,6 +947,12 @@ class RobotController:
             # Lift pen after finishing this contour
             self.send_pen_up()
             time.sleep(0.02)  # Ultra-minimal delay between contours
+            # After retreat, move to next contour's Y with X offset if available
+            next_start = None
+            if contour_idx + 1 < len(drawing_points) and len(drawing_points[contour_idx + 1]) > 0:
+                next_start = drawing_points[contour_idx + 1][0]
+            # Send between-contour command which will also move to intermediate point if next_start provided
+            self.send_between_command(next_start=next_start)
         
         # Send stop command when done
         self.send_stop()
