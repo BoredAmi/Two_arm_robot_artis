@@ -10,8 +10,7 @@ client = OpenAI(api_key="sk-proj-keTzz-AQn6LKd7WNp_SVJGUR8xwJc6i_k4NOLBN9Ru9FG7d
 # Predefined prompts for different styles
 PROMPTS = {
     "minimalist": """
-        Create a minimalist line art portrait in black and white. Use clean, continuous outlines with no shading or color. Depict all key facial features in detail, including eyes, eyebrows, nose, lips, and hair, with clear and expressive lines. Emphasize the structure and expression of the face, but avoid sketchiness or extra hatching. The background should be plain white. The style should be simple, modern, and suitable for robotic drawing, similar to a detailed coloring book.
-    """,
+        Convert the input into a minimalist black-and-white line art portrait. Use only solid, continuous black outlines on a plain white background. Avoid shading, gradients, textures, or colors. Depict all essential facial features (eyes, eyebrows, nose, lips, hair if visible) with uniform stroke thickness and closed contours. The lines should be smooth, bold, and clean, suitable for binary thresholding and contour extraction. The style should be modern, simple, and precise, like a coloring book illustration or technical outline drawing.    """,
     "caricature": """
         Create a humorous caricature portrait in black and white line art. Exaggerate facial features in a playful, cartoon-like manner with oversized distinctive features. Use clean, bold outlines with no shading, emphasizing the subject's most recognizable characteristics in an amusing but respectful way. Plain white background.
     """
