@@ -33,6 +33,8 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 
+from voice_commands import VoiceCommandListener
+
 from robot_drawer import RobotDrawer
 
 
@@ -52,10 +54,18 @@ class SimpleRobotGUI:
     DEFAULT_ROBOT_PORT = "1025"
     
     # UI dimensions and colors
-    WINDOW_WIDTH = 900
-    WINDOW_HEIGHT = 700
-    PREVIEW_WIDTH = 300
-    PREVIEW_HEIGHT = 200
+    WINDOW_WIDTH = 1100
+    WINDOW_HEIGHT = 800
+    PREVIEW_WIDTH = 520
+    PREVIEW_HEIGHT = 520
+
+    # Button fonts for larger UI elements
+    BUTTON_FONT = ('Arial', 12, 'bold')
+    SMALL_BUTTON_FONT = ('Arial', 11)
+    # Uniform button sizing (width in chars, height via padding)
+    BUTTON_WIDTH = 16
+    BUTTON_PADX = 20
+    BUTTON_PADY = 12
     
     # Color scheme
     COLORS = {
@@ -82,6 +92,16 @@ class SimpleRobotGUI:
         self.root.title("Robot Drawing System")
         self.root.geometry(f"{self.WINDOW_WIDTH}x{self.WINDOW_HEIGHT}")
         self.root.configure(bg=self.COLORS['background'])
+
+        # Create a lightweight placeholder for legacy callers that expect self.file_label
+        # The real `self.file_label` will be created in `create_image_section`; this avoids
+        # attribute errors if other routines attempt to update it before the setup UI exists.
+        try:
+            if not hasattr(self, 'file_label'):
+                self.file_label = tk.Label(self.root, text="No image selected", bg=self.COLORS['section_bg'])
+        except Exception:
+            # If Tk isn't fully ready, keep a None fallback
+            self.file_label = None
 
         # Dual-arm mode state (must be after tk.Tk() and self is defined)
         self.dual_arm_mode = tk.BooleanVar(master=self.root, value=False)
@@ -111,9 +131,54 @@ class SimpleRobotGUI:
             self.margin_x.set(self.config["margin_x"])
         if self.config.get("margin_y") is not None:
             self.margin_y.set(self.config["margin_y"])
+        # Restore additional UI settings (quality, detection, modes, brush, dual-arm)
+        if self.config.get("quality_var") is not None:
+            try:
+                self.quality_var.set(self.config["quality_var"])
+            except Exception:
+                pass
+        if self.config.get("detection_method") is not None:
+            try:
+                self.detection_method.set(self.config["detection_method"])
+            except Exception:
+                pass
+        if self.config.get("enable_tsp") is not None:
+            try:
+                self.enable_tsp.set(self.config["enable_tsp"])
+            except Exception:
+                pass
+        if self.config.get("use_batch_mode") is not None:
+            try:
+                self.use_batch_mode.set(self.config["use_batch_mode"])
+            except Exception:
+                pass
+        if self.config.get("drawing_mode") is not None:
+            try:
+                self.drawing_mode.set(self.config["drawing_mode"])
+            except Exception:
+                pass
+        if self.config.get("brush_size") is not None:
+            try:
+                self.brush_size.set(self.config["brush_size"])
+            except Exception:
+                pass
+        if self.config.get("dual_arm_mode") is not None:
+            try:
+                # stored as bool
+                self.dual_arm_mode.set(self.config["dual_arm_mode"])
+            except Exception:
+                pass
 
-        # Create the user interface
+        # Create the user interface (compact main view). Full setup is in a separate window.
         self.create_simple_interface()
+
+        # Start voice listener (background thread). Calls into _on_voice_command -> main thread dispatcher.
+        try:
+            self._voice_listener = VoiceCommandListener(callback=self._on_voice_command)
+            self._voice_listener.start()
+        except Exception:
+            # If voice model not available or sound device missing, continue without voice control
+            self._voice_listener = None
 
         # Restore forbidden buffer from config (created during UI setup)
         if self.config.get("forbidden_buffer") is not None:
@@ -153,6 +218,35 @@ class SimpleRobotGUI:
                 "margin_x": self.margin_x.get(),
                 "margin_y": self.margin_y.get()
             }
+            # Additional UI settings to persist (but do NOT save image_path)
+            try:
+                config["quality_var"] = self.quality_var.get()
+            except Exception:
+                config["quality_var"] = "high"
+            try:
+                config["detection_method"] = self.detection_method.get()
+            except Exception:
+                config["detection_method"] = "threshold"
+            try:
+                config["enable_tsp"] = bool(self.enable_tsp.get())
+            except Exception:
+                config["enable_tsp"] = True
+            try:
+                config["use_batch_mode"] = bool(self.use_batch_mode.get())
+            except Exception:
+                config["use_batch_mode"] = True
+            try:
+                config["drawing_mode"] = self.drawing_mode.get()
+            except Exception:
+                config["drawing_mode"] = "load"
+            try:
+                config["brush_size"] = int(self.brush_size.get())
+            except Exception:
+                config["brush_size"] = 3
+            try:
+                config["dual_arm_mode"] = bool(self.dual_arm_mode.get())
+            except Exception:
+                config["dual_arm_mode"] = False
             # Persist forbidden buffer if present
             try:
                 config["forbidden_buffer"] = int(self.forbidden_buffer_var.get()) if hasattr(self, 'forbidden_buffer_var') else 40
@@ -220,11 +314,27 @@ class SimpleRobotGUI:
                               bg=self.COLORS['background'], fg='#333')
         title_label.pack(pady=(0, 30))
         
-        # Create main workflow sections
-        self.create_step_section(main_frame, "1. Choose Your Image or Draw", self.create_image_section)
+        # Compact top row: show selected file, Browse and Setup buttons
+        top_controls = tk.Frame(main_frame, bg=self.COLORS['background'])
+        top_controls.pack(fill=tk.X, pady=(0, 10))
+
+        # Compact file label shown on main window
+        self.file_label_main = tk.Label(top_controls, text="No image selected",
+            font=('Arial', 10), bg=self.COLORS['background'], fg='#666', anchor='w')
+        self.file_label_main.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        browse_btn_main = tk.Button(top_controls, text="Browse Images", command=self.browse_image,
+            bg='#4CAF50', fg='white', font=self.BUTTON_FONT, relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
+        browse_btn_main.pack(side=tk.RIGHT, padx=(10, 0))
+
+        setup_btn = tk.Button(top_controls, text="Setup...", command=self.open_setup_window,
+                  bg='#607D8B', fg='white', font=self.BUTTON_FONT, relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=12)
+        setup_btn.pack(side=tk.RIGHT)
+
+        # Create main workflow sections (only 2 and 3 visible by default)
         self.create_step_section(main_frame, "2. Connect to Robot", self.create_connection_section)
         self.create_step_section(main_frame, "3. Preview & Send to Robot", self.create_action_section)
-        
+
         # Status bar at bottom
         self.create_status_bar(main_frame)
     
@@ -287,9 +397,9 @@ class SimpleRobotGUI:
         
         # Browse button
         browse_btn = tk.Button(self.file_section, text="Browse Images", 
-                              command=self.browse_image,
-                              bg='#4CAF50', fg='white', font=('Arial', 10, 'bold'),
-                              relief='flat', padx=20, pady=8, cursor='hand2')
+                command=self.browse_image,
+                bg='#4CAF50', fg='white', font=self.BUTTON_FONT,
+                relief='flat', padx=18, pady=12, cursor='hand2')
         browse_btn.pack(side=tk.RIGHT, padx=(10, 0))
         
         # Drawing section
@@ -301,16 +411,16 @@ class SimpleRobotGUI:
         draw_controls.pack()
         
         draw_btn = tk.Button(draw_controls, text="🎨 Open Drawing Canvas", 
-                            command=self.open_drawing_window,
-                            bg='#9C27B0', fg='white', font=('Arial', 11, 'bold'),
-                            relief='flat', padx=25, pady=10, cursor='hand2')
+                command=self.open_drawing_window,
+                bg='#9C27B0', fg='white', font=self.BUTTON_FONT,
+                relief='flat', padx=18, pady=12, cursor='hand2')
         draw_btn.pack(side=tk.LEFT, padx=(0, 10))
         
         # Templates button
         templates_btn = tk.Button(draw_controls, text="📋 Templates", 
-                                 command=self.show_templates,
-                                 bg='#607D8B', fg='white', font=('Arial', 10, 'bold'),
-                                 relief='flat', padx=15, pady=10, cursor='hand2')
+                command=self.show_templates,
+                bg='#607D8B', fg='white', font=self.SMALL_BUTTON_FONT,
+                relief='flat', padx=18, pady=12, cursor='hand2')
         templates_btn.pack(side=tk.LEFT)
         
         # Initially hide draw section
@@ -522,22 +632,22 @@ class SimpleRobotGUI:
         
         # Connect button
         self.connect_btn = tk.Button(conn_frame, text="Connect", 
-                                    command=self.toggle_connection,
-                                    bg='#FF9800', fg='white', font=('Arial', 10, 'bold'),
-                                    relief='flat', padx=20, pady=6, cursor='hand2')
+            command=self.toggle_connection,
+            bg='#FF9800', fg='white', font=self.BUTTON_FONT,
+            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2')
         self.connect_btn.pack(side=tk.RIGHT, padx=(0, 10))
         
         # Get Picture button
         self.get_pic_btn = tk.Button(conn_frame, text="📷 Get Picture", 
-                                    command=self.get_picture_from_robot,
-                                    bg='#9C27B0', fg='white', font=('Arial', 10, 'bold'),
-                                    relief='flat', padx=15, pady=6, cursor='hand2',
-                                    state='normal')
+            command=self.get_picture_from_robot,
+            bg='#9C27B0', fg='white', font=self.BUTTON_FONT,
+            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2',
+            state='normal')
         self.get_pic_btn.pack(side=tk.RIGHT)
         
         # Connection status
         self.conn_status_label = tk.Label(parent, text="⚫ Not Connected", 
-                                         font=('Arial', 10), bg='white', fg='#f44336')
+                         font=('Arial', 10), bg='white', fg='#f44336')
         self.conn_status_label.pack(anchor='w')
     
     def create_action_section(self, parent):
@@ -563,44 +673,43 @@ class SimpleRobotGUI:
             bg='white').pack(pady=(0, 5))
 
         self.original_canvas = tk.Canvas(left_panel, bg='#f8f8f8', 
-                        width=300, height=200, relief='solid', bd=1)
+                        width=self.PREVIEW_WIDTH, height=self.PREVIEW_HEIGHT, relief='solid', bd=1)
         self.original_canvas.pack()
-        self.original_canvas.create_text(150, 100, text="No image loaded", 
+        # Centered placeholder text; coordinates will be adjusted in load_preview_image
+        self.original_canvas.create_text(self.PREVIEW_WIDTH//2, self.PREVIEW_HEIGHT//2, text="No image loaded", 
                         font=('Arial', 10), fill='#999')
 
         # Middle panel content (buttons and progress)
-    # ...existing code...
-
         # Face Drawing button
         self.face_drawing_btn = tk.Button(middle_panel, text="👤 Face\nDrawing", 
-                        command=self.convert_to_face_drawing,
-                        bg='#E91E63', fg='white', font=('Arial', 9, 'bold'),
-                        relief='flat', padx=15, pady=10, cursor='hand2',
-                        state='disabled', width=12)
+            command=self.convert_to_face_drawing,
+            bg='#E91E63', fg='white', font=self.BUTTON_FONT,
+            relief='flat', padx=18, pady=12, cursor='hand2',
+            state='disabled', width=14)
         self.face_drawing_btn.pack(pady=(10, 5))
 
         # Caricature button
         self.caricature_btn = tk.Button(middle_panel, text="🎭 Caricature", 
-                        command=self.convert_to_caricature,
-                        bg='#FF9800', fg='white', font=('Arial', 9, 'bold'),
-                        relief='flat', padx=15, pady=10, cursor='hand2',
-                        state='disabled', width=12)
+            command=self.convert_to_caricature,
+            bg='#FF9800', fg='white', font=self.BUTTON_FONT,
+            relief='flat', padx=18, pady=12, cursor='hand2',
+            state='disabled', width=14)
         self.caricature_btn.pack(pady=5)
 
         # Draw button
         self.draw_btn = tk.Button(middle_panel, text="🎨 Start\nDrawing", 
-                    command=self.start_robot_drawing,
-                    bg='#4CAF50', fg='white', font=('Arial', 9, 'bold'),
-                    relief='flat', padx=15, pady=10, cursor='hand2',
-                    state='disabled', width=12)
+            command=self.start_robot_drawing,
+            bg='#4CAF50', fg='white', font=self.BUTTON_FONT,
+            relief='flat', padx=18, pady=12, cursor='hand2',
+            state='disabled', width=14)
         self.draw_btn.pack(pady=5)
 
         # Zoom viewer button
         zoom_btn = tk.Button(middle_panel, text="🔍 Zoom\nViewer",
-                    command=self.open_detailed_path_window,
-                    bg='#607D8B', fg='white', font=('Arial', 9, 'bold'),
-                    relief='flat', padx=15, pady=10, cursor='hand2',
-                    width=12)
+            command=self.open_detailed_path_window,
+            bg='#607D8B', fg='white', font=self.SMALL_BUTTON_FONT,
+            relief='flat', padx=18, pady=12, cursor='hand2',
+            width=14)
         zoom_btn.pack(pady=5)
         
         # Emergency stop button (initially hidden)
@@ -615,19 +724,22 @@ class SimpleRobotGUI:
         tk.Label(right_panel, text="Robot Drawing Path", font=('Arial', 10, 'bold'), 
             bg='white').pack(pady=(0, 5))
 
-        # Matplotlib figure for robot path with dynamic coordinate system
-        # Calculate figure size to match drawing area aspect ratio
-        drawing_aspect_ratio = self.max_x.get() / self.max_y.get()
-        fig_width = 4.0
-        fig_height = fig_width / drawing_aspect_ratio
-        # Limit height to reasonable range
-        fig_height = min(4.0, max(2.0, fig_height))
-        
-        self.fig = Figure(figsize=(fig_width, fig_height), dpi=75, facecolor='white')
+        # Matplotlib figure for robot path sized to match the original image preview
+        # Convert preview pixel dimensions to inches for the Figure (dpi-based)
+        dpi = 100
+        fig_width = self.PREVIEW_WIDTH / dpi
+        fig_height = self.PREVIEW_HEIGHT / dpi
+
+        self.fig = Figure(figsize=(fig_width, fig_height), dpi=dpi, facecolor='white')
         self.ax = self.fig.add_subplot(111)
-        
+
         self.canvas_widget = FigureCanvasTkAgg(self.fig, right_panel)
         self.canvas_widget.get_tk_widget().pack()
+        # Ensure the Tk widget matches the preview pixel size
+        try:
+            self.canvas_widget.get_tk_widget().config(width=self.PREVIEW_WIDTH, height=self.PREVIEW_HEIGHT)
+        except Exception:
+            pass
         
         # Initialize the preview with correct coordinate system
         self.update_robot_preview()
@@ -928,32 +1040,133 @@ class SimpleRobotGUI:
         self.progress_indicator = tk.Label(status_frame, text="", 
                                           font=('Arial', 9), bg='#e0e0e0')
         self.progress_indicator.pack(side=tk.RIGHT, padx=10)
+
+    def _on_voice_command(self, cmd):
+        """Internal callback from voice listener (worker thread).
+
+        Re-dispatch to Tk main thread using root.after.
+        """
+        try:
+            if hasattr(self, 'root') and self.root:
+                self.root.after(0, lambda: self._handle_command(cmd))
+        except Exception:
+            pass
+
+    def _handle_command(self, cmd):
+        """Map recognized voice commands (strings) to GUI actions.
+
+        Edit mappings here if you want different behavior.
+        """
+        cmd = (cmd or '').lower().strip()
+        if cmd == 'połącz':
+            # Polish: connect
+            try:
+                self.toggle_connection()
+            except Exception:
+                pass
+        elif cmd == 'start':
+            try:
+                self.start_robot_drawing()
+            except Exception:
+                pass
+        elif cmd == 'stop':
+            try:
+                self.emergency_stop()
+            except Exception:
+                pass
+        elif cmd == 'uchwyć':
+            try:
+                self.get_picture_from_robot()
+            except Exception:
+                pass
+        elif cmd == 'portret':
+            try:
+                self.convert_to_face_drawing()
+            except Exception:
+                pass
+        elif cmd == 'karykatura':
+            try:
+                self.convert_to_caricature()
+            except Exception:
+                pass
+        elif cmd == 'podgląd':
+            try:
+                self.update_robot_preview()
+            except Exception:
+                pass
+        else:
+            print('Voice command not mapped:', cmd)
     
     def on_mode_change(self):
         """Handle mode selection change"""
-        if self.drawing_mode.get() == "load":
-            self.file_section.pack(fill=tk.X, pady=(0, 10))
-            self.draw_section.pack_forget()
-            # Clear drawing path when switching to file mode
-            self.temp_drawing_path = None
-            # Reset to no image if no file is selected
-            if not self.image_path.get():
-                self.file_label.config(text="No image selected", fg='#666')
-                self.draw_btn.config(state='disabled')
-                self.face_drawing_btn.config(state='disabled')  # Disable face drawing button
-                self.original_canvas.delete("all")
-                self.original_canvas.create_text(150, 100, text="No image loaded", 
-                                                font=('Arial', 10), fill='#999')
-        else:
-            self.file_section.pack_forget()
-            self.draw_section.pack(fill=tk.X, pady=(0, 10))
-            # Clear file path when switching to draw mode
-            self.image_path.set("")
-            self.draw_btn.config(state='disabled')
-            self.face_drawing_btn.config(state='disabled')  # Disable face drawing button
-            self.original_canvas.delete("all")
-            self.original_canvas.create_text(150, 100, text="No image loaded", 
-                                            font=('Arial', 10), fill='#999')
+        try:
+            if self.drawing_mode.get() == "load":
+                if hasattr(self, 'file_section') and self.file_section.winfo_exists():
+                    self.file_section.pack(fill=tk.X, pady=(0, 10))
+                if hasattr(self, 'draw_section') and self.draw_section.winfo_exists():
+                    try:
+                        self.draw_section.pack_forget()
+                    except Exception:
+                        pass
+                # Clear drawing path when switching to file mode
+                self.temp_drawing_path = None
+                # Reset to no image if no file is selected
+                if not self.image_path.get():
+                    if hasattr(self, 'file_label') and self.file_label.winfo_exists():
+                        try:
+                            self.file_label.config(text="No image selected", fg='#666')
+                        except Exception:
+                            pass
+                    try:
+                        if hasattr(self, 'draw_btn') and self.draw_btn:
+                            self.draw_btn.config(state='disabled')
+                    except Exception:
+                        pass
+                    try:
+                        if hasattr(self, 'face_drawing_btn') and self.face_drawing_btn:
+                            self.face_drawing_btn.config(state='disabled')
+                    except Exception:
+                        pass
+                    if hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
+                        try:
+                            self.original_canvas.delete("all")
+                            self.original_canvas.create_text(150, 100, text="No image loaded", 
+                                                            font=('Arial', 10), fill='#999')
+                        except Exception:
+                            pass
+            else:
+                if hasattr(self, 'file_section') and self.file_section.winfo_exists():
+                    try:
+                        self.file_section.pack_forget()
+                    except Exception:
+                        pass
+                if hasattr(self, 'draw_section') and self.draw_section.winfo_exists():
+                    try:
+                        self.draw_section.pack(fill=tk.X, pady=(0, 10))
+                    except Exception:
+                        pass
+                # Clear file path when switching to draw mode
+                self.image_path.set("")
+                try:
+                    if hasattr(self, 'draw_btn') and self.draw_btn:
+                        self.draw_btn.config(state='disabled')
+                except Exception:
+                    pass
+                try:
+                    if hasattr(self, 'face_drawing_btn') and self.face_drawing_btn:
+                        self.face_drawing_btn.config(state='disabled')
+                except Exception:
+                    pass
+                if hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
+                    try:
+                        self.original_canvas.delete("all")
+                        self.original_canvas.create_text(150, 100, text="No image loaded", 
+                                                        font=('Arial', 10), fill='#999')
+                    except Exception:
+                        pass
+        except Exception:
+            # Protect against widget path errors when widgets are destroyed
+            pass
     
     def on_quality_change(self):
         """Handle quality setting change"""
@@ -1296,6 +1509,53 @@ class SimpleRobotGUI:
         
         # Focus the window
         self.drawing_window.focus_set()
+
+    def open_setup_window(self):
+        """Open a separate Setup window containing the full image/settings UI."""
+        if hasattr(self, 'setup_window') and self.setup_window.winfo_exists():
+            self.setup_window.lift()
+            return
+
+        self.setup_window = tk.Toplevel(self.root)
+        self.setup_window.title("Setup")
+        self.setup_window.geometry("760x620")
+        self.setup_window.configure(bg=self.COLORS['background'])
+
+        # Create scrollable frame for long setup content
+        canvas = tk.Canvas(self.setup_window, bg=self.COLORS['background'])
+        scrollbar = ttk.Scrollbar(self.setup_window, orient="vertical", command=canvas.yview)
+        scroll_frame = tk.Frame(canvas, bg=self.COLORS['background'])
+
+        scroll_frame.bind(
+            "<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scroll_frame, anchor='nw')
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Populate the setup with the full image section and the larger controls
+        try:
+            self.create_image_section(scroll_frame)
+        except Exception:
+            # If something fails, fall back to manual creation
+            pass
+
+        # When closed, update compact main label with current selection
+        def on_setup_close():
+            try:
+                if self.image_path.get() and hasattr(self, 'file_label_main'):
+                    self.file_label_main.config(text=f"Selected: {os.path.basename(self.image_path.get())}")
+            except Exception:
+                pass
+            self.setup_window.destroy()
+
+        try:
+            self.setup_window.protocol("WM_DELETE_WINDOW", on_setup_close)
+        except Exception:
+            pass
     
     def show_templates(self):
         """Show template selection window"""
@@ -1429,7 +1689,11 @@ class SimpleRobotGUI:
             
             # Update UI
             self.image_path.set(self.temp_drawing_path)
-            self.file_label.config(text=f"Template: {shape.title()}")
+            try:
+                if hasattr(self, 'file_label') and self.file_label and self.file_label.winfo_exists():
+                    self.file_label.config(text=f"Template: {shape.title()}")
+            except Exception:
+                pass
             
             # Enable face drawing button when template is loaded
             self.face_drawing_btn.config(state='normal')
@@ -1562,7 +1826,11 @@ class SimpleRobotGUI:
             
             # Update UI
             self.image_path.set(self.temp_drawing_path)
-            self.file_label.config(text=f"Drawing: {os.path.basename(self.temp_drawing_path)}")
+            try:
+                if hasattr(self, 'file_label') and self.file_label and self.file_label.winfo_exists():
+                    self.file_label.config(text=f"Drawing: {os.path.basename(self.temp_drawing_path)}")
+            except Exception:
+                pass
             
             # Enable face drawing button when drawing is created
             self.face_drawing_btn.config(state='normal')
@@ -1602,12 +1870,26 @@ class SimpleRobotGUI:
         
         if filename:
             self.image_path.set(filename)
-            self.file_label.config(text=f"Selected: {filename.split('/')[-1]}", fg='#333')
-            
-            # Enable face drawing button when image is loaded
-            self.face_drawing_btn.config(state='normal')
-            self.caricature_btn.config(state='normal')
-            
+            # Update the full file label if the setup UI has been created
+            try:
+                if hasattr(self, 'file_label') and self.file_label:
+                    self.file_label.config(text=f"Selected: {filename.split('/')[-1]}", fg='#333')
+            except Exception:
+                pass
+            # Update compact main label if present
+            try:
+                if hasattr(self, 'file_label_main'):
+                    self.file_label_main.config(text=f"Selected: {filename.split('/')[-1]}")
+            except Exception:
+                pass
+
+            # Enable face drawing button when image is loaded (guarded)
+            try:
+                self.face_drawing_btn.config(state='normal')
+                self.caricature_btn.config(state='normal')
+            except Exception:
+                pass
+
             self.load_preview_image()
             self.status_text.set("Image loaded - processing...")
             # Automatically process the image
@@ -1624,28 +1906,35 @@ class SimpleRobotGUI:
             image = cv2.imread(self.image_path.get())
             if image is None:
                 return
-            
+
             # Convert BGR to RGB for display
             image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            
+
             # Resize for preview while maintaining aspect ratio
             h, w = image_rgb.shape[:2]
             scale = min(self.PREVIEW_WIDTH/w, self.PREVIEW_HEIGHT/h)
             new_w, new_h = int(w*scale), int(h*scale)
             image_resized = cv2.resize(image_rgb, (new_w, new_h))
-            
+
             # Convert to PhotoImage for tkinter
             pil_image = Image.fromarray(image_resized)
             self.preview_image = ImageTk.PhotoImage(pil_image)
-            
-            # Display centered in canvas
-            self.original_canvas.delete("all")
-            x = (self.PREVIEW_WIDTH - new_w) // 2
-            y = (self.PREVIEW_HEIGHT - new_h) // 2
-            self.original_canvas.create_image(x, y, anchor=tk.NW, image=self.preview_image)
-            
+
+            # Display centered in canvas if canvas exists
+            if hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
+                try:
+                    self.original_canvas.delete("all")
+                    x = (self.PREVIEW_WIDTH - new_w) // 2
+                    y = (self.PREVIEW_HEIGHT - new_h) // 2
+                    self.original_canvas.create_image(x, y, anchor=tk.NW, image=self.preview_image)
+                except Exception:
+                    pass
+
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to load image: {e}")
+            try:
+                messagebox.showerror("Error", f"Failed to load image: {e}")
+            except Exception:
+                print(f"Failed to load image: {e}")
     
     def toggle_connection(self):
         """Toggle robot connection"""
@@ -1743,6 +2032,13 @@ class SimpleRobotGUI:
                 sys.exit(0)
             except Exception:
                 pass
+        finally:
+            # Ensure voice listener stopped
+            try:
+                if hasattr(self, '_voice_listener') and self._voice_listener:
+                    self._voice_listener.stop()
+            except Exception:
+                pass
     
     def get_picture_from_robot(self):
         """Capture picture from local camera (GUI hook)."""
@@ -1834,15 +2130,28 @@ class SimpleRobotGUI:
         try:
             # Switch to load mode if not already
             self.drawing_mode.set("load")
-            self.on_mode_change()
+            try:
+                # Call on_mode_change safely (it already guards against missing widgets)
+                self.on_mode_change()
+            except Exception:
+                pass
             
             # Set the image path
             self.image_path.set(image_path)
-            self.file_label.config(text="Robot Camera: image.png", fg='#333')
+            try:
+                if hasattr(self, 'file_label') and self.file_label.winfo_exists():
+                    self.file_label.config(text="Robot Camera: image.png", fg='#333')
+            except Exception:
+                pass
             
             # Enable face drawing button when robot image is loaded
-            self.face_drawing_btn.config(state='normal')
-            self.caricature_btn.config(state='normal')
+            try:
+                if hasattr(self, 'face_drawing_btn'):
+                    self.face_drawing_btn.config(state='normal')
+                if hasattr(self, 'caricature_btn'):
+                    self.caricature_btn.config(state='normal')
+            except Exception:
+                pass
             
             # Load preview
             self.load_preview_image()
@@ -2045,113 +2354,93 @@ class SimpleRobotGUI:
     def update_robot_preview(self):
         """Update robot path preview with current coordinate system"""
         try:
-            # Check if we need to recreate the figure with new aspect ratio
             max_x = self.max_x.get()
             max_y = self.max_y.get()
-            new_aspect_ratio = max_x / max_y
-            
-            # Get current figure size and calculate current aspect ratio
-            current_fig_size = self.fig.get_size_inches()
-            current_aspect_ratio = current_fig_size[0] / current_fig_size[1]
-            
-            # If aspect ratios are significantly different, recreate the figure
-            if abs(new_aspect_ratio - current_aspect_ratio) > 0.1:
-                # Calculate new figure size to match drawing area aspect ratio
-                fig_width = 4.0
-                fig_height = fig_width / new_aspect_ratio
-                # Limit height to reasonable range
-                fig_height = min(4.0, max(2.0, fig_height))
-                
-                # Recreate the figure with correct aspect ratio
-                self.fig.set_size_inches(fig_width, fig_height)
-            
+
+            # Clear and prepare axes
             self.ax.clear()
-            
+
             # Set coordinate system based on user selection
             use_center = self.use_center_origin.get()
-            
             if use_center:
-                # Center-based coordinate system (0,0 at center)
                 self.ax.set_xlim(-max_x/2, max_x/2)
                 self.ax.set_ylim(-max_y/2, max_y/2)
-                origin_text = "Center (0,0)"
                 origin_x, origin_y = 0, 0
             else:
-                # Corner-based coordinate system (0,0 at corner)
                 self.ax.set_xlim(0, max_x)
                 self.ax.set_ylim(0, max_y)
-                origin_text = "Corner (0,0)"
                 origin_x, origin_y = 0, 0
-            
+
+            # Reduce outer margins so drawing fills the preview
+            try:
+                self.fig.subplots_adjust(left=0.06, right=0.98, top=0.9, bottom=0.08)
+                self.ax.set_position([0.06, 0.08, 0.88, 0.86])
+            except Exception:
+                pass
+
             self.ax.set_xlabel('X (mm)', fontsize=9)
             self.ax.set_ylabel('Y (mm)', fontsize=9)
             self.ax.grid(True, alpha=0.3)
-            
-            # Set equal aspect ratio so 1mm = 1mm visually
+
+            # Ensure 1mm == 1mm and eliminate data margins
             self.ax.set_aspect('equal', adjustable='box')
-            
-            # Draw center axes only for center coordinate system
-            if use_center:
-                self.ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5, linewidth=1)
-                self.ax.axvline(x=0, color='gray', linestyle='--', alpha=0.5, linewidth=1)
-            
+            try:
+                self.ax.margins(0)
+            except Exception:
+                pass
+
             # Draw drawing area boundary
             if use_center:
                 boundary_x = [-max_x/2, max_x/2, max_x/2, -max_x/2, -max_x/2]
                 boundary_y = [-max_y/2, -max_y/2, max_y/2, max_y/2, -max_y/2]
-                # Draw margin boundaries (effective drawing area)
-                margin_x = self.margin_x.get()
-                margin_y = self.margin_y.get()
-                effective_boundary_x = [-(max_x/2-margin_x), (max_x/2-margin_x), (max_x/2-margin_x), -(max_x/2-margin_x), -(max_x/2-margin_x)]
-                effective_boundary_y = [-(max_y/2-margin_y), -(max_y/2-margin_y), (max_y/2-margin_y), (max_y/2-margin_y), -(max_y/2-margin_y)]
             else:
                 boundary_x = [0, max_x, max_x, 0, 0]
                 boundary_y = [0, 0, max_y, max_y, 0]
-                # Draw margin boundaries (effective drawing area)
-                margin_x = self.margin_x.get()
-                margin_y = self.margin_y.get()
-                effective_boundary_x = [margin_x, max_x-margin_x, max_x-margin_x, margin_x, margin_x]
-                effective_boundary_y = [margin_y, margin_y, max_y-margin_y, max_y-margin_y, margin_y]
-            
-            self.ax.plot(boundary_x, boundary_y, 'k--', linewidth=2, alpha=0.5, label='Workspace Area')
-            
-            # Show effective drawing area (after margins) in green
+
+            self.ax.plot(boundary_x, boundary_y, 'k-', linewidth=2.5, alpha=0.9)
+
+            # Plot effective drawing area (margins) if present
+            margin_x = self.margin_x.get()
+            margin_y = self.margin_y.get()
             if margin_x > 0 or margin_y > 0:
-                self.ax.plot(effective_boundary_x, effective_boundary_y, 'g-', linewidth=1.5, alpha=0.7, label='Drawing Area (with margins)')
-            
-            # Mark origin point
-            self.ax.plot(origin_x, origin_y, 'r+', markersize=8, markeredgewidth=2, label=origin_text)
-            
-            if not self.drawer.drawing_points:
-                # Position text based on coordinate system
-                text_x = 0 if use_center else max_x/2
-                text_y = 0 if use_center else max_y/2
-                coord_info = "center" if use_center else "corner"
-                self.ax.text(text_x, text_y, f'No path generated\n(0,0) at {coord_info}', 
-                           ha='center', va='center', fontsize=9, color='#999')
-                self.fig.tight_layout()
-                self.canvas_widget.draw()
+                if use_center:
+                    eff_x = [-(max_x/2-margin_x), (max_x/2-margin_x), (max_x/2-margin_x), -(max_x/2-margin_x), -(max_x/2-margin_x)]
+                    eff_y = [-(max_y/2-margin_y), -(max_y/2-margin_y), (max_y/2-margin_y), (max_y/2-margin_y), -(max_y/2-margin_y)]
+                else:
+                    eff_x = [margin_x, max_x-margin_x, max_x-margin_x, margin_x, margin_x]
+                    eff_y = [margin_y, margin_y, max_y-margin_y, max_y-margin_y, margin_y]
+                self.ax.plot(eff_x, eff_y, 'g-', linewidth=1.8, alpha=0.8)
+
+            # Origin marker
+            self.ax.plot(origin_x, origin_y, 'r+', markersize=9, markeredgewidth=2)
+
+            # If no drawing points, show centered message
+            if not getattr(self.drawer, 'drawing_points', None):
+                coord_info = 'center' if use_center else 'corner'
+                self.ax.text(0.5, 0.5, f'No path generated\n(0,0) at {coord_info}', ha='center', va='center', transform=self.ax.transAxes, fontsize=11, color='#666')
+                self.canvas_widget.draw_idle()
                 return
-            
-            # Plot paths (coordinates should already be in the correct system from transformer)
-            colors = plt.cm.tab10(np.linspace(0, 1, len(self.drawer.drawing_points)))
-            
+
+            # Plot paths with larger stroke and markers for visibility
+            colors = plt.cm.tab10(np.linspace(0, 1, max(1, len(self.drawer.drawing_points))))
             for i, path in enumerate(self.drawer.drawing_points):
-                if len(path) > 0:
+                if path and len(path) > 0:
                     x_coords = [p[0] for p in path]
                     y_coords = [p[1] for p in path]
-                    self.ax.plot(x_coords, y_coords, 'o-', color=colors[i], 
-                               linewidth=2, markersize=1.5)
-            
+                    self.ax.plot(x_coords, y_coords, '-', color=colors[i % len(colors)], linewidth=2.2, alpha=0.95)
+                    # small markers at points for clarity
+                    self.ax.plot(x_coords, y_coords, 'o', color=colors[i % len(colors)], markersize=3.5, alpha=0.9)
+
             total_points = sum(len(path) for path in self.drawer.drawing_points)
-            coord_info = "center" if use_center else "corner"
-            margin_info = f" (margins: {self.margin_x.get()}x{self.margin_y.get()}mm)" if self.margin_x.get() > 0 or self.margin_y.get() > 0 else ""
-            
-            self.ax.set_title(f'{len(self.drawer.drawing_points)} paths, {total_points} points ({coord_info} origin{margin_info})', 
-                            fontsize=10)
-            
-            self.fig.tight_layout()
-            self.canvas_widget.draw()
+            coord_info = 'center' if use_center else 'corner'
+            margin_info = f" (margins: {margin_x}x{margin_y}mm)" if margin_x > 0 or margin_y > 0 else ''
+            self.ax.set_title(f'{len(self.drawer.drawing_points)} paths, {total_points} points ({coord_info} origin{margin_info})', fontsize=10)
+
+            self.fig.tight_layout(pad=0.5)
+            try:
+                self.canvas_widget.draw_idle()
+            except Exception:
+                self.canvas_widget.draw()
             
         except Exception as e:
             print(f"Preview error: {e}")
@@ -2419,7 +2708,11 @@ class SimpleRobotGUI:
             
             # Update the image path to use the new line art
             self.image_path.set(output_path)
-            self.file_label.config(text="Face Line Art: out.png", fg='#333')
+            try:
+                if hasattr(self, 'file_label') and self.file_label and self.file_label.winfo_exists():
+                    self.file_label.config(text="Face Line Art: out.png", fg='#333')
+            except Exception:
+                pass
             
             # Load preview of the line art
             self.load_preview_image()
@@ -2508,7 +2801,11 @@ class SimpleRobotGUI:
             
             # Update the image path to use the new caricature
             self.image_path.set(output_path)
-            self.file_label.config(text="Caricature: out.png", fg='#333')
+            try:
+                if hasattr(self, 'file_label') and self.file_label and self.file_label.winfo_exists():
+                    self.file_label.config(text="Caricature: out.png", fg='#333')
+            except Exception:
+                pass
             
             # Load preview of the caricature
             self.load_preview_image()
