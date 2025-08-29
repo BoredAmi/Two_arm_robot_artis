@@ -49,13 +49,42 @@ def master_slave_assign_contours(contours, master, buffer_radius=40, buffer_x=10
     def contour_center_x(contour):
         xs = [p[0] for p in contour]
         return sum(xs) / len(xs) if xs else 0
+    # Build sorted order depending on master preference
     if master == "right":
         # Right arm: pick contour with highest center X (rightmost)
         sorted_contours = sorted(contours, key=contour_center_x)
     else:
         # Left arm: pick contour with lowest center X (leftmost)
         sorted_contours = sorted(contours, key=contour_center_x, reverse=True)
-    master_contour = sorted_contours[0]
+
+    # Helper: detect if a contour intersects the left-arm unreachable rectangle
+    # Left arm cannot reach coordinates x < 130 mm and y < 40 mm (rectangle from origin)
+    def _contour_in_left_forbidden(c):
+        try:
+            for p in c:
+                x, y = p[0], p[1]
+                if x < 130 and y < 40:
+                    return True
+        except Exception:
+            pass
+        return False
+
+    # Select master contour while avoiding assigning left-arm to contours inside its unreachable rectangle
+    master_contour = None
+    if master == 'left':
+        for c in sorted_contours:
+            if not _contour_in_left_forbidden(c):
+                master_contour = c
+                break
+        if master_contour is None:
+            # If no contour is reachable by the left arm, swap roles and pick a right master
+            # This prevents assigning an unreachable contour to the left arm even when left was requested.
+            master = 'right'
+            # Recompute sorted order for right master (rightmost)
+            sorted_contours = sorted(contours, key=contour_center_x)
+            master_contour = sorted_contours[0]
+    else:
+        master_contour = sorted_contours[0]
     from shapely.geometry import Polygon
     import numpy as np
     # Use the caller-specified buffer_radius around the contour
@@ -88,7 +117,15 @@ def master_slave_assign_contours(contours, master, buffer_radius=40, buffer_x=10
     # Find the first slave contour that is completely outside forbidden area (no intersection at all)
     from shapely.geometry import Polygon
     slave_contour = None
-    for c in contours[1:]:
+    # Determine which side the slave would be (opposite of master)
+    slave_side = 'left' if master == 'right' else 'right'
+    for c in contours:
+        # Skip any contours already assigned
+        if c in [master_contour]:
+            continue
+        # If slave is left, avoid assigning contours inside the left unreachable rectangle
+        if slave_side == 'left' and _contour_in_left_forbidden(c):
+            continue
         # Convert to polygon (buffer if needed)
         if len(c) < 3:
             slave_poly = Polygon(c).buffer(1.0)
