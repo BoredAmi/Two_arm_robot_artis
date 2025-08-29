@@ -13,7 +13,7 @@
   "enable_tsp": true,
   "use_batch_mode": true,
   "drawing_mode": "load",
-  "brush_size": 3,
+  "brush_size": 20,
   "dual_arm_mode": true,
   "forbidden_buffer": 40
 }

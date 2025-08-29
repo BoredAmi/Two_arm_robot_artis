@@ -1992,6 +1992,27 @@ class SimpleRobotGUI:
             self.drawer.robot.set_batch_mode(self.use_batch_mode.get())
             self.drawer.robot.set_coordinate_system(self.use_center_origin.get())
 
+        # Recalculate drawing paths / regenerate forbidden zones if we already have an image or drawing
+        try:
+            # If a drawing or image path exists, re-run automatic processing so the new drawer (with robot settings)
+            # recalculates drawing_points and steps similar to when parameters change.
+            has_image = bool(self.image_path.get())
+            has_temp = hasattr(self, 'temp_drawing_path') and self.temp_drawing_path
+            if has_image or has_temp or self.is_processed:
+                # Inform user and trigger processing which will update preview and forbidden zones on success
+                self.status_text.set("Connected to robot - recalculating paths...")
+                try:
+                    self.auto_process_image()
+                except Exception:
+                    # Fallback: regenerate forbidden zones if processing cannot run now
+                    try:
+                        self._regenerate_forbidden_zones()
+                        self.update_robot_preview()
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
         self.status_text.set("Connected to robot successfully")
     
     def _connection_failed(self):

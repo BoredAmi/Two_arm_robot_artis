@@ -53,6 +53,23 @@ class RobotController:
         barrier = threading.Barrier(2)
         results = {'right': True, 'left': True}
 
+        # Prepare progress tracking for dual-arm: combined total points and steps
+        total_batches = max(len(right_actions), len(left_actions)) if (right_actions or left_actions) else 0
+        # Compute total_points across both action lists
+        def _count_points(actions_list):
+            s = 0
+            for a in actions_list:
+                if a and a != 'wait' and isinstance(a, (list, tuple)):
+                    try:
+                        s += len(a)
+                    except Exception:
+                        pass
+            return s
+
+        total_points = _count_points(right_actions) + _count_points(left_actions)
+        points_sent = {'value': 0}
+        points_lock = threading.Lock()
+
         def do_action_list(actions, target):
             for idx, action in enumerate(actions):
                 if not results['right'] if target == 'right' else not results['left']:
@@ -97,33 +114,44 @@ class RobotController:
                                     ok = False
                                 else:
                                     # Pen down to draw
-                                    if not self.send_pen_down(target=target):
-                                        print(f"[{target}] Failed to send PEN_DOWN")
-                                        ok = False
-                                    else:
-                                        time.sleep(0.02)
-                                        if len(contour) > 1:
-                                            if not self.send_batch_moves(contour[1:], batch_size=batch_size, target=target):
-                                                print(f"[{target}] Failed to send batch moves")
-                                                ok = False
-                                        # Lift pen after contour
-                                        if not self.send_pen_up(target=target):
-                                            print(f"[{target}] Failed to send PEN_UP (after contour)")
+                                        if not self.send_pen_down(target=target):
+                                            print(f"[{target}] Failed to send PEN_DOWN")
                                             ok = False
                                         else:
-                                            # Notify robot between contours so RAPID can perform a retreat/back-off
-                                            # Determine next contour start from the actions list if available
-                                            next_start = None
-                                            try:
-                                                if idx + 1 < len(actions):
-                                                    nxt = actions[idx + 1]
-                                                    if nxt and nxt != 'wait':
-                                                        if isinstance(nxt, (list, tuple)) and len(nxt) > 0:
-                                                            next_start = nxt[0]
-                                            except Exception:
+                                            time.sleep(0.02)
+                                            if len(contour) > 1:
+                                                # send batches; if successful, account for all contour points (including start)
+                                                if not self.send_batch_moves(contour[1:], batch_size=batch_size, target=target):
+                                                    print(f"[{target}] Failed to send batch moves")
+                                                    ok = False
+                                                else:
+                                                    # Increment shared points_sent by full contour length
+                                                    if progress_callback:
+                                                        with points_lock:
+                                                            points_sent['value'] += len(contour)
+                                                            cur = points_sent['value']
+                                                        try:
+                                                            progress_callback(idx + 1, total_batches, cur, total_points)
+                                                        except Exception:
+                                                            pass
+                                            # Lift pen after contour
+                                            if not self.send_pen_up(target=target):
+                                                print(f"[{target}] Failed to send PEN_UP (after contour)")
+                                                ok = False
+                                            else:
+                                                # Notify robot between contours so RAPID can perform a retreat/back-off
+                                                # Determine next contour start from the actions list if available
                                                 next_start = None
-                                            self.send_between_command(target=target, next_start=next_start)
-                                        time.sleep(0.02)
+                                                try:
+                                                    if idx + 1 < len(actions):
+                                                        nxt = actions[idx + 1]
+                                                        if nxt and nxt != 'wait':
+                                                            if isinstance(nxt, (list, tuple)) and len(nxt) > 0:
+                                                                next_start = nxt[0]
+                                                except Exception:
+                                                    next_start = None
+                                                self.send_between_command(target=target, next_start=next_start)
+                                            time.sleep(0.02)
 
                             else:
                                 contour = action
@@ -146,6 +174,16 @@ class RobotController:
                                     print(f"[{target}] Failed to transition to start of contour")
                                     ok = False
                                 else:
+                                    # Count the transition-to-start as a sent point (for progress)
+                                    if progress_callback:
+                                        with points_lock:
+                                            points_sent['value'] += 1
+                                            cur = points_sent['value']
+                                        try:
+                                            progress_callback(idx + 1, total_batches, cur, total_points)
+                                        except Exception:
+                                            pass
+
                                     if not self.send_pen_down(target=target):
                                         print(f"[{target}] Failed to send PEN_DOWN")
                                         ok = False
@@ -156,6 +194,16 @@ class RobotController:
                                                 print(f"[{target}] Failed to send point")
                                                 ok = False
                                                 break
+                                            else:
+                                                # Increment progress per point sent
+                                                if progress_callback:
+                                                    with points_lock:
+                                                        points_sent['value'] += 1
+                                                        cur = points_sent['value']
+                                                    try:
+                                                        progress_callback(idx + 1, total_batches, cur, total_points)
+                                                    except Exception:
+                                                        pass
                                             if move_delay > 0:
                                                 time.sleep(move_delay)
                                         if not self.send_pen_up(target=target):
@@ -359,6 +407,19 @@ class RobotController:
         except Exception:
             return (x, y)
 
+    def _contains_left_forbidden(self, points):
+        """Return True if any point in `points` lies inside the left-arm forbidden rectangle.
+
+        Forbidden rectangle (robot coords): x < 130 and y < 40
+        """
+        try:
+            for x, y in points:
+                if float(x) < 130.0 and float(y) < 40.0:
+                    return True
+        except Exception:
+            pass
+        return False
+
     def _transition_to_start(self, start_x, start_y, target='right'):
         """Perform a two-step transition: move to an X-offset point, then to the true start.
 
@@ -416,6 +477,14 @@ class RobotController:
     
     def send_move(self, x, y, wait_response=True, target='right'):
         """Send movement command to robot with coordinate system awareness"""
+        # Safety: block single MOVE commands to left if the coordinate is in left-forbidden area
+        try:
+            if target == 'left' and float(x) < 130.0 and float(y) < 40.0:
+                print(f"Refusing MOVE to left for point ({x:.1f},{y:.1f}): inside left-forbidden rectangle (x<130,y<40)")
+                return False
+        except Exception:
+            pass
+
         cmd = f"MOVE,{x:.2f},{y:.2f}\n"
         ok = self._send_command(cmd, wait_response, target=target)
         # Update last-known position for the target on success
@@ -446,7 +515,11 @@ class RobotController:
         if not points:
             return True
             
-        print(f"Sending {len(points)} points with dynamic batch sizing (base: {batch_size}, max: {max_batch_size})")
+        print(f"Sending {len(points)} points with dynamic batch sizing (base: {batch_size}, max: {max_batch_size}) to {target}")
+        # Safety: refuse to send batches to left if any point is in left-forbidden area
+        if target == 'left' and self._contains_left_forbidden(points):
+            print(f"Refusing to send batch to left: contains points inside left-forbidden rectangle (x<130,y<40)")
+            return False
         
         # Optimize batch size based on coordinate precision
         optimal_batch_size = self._calculate_optimal_batch_size(points, batch_size, max_batch_size)
@@ -924,9 +997,13 @@ class RobotController:
                 for i in range(0, len(remaining_points), batch_size_to_use):
                     batch = remaining_points[i:i + batch_size_to_use]
                     
+                    # Safety: do not send to left if batch contains forbidden points
+                    if self._contains_left_forbidden(batch):
+                        print(f"Refusing ultra-fast batch for contour {contour_idx + 1}: contains left-forbidden points")
+                        return False
                     # Send this batch
                     if len(batch) > 1:
-                        if not self.send_batch_moves_ultra_fast(batch, len(batch)):
+                        if not self.send_batch_moves_ultra_fast(batch, len(batch), target='right' if self.socket else 'right'):
                             print(f"Failed to send batch moves for contour {contour_idx + 1}")
                             return False
                     else:
@@ -959,37 +1036,40 @@ class RobotController:
         print("Ultra-fast drawing with path optimization completed!")
         return True
 
-    def send_batch_moves_ultra_fast(self, points, batch_size):
+    def send_batch_moves_ultra_fast(self, points, batch_size, target='right'):
         """Ultra-fast batch moves with coordinate system conversion"""
         if not points:
             return True
-            
+        # Safety: refuse to send to left if any point is in left-forbidden area
+        if target == 'left' and self._contains_left_forbidden(points):
+            print(f"Refusing to send ultra-fast batch to left: contains points inside left-forbidden rectangle (x<130,y<40)")
+            return False
         # Process points in large batches with coordinate conversion
         for i in range(0, len(points), batch_size):
             batch = points[i:i + batch_size]
-            
+
             # Format batch command - robot handles coordinate system
             coords = []
             for x, y in batch:
                 coords.extend([f"{int(round(x))}", f"{int(round(y))}"])
-            
+
             cmd = f"BATCH,{','.join(coords)}\n"
-            
+
             # Check command length (80 char limit)
             if len(cmd) > 78:
                 # Split and retry with smaller batches
                 mid_point = len(batch) // 2
                 if mid_point > 0:
-                    if not self.send_batch_moves_ultra_fast(batch[:mid_point], mid_point):
+                    if not self.send_batch_moves_ultra_fast(batch[:mid_point], mid_point, target=target):
                         return False
-                    if not self.send_batch_moves_ultra_fast(batch[mid_point:], len(batch) - mid_point):
+                    if not self.send_batch_moves_ultra_fast(batch[mid_point:], len(batch) - mid_point, target=target):
                         return False
                     continue
-            
+
             # Send batch command
-            if not self._send_command(cmd):
+            if not self._send_command(cmd, target=target):
                 print(f"Failed to send ultra-fast batch of {len(batch)} points")
                 return False
             # No delay between ultra-fast batches
-                    
+
         return True
