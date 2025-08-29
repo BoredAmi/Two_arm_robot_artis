@@ -3,10 +3,17 @@
   "robot_port": "1025",
   "use_center_origin": false,
   "enable_logo": true,
-  "logo_size": 20,
+  "logo_size": 27,
   "max_x": 290,
   "max_y": 210,
   "margin_x": 10,
   "margin_y": 10,
-  "forbidden_buffer": 80
+  "quality_var": "high",
+  "detection_method": "adaptive",
+  "enable_tsp": true,
+  "use_batch_mode": true,
+  "drawing_mode": "load",
+  "brush_size": 3,
+  "dual_arm_mode": true,
+  "forbidden_buffer": 40
 }
