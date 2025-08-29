@@ -532,7 +532,7 @@ class SimpleRobotGUI:
                                     command=self.get_picture_from_robot,
                                     bg='#9C27B0', fg='white', font=('Arial', 10, 'bold'),
                                     relief='flat', padx=15, pady=6, cursor='hand2',
-                                    state='disabled')
+                                    state='normal')
         self.get_pic_btn.pack(side=tk.RIGHT)
         
         # Connection status
@@ -1663,7 +1663,6 @@ class SimpleRobotGUI:
             self.is_connected = False
             self.connect_btn.config(text="Connect", bg='#FF9800')
             self.conn_status_label.config(text="⚫ Not Connected", fg='#f44336')
-            self.get_pic_btn.config(state='disabled')  # Disable get picture button
             self.status_text.set("Disconnected from robot")
     
     def _connect_thread(self):
@@ -1697,26 +1696,26 @@ class SimpleRobotGUI:
         self.is_connected = True
         self.connect_btn.config(text="Disconnect", bg='#f44336', state='normal')
         self.conn_status_label.config(text="🟢 Connected", fg='#4CAF50')
-        self.get_pic_btn.config(state='normal')  # Enable get picture button
-        
+        self.get_pic_btn.config(state='normal')  # Ensure get picture button available
+
         # Apply current settings to robot
         if hasattr(self.drawer, 'robot') and self.drawer.robot:
             self.drawer.robot.set_batch_mode(self.use_batch_mode.get())
             self.drawer.robot.set_coordinate_system(self.use_center_origin.get())
-        
+
         self.status_text.set("Connected to robot successfully")
     
     def _connection_failed(self):
         """Handle connection failure"""
         self.connect_btn.config(state='normal')
-        self.get_pic_btn.config(state='disabled')  # Disable get picture button
+        # Keep get picture button available for local camera
         self.status_text.set("Failed to connect to robot")
         messagebox.showerror("Connection Error", "Could not connect to robot. Please check IP and port.")
     
     def _connection_error(self, error):
         """Handle connection error"""
         self.connect_btn.config(state='normal')
-        self.get_pic_btn.config(state='disabled')  # Disable get picture button
+        # Keep get picture button available for local camera
         self.status_text.set("Connection error")
         messagebox.showerror("Error", f"Connection error: {error}")
 
@@ -1746,14 +1745,12 @@ class SimpleRobotGUI:
                 pass
     
     def get_picture_from_robot(self):
-        """Get picture from robot camera"""
-        if not self.is_connected:
-            messagebox.showwarning("Warning", "Please connect to robot first")
-            return
-        
-        self.status_text.set("Getting picture from robot...")
-        self.get_pic_btn.config(state='disabled')
-        
+        """Capture picture from local camera (GUI hook)."""
+        self.status_text.set("Capturing image from camera...")
+        try:
+            self.get_pic_btn.config(state='disabled')
+        except Exception:
+            pass
         thread = threading.Thread(target=self._get_picture_thread)
         thread.daemon = True
         thread.start()
@@ -1807,63 +1804,29 @@ class SimpleRobotGUI:
         messagebox.showerror("Error", f"Robot ready error: {error}")
 
     def _get_picture_thread(self):
-        """Get picture from robot in background thread"""
-        import subprocess
+        """Capture a picture from a local camera in background thread (no FTP)."""
         import os
-        
+
         try:
-            # Send get_pic command to robot and wait for OK response
-            if self.drawer.robot and self.drawer.robot.socket:
-                print("Sending get_pic command...")
-                success = self.drawer.robot._send_command("get_pic\n", wait_response=True)
-                
-                if not success:
-                    print("Failed to send get_pic command")
-                    self.root.after(0, self._get_picture_failed)
-                    return
-                
-                print("Robot confirmed picture taken (OK received)")
-                
-                # Delete old image.bmp if it exists
-                image_path = os.path.join(os.getcwd(), "image.bmp")
-                if os.path.exists(image_path):
-                    try:
-                        os.remove(image_path)
-                        print("Deleted old image.bmp")
-                    except Exception as e:
-                        print(f"Could not delete old image.bmp: {e}")
-                
-                # Now run bruh.py to download the fresh image
-                downloader_path = os.path.join(os.getcwd(), "robot_ftp_downloader.py")
-                if os.path.exists(downloader_path):
-                    print("Running robot_ftp_downloader.py to download image...")
-                    try:
-                        result = subprocess.run(["python", "robot_ftp_downloader.py"], 
-                                              capture_output=True, text=True, 
-                                              cwd=os.getcwd(), timeout=30)
-                        
-                        if result.returncode == 0:
-                            print("robot_ftp_downloader.py completed successfully")
-                        else:
-                            print(f"robot_ftp_downloader.py failed: {result.stderr}")
-                            
-                    except subprocess.TimeoutExpired:
-                        print("robot_ftp_downloader.py timed out")
-                    except Exception as e:
-                        print(f"robot_ftp_downloader.py error: {e}")
-                
-                # Check if fresh image exists and load it
-                if os.path.exists(image_path):
-                    print("Fresh image.bmp found, loading...")
-                    self.root.after(0, lambda: self._load_robot_image(image_path))
-                else:
-                    print("No image.bmp found after robot_ftp_downloader.py")
-                    self.root.after(0, self._get_picture_no_image)
-            else:
-                self.root.after(0, self._get_picture_failed)
-                
+            # Use local camera capture utility instead of FTP
+            from robot_ftp_downloader import RobotCameraCapture
         except Exception as e:
-            print(f"Get picture error: {e}")
+            print(f"Local camera utility unavailable: {e}")
+            self.root.after(0, lambda: self._get_picture_error(f"Local camera utility unavailable: {e}"))
+            return
+
+        try:
+            cam = RobotCameraCapture()
+            ok = cam.capture_image()
+            image_path = os.path.abspath(cam.local_path)
+            if ok and os.path.exists(image_path):
+                print(f"Captured image: {image_path}")
+                self.root.after(0, lambda: self._load_robot_image(image_path))
+            else:
+                print("Failed to capture image from local camera")
+                self.root.after(0, self._get_picture_no_image)
+        except Exception as e:
+            print(f"Local capture error: {e}")
             self.root.after(0, lambda: self._get_picture_error(str(e)))
     
     def _load_robot_image(self, image_path):
@@ -1875,7 +1838,7 @@ class SimpleRobotGUI:
             
             # Set the image path
             self.image_path.set(image_path)
-            self.file_label.config(text="Robot Camera: image.bmp", fg='#333')
+            self.file_label.config(text="Robot Camera: image.png", fg='#333')
             
             # Enable face drawing button when robot image is loaded
             self.face_drawing_btn.config(state='normal')
@@ -1889,7 +1852,11 @@ class SimpleRobotGUI:
             self.auto_process_image()
             
             self.get_pic_btn.config(state='normal')
-            messagebox.showinfo("Success", "Picture captured from robot camera!")
+            # Neutral popup after local camera capture
+            try:
+                messagebox.showinfo("Picture taken", "Picture taken")
+            except Exception:
+                pass
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load robot image: {e}")
@@ -1903,10 +1870,10 @@ class SimpleRobotGUI:
         messagebox.showerror("Error", "Failed to send get_pic command to robot")
     
     def _get_picture_no_image(self):
-        """Handle case where image.bmp doesn't exist"""
+        """Handle case where image.png doesn't exist"""
         self.get_pic_btn.config(state='normal')
         self.status_text.set("No image received from robot")
-        messagebox.showwarning("Warning", "No image.bmp file found after running robot_ftp_downloader.py")
+        messagebox.showwarning("Warning", "No image.png file found after capture")
     
     def _get_picture_error(self, error):
         """Handle get picture error"""
