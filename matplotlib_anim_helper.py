@@ -29,12 +29,14 @@ def animate_paths(ax, paths, colors=None, interval=50, on_frame=None, show_left_
         if show_left_forbidden:
             try:
                 x0, y0, w, h = forbidden_rect
-                # Semi-transparent red with hatch to indicate forbidden area
-                forb = Rectangle((x0, y0), w, h, facecolor='red', alpha=0.12, edgecolor='red', hatch='//')
-                # Add as a non-updating artist so it stays visible throughout the animation
-                ax.add_patch(forb)
-            except Exception:
-                pass
+                # Semi-transparent pink fill for the forbidden area
+                forb_fill = Rectangle((x0, y0), w, h, facecolor='pink', alpha=0.3, edgecolor='red', linewidth=2, linestyle='--')
+                ax.add_patch(forb_fill)
+                # Add text label to identify the forbidden area
+                ax.text(x0 + w/2, y0 + h/2, 'Left\nForbidden\n(0,0)-(130,40)', 
+                       ha='center', va='center', fontsize=8, color='red', weight='bold')
+            except Exception as e:
+                print(f"Error adding forbidden rectangle: {e}")
         return lines
 
     def update(frame):
