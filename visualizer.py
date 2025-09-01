@@ -69,6 +69,10 @@ class DrawingVisualizer:
         # Set up the plot with centered coordinate system
         plt.xlim(-self.max_x/2, self.max_x/2)
         plt.ylim(-self.max_y/2, self.max_y/2)
+        
+        # Invert y-axis so (0,0) is at top-left corner
+        plt.gca().invert_yaxis()
+        
         plt.xlabel('X coordinate (mm)')
         plt.ylabel('Y coordinate (mm)')
         plt.title('Robot Drawing Preview - All Points')
@@ -144,6 +148,10 @@ class DrawingVisualizer:
             
             plt.xlim(-self.max_x/2, self.max_x/2)
             plt.ylim(-self.max_y/2, self.max_y/2)
+            
+            # Invert y-axis so (0,0) is at top-left corner
+            plt.gca().invert_yaxis()
+            
             plt.xlabel('X (mm)')
             plt.ylabel('Y (mm)')
             

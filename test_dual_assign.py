@@ -109,6 +109,9 @@ def comprehensive_dual_assign_viz():
         ax.set_aspect('equal')
         ax.set_xlim(-150, 150)
         ax.set_ylim(-120, 120)
+        
+        # Invert y-axis so (0,0) is at top-left corner
+        ax.invert_yaxis()
         figs.append(fig)
         print(f"Master: {master}\nSlave: {slave}\nRemaining: {len(rest)}")
         # Prepare for next step

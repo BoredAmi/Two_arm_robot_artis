@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.patches import Rectangle
 
-def animate_points(ax, paths, colors=None, interval=1, on_frame=None, show_left_forbidden=True, forbidden_rect=(0, 0, 130, 40)):
+def animate_points(ax, paths, colors=None, interval=1, on_frame=None, show_left_forbidden=True, forbidden_rect=(0, 0, 130, 40), invert_y=True):
     """
     Animate drawing of all points in all paths, N points at a time (very fast).
     - ax: matplotlib Axes
@@ -12,11 +12,17 @@ def animate_points(ax, paths, colors=None, interval=1, on_frame=None, show_left_
     - interval: ms between frames (default 1ms for speed)
     - on_frame: callback(frame) for integration with Tkinter
     - points_per_frame: how many points to draw per frame (default 10)
+    - invert_y: whether to invert y-axis so (0,0) is at top-left (default True)
     Returns: FuncAnimation object
     """
     points_per_frame = 10  # You can change this value for more/less speed
     if colors is None:
         colors = [plt.cm.tab20(i % 20) for i in range(len(paths))]
+    
+    # Apply y-axis inversion if requested and not already inverted
+    if invert_y and not ax.yaxis_inverted():
+        ax.invert_yaxis()
+    
     lines = []
     for i in range(len(paths)):
         line, = ax.plot([], [], '-', color=colors[i], linewidth=1)
