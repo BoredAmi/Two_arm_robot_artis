@@ -802,6 +802,9 @@ class SimpleRobotGUI:
         ax.set_xlabel('X (mm)'); ax.set_ylabel('Y (mm)')
         ax.grid(True, alpha=0.3)
         
+        # Invert y-axis so (0,0) is at top-left corner
+        ax.invert_yaxis()
+        
         # Set equal aspect ratio so 1mm = 1mm visually
         ax.set_aspect('equal', adjustable='box')
         
@@ -884,9 +887,14 @@ class SimpleRobotGUI:
                 if not contour:
                     return
                 xs, ys = zip(*contour)
+                
+                # Transform coordinates to mirror them vertically for proper display
+                workspace_height = max_y  # Use the workspace height from boundary
+                ys_transformed = [workspace_height - y for y in ys]
+                
                 xs = list(xs) + [xs[0]]
-                ys = list(ys) + [ys[0]]
-                ax.plot(xs, ys, color=color, lw=lw, alpha=alpha, zorder=zorder)
+                ys_transformed = list(ys_transformed) + [ys_transformed[0]]
+                ax.plot(xs, ys_transformed, color=color, lw=lw, alpha=alpha, zorder=zorder)
 
             # Add a small label to show current step / total steps
             step_label = tk.Label(self.detail_window, text="Step 0 / 0", bg='white', font=('Arial', 10, 'bold'))
@@ -897,6 +905,12 @@ class SimpleRobotGUI:
                 ax.clear()
                 ax.set_xlabel('X (mm)'); ax.set_ylabel('Y (mm)')
                 ax.grid(True, alpha=0.3)
+                
+                # Invert y-axis so (0,0) is at top-left corner (only if not already inverted)
+                if not ax.yaxis_inverted():
+                    ax.invert_yaxis()
+                print(f"Animation frame {frame}: Y-axis inverted = {ax.yaxis_inverted()}")
+                
                 ax.set_aspect('equal', adjustable='box')
 
                 # Force view limits to workspace boundary so huge forbidden tails don't expand view
@@ -908,17 +922,20 @@ class SimpleRobotGUI:
                 ax.set_xlim(x_min - pad_x, x_max + pad_x)
                 ax.set_ylim(y_min - pad_y, y_max + pad_y)
 
-                # Draw static workspace outlines
-                ax.plot(boundary_x, boundary_y, 'k--', linewidth=2, alpha=0.5, label='Workspace Area')
+                # Draw static workspace outlines - transform coordinates
+                boundary_y_transformed = [max_y - y for y in boundary_y]
+                ax.plot(boundary_x, boundary_y_transformed, 'k--', linewidth=2, alpha=0.5, label='Workspace Area')
                 if margin_x > 0 or margin_y > 0:
-                    ax.plot(effective_boundary_x, effective_boundary_y, 'g-', linewidth=1.5, alpha=0.7, label='Drawing Area (with margins)')
+                    effective_boundary_y_transformed = [max_y - y for y in effective_boundary_y]
+                    ax.plot(effective_boundary_x, effective_boundary_y_transformed, 'g-', linewidth=1.5, alpha=0.7, label='Drawing Area (with margins)')
                 
-                # Draw static left-forbidden rectangle (0,0) to (130,40)
+                # Draw static left-forbidden rectangle (0,0) to (130,40) - transform coordinates
                 if not use_center:  # Only show in corner origin mode
                     left_forbidden_x = [0, 130, 130, 0, 0]
                     left_forbidden_y = [0, 0, 40, 40, 0]
-                    ax.fill(left_forbidden_x, left_forbidden_y, color='pink', alpha=0.3, zorder=1)
-                    ax.plot(left_forbidden_x, left_forbidden_y, color='red', linewidth=2, 
+                    left_forbidden_y_transformed = [max_y - y for y in left_forbidden_y]
+                    ax.fill(left_forbidden_x, left_forbidden_y_transformed, color='pink', alpha=0.3, zorder=1)
+                    ax.plot(left_forbidden_x, left_forbidden_y_transformed, color='red', linewidth=2, 
                            linestyle='--', alpha=0.8, zorder=1)
                 ax.set_title(f'Step {frame+1} / {len(steps)}')
                 # Update step label text
@@ -957,7 +974,9 @@ class SimpleRobotGUI:
                         for poly in polys:
                             if hasattr(poly, 'exterior') and poly.exterior is not None:
                                 x_f, y_f = poly.exterior.xy
-                                ax.fill(x_f, y_f, color='red', alpha=0.15, zorder=2, hatch='//')
+                                # Transform forbidden polygon coordinates
+                                y_f_transformed = [max_y - y for y in y_f]
+                                ax.fill(x_f, y_f_transformed, color='red', alpha=0.15, zorder=2, hatch='//')
 
                 # Plot master and slave
                 if master:
@@ -980,6 +999,10 @@ class SimpleRobotGUI:
             ax.clear()
             ax.set_xlabel('X (mm)'); ax.set_ylabel('Y (mm)')
             ax.grid(True, alpha=0.3)
+            
+            # Invert y-axis so (0,0) is at top-left corner
+            ax.invert_yaxis()
+            
             ax.set_aspect('equal', adjustable='box')
             ax.plot(boundary_x, boundary_y, 'k--', linewidth=2, alpha=0.5, label='Workspace Area')
             if margin_x > 0 or margin_y > 0:
@@ -989,7 +1012,7 @@ class SimpleRobotGUI:
                 colors = plt.cm.tab20(np.linspace(0, 1, len(self.drawer.drawing_points)))
                 self._current_anim = animate_points(
                     ax, self.drawer.drawing_points, colors=colors, interval=1,
-                    on_frame=lambda f: canvas.draw_idle(), show_left_forbidden=True)
+                    on_frame=lambda f: canvas.draw_idle(), show_left_forbidden=True, invert_y=False)
                 canvas.draw_idle()
             else:
                 import tkinter.messagebox as mb
@@ -2403,6 +2426,9 @@ class SimpleRobotGUI:
                 self.ax.set_xlim(0, max_x)
                 self.ax.set_ylim(0, max_y)
                 origin_x, origin_y = 0, 0
+            
+            # Invert y-axis so (0,0) is at top-left corner
+            self.ax.invert_yaxis()
 
             # Reduce outer margins so drawing fills the preview
             try:
