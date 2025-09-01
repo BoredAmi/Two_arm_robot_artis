@@ -311,6 +311,11 @@ class RobotDrawer:
                     x = px * scale_factor + logo_x_offset
                     y = py * scale_factor + logo_y_offset
                     
+                    # Mirror logo horizontally (flip X coordinates)
+                    # Calculate logo width to flip around its center
+                    logo_width_mm = logo_pixel_width * scale_factor
+                    x = logo_x_offset + logo_width_mm - (px * scale_factor)
+                    
                     # Adjust for coordinate system (center vs corner origin)
                     if hasattr(self, 'use_center_origin') and self.use_center_origin:
                         # Convert to center-based coordinates
