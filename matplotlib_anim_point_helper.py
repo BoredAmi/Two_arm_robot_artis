@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from matplotlib.patches import Rectangle
 
-def animate_points(ax, paths, colors=None, interval=1, on_frame=None):
+def animate_points(ax, paths, colors=None, interval=1, on_frame=None, show_left_forbidden=True, forbidden_rect=(0, 0, 130, 40)):
     """
     Animate drawing of all points in all paths, N points at a time (very fast).
     - ax: matplotlib Axes
@@ -29,6 +30,18 @@ def animate_points(ax, paths, colors=None, interval=1, on_frame=None):
     def init():
         for line in lines:
             line.set_data([], [])
+        # Draw left-arm forbidden rectangle (if requested)
+        if show_left_forbidden:
+            try:
+                x0, y0, w, h = forbidden_rect
+                # Semi-transparent pink fill for the forbidden area
+                forb_fill = Rectangle((x0, y0), w, h, facecolor='pink', alpha=0.3, edgecolor='red', linewidth=2, linestyle='--')
+                ax.add_patch(forb_fill)
+                # Add text label to identify the forbidden area
+                ax.text(x0 + w/2, y0 + h/2, 'Left\nForbidden\n(0,0)-(130,40)', 
+                       ha='center', va='center', fontsize=8, color='red', weight='bold')
+            except Exception as e:
+                print(f"Error adding forbidden rectangle: {e}")
         return lines
     def update(frame):
         last_idx = min((frame+1)*points_per_frame, len(point_indices))

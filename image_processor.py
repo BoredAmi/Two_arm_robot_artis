@@ -133,12 +133,13 @@ class ImageProcessor:
         try:
             # Load image
             image = cv2.imread(image_path)
-            image = cv2.flip(image, 1)  # flip image in x
             if image is None:
                 print(f"Error: Could not load image {image_path}")
                 return None
             
-            print(f"Loaded image for edge following: {image.shape} pixels")
+            # Flip image 180 degrees (rotate around center)
+            image = cv2.rotate(image, cv2.ROTATE_180)
+            print(f"Loaded and flipped image 180°: {image.shape} pixels")
             print(f"Precision mode: {precision}")
             print(f"Detection method: {detection_method}")
             
@@ -318,6 +319,9 @@ class ImageProcessor:
         image = cv2.imread(image_path)
         if image is None:
             return None
+        
+        # Flip image 180 degrees (rotate around center) for consistency
+        image = cv2.rotate(image, cv2.ROTATE_180)
         
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         

@@ -843,6 +843,9 @@ class SimpleRobotGUI:
             from matplotlib.animation import FuncAnimation
             import matplotlib.patches as mpatches
 
+            # Get coordinate system setting
+            use_center = self.use_center_origin.get()
+
             contours = self.drawer.drawing_points
             if not contours or not any(len(c) > 0 for c in contours):
                 import tkinter.messagebox as mb
@@ -872,6 +875,7 @@ class SimpleRobotGUI:
             # Prepare legend
             legend_handles = [
                 mpatches.Patch(color='red', alpha=0.15, label='Forbidden zone', hatch='//'),
+                mpatches.Patch(color='pink', alpha=0.3, label='Left-forbidden rectangle'),
                 mpatches.Patch(color='red', label='Master'),
                 mpatches.Patch(color='blue', label='Slave'),
             ]
@@ -908,6 +912,14 @@ class SimpleRobotGUI:
                 ax.plot(boundary_x, boundary_y, 'k--', linewidth=2, alpha=0.5, label='Workspace Area')
                 if margin_x > 0 or margin_y > 0:
                     ax.plot(effective_boundary_x, effective_boundary_y, 'g-', linewidth=1.5, alpha=0.7, label='Drawing Area (with margins)')
+                
+                # Draw static left-forbidden rectangle (0,0) to (130,40)
+                if not use_center:  # Only show in corner origin mode
+                    left_forbidden_x = [0, 130, 130, 0, 0]
+                    left_forbidden_y = [0, 0, 40, 40, 0]
+                    ax.fill(left_forbidden_x, left_forbidden_y, color='pink', alpha=0.3, zorder=1)
+                    ax.plot(left_forbidden_x, left_forbidden_y, color='red', linewidth=2, 
+                           linestyle='--', alpha=0.8, zorder=1)
                 ax.set_title(f'Step {frame+1} / {len(steps)}')
                 # Update step label text
                 try:
@@ -977,7 +989,7 @@ class SimpleRobotGUI:
                 colors = plt.cm.tab20(np.linspace(0, 1, len(self.drawer.drawing_points)))
                 self._current_anim = animate_points(
                     ax, self.drawer.drawing_points, colors=colors, interval=1,
-                    on_frame=lambda f: canvas.draw_idle())
+                    on_frame=lambda f: canvas.draw_idle(), show_left_forbidden=True)
                 canvas.draw_idle()
             else:
                 import tkinter.messagebox as mb
@@ -2419,6 +2431,15 @@ class SimpleRobotGUI:
                 boundary_y = [0, 0, max_y, max_y, 0]
 
             self.ax.plot(boundary_x, boundary_y, 'k-', linewidth=2.5, alpha=0.9)
+
+            # Plot left-forbidden rectangle (0,0) to (130,40) - always visible in corner origin mode
+            if not use_center:  # Only show in corner origin mode where this constraint applies
+                left_forbidden_x = [0, 130, 130, 0, 0]
+                left_forbidden_y = [0, 0, 40, 40, 0]
+                self.ax.fill(left_forbidden_x, left_forbidden_y, color='pink', alpha=0.3, 
+                           label='Left-forbidden (0,0)-(130,40)')
+                self.ax.plot(left_forbidden_x, left_forbidden_y, color='red', linewidth=2, 
+                           linestyle='--', alpha=0.8)
 
             # Plot effective drawing area (margins) if present
             margin_x = self.margin_x.get()

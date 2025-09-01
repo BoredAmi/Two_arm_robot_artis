@@ -32,6 +32,7 @@ def animate_dual_assignment(contours, xlim=(-150, 150), ylim=(-120, 120)):
     colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan']
     legend_handles = [
         mpatches.Patch(color='red', alpha=0.15, label='Forbidden zone', hatch='//'),
+        mpatches.Patch(color='pink', alpha=0.3, label='Left-forbidden rectangle'),
         mpatches.Patch(color='red', label='Master'),
         mpatches.Patch(color='blue', label='Slave'),
     ]
@@ -48,6 +49,14 @@ def animate_dual_assignment(contours, xlim=(-150, 150), ylim=(-120, 120)):
         ax.set_title(f'Step {frame+1} / {len(steps)}')
         ax.legend(handles=legend_handles)
         remaining, master_role, master, slave, forbidden_poly = steps[frame]
+        
+        # Plot static left-forbidden rectangle (0,0) to (130,40) - always visible
+        left_forbidden_rect_x = [0, 130, 130, 0, 0]
+        left_forbidden_rect_y = [0, 0, 40, 40, 0]
+        ax.fill(left_forbidden_rect_x, left_forbidden_rect_y, color='pink', alpha=0.3, zorder=1, 
+               label='Left-forbidden (0,0)-(130,40)')
+        ax.plot(left_forbidden_rect_x, left_forbidden_rect_y, color='pink', linewidth=2, zorder=1)
+        
         # Plot all remaining contours
         for i, c in enumerate(remaining):
             plot_contour(ax, c, color=colors[i%len(colors)], lw=1, alpha=0.5, zorder=1)

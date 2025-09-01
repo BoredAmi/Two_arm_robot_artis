@@ -1,4 +1,4 @@
-from shapely.geometry import Polygon, box
+from shapely.geometry import Polygon, box, Point
 
 def polygons_overlap(contour1, contour2):
     """
@@ -61,59 +61,113 @@ def master_slave_assign_contours(contours, master, buffer_radius=40, buffer_x=10
     # Left arm cannot reach coordinates x < 130 mm and y < 40 mm (rectangle from origin)
     def _contour_in_left_forbidden(c):
         try:
+            from shapely.geometry import Polygon as ShapelyPolygon
+            # Create left forbidden rectangle: (0,0) to (130,40)
+            left_forbidden_rect = ShapelyPolygon([(0, 0), (130, 0), (130, 40), (0, 40)])
+            
+            # Convert contour to polygon and check intersection
+            if len(c) >= 3:
+                contour_poly = ShapelyPolygon(c)
+            else:
+                # For lines or points, buffer slightly
+                contour_poly = ShapelyPolygon(c).buffer(1.0)
+            
+            # Return True if contour intersects or is inside the forbidden rectangle
+            return left_forbidden_rect.intersects(contour_poly)
+        except Exception:
+            # Fallback: check if any point is in forbidden rectangle (0,0) to (130,40)
             for p in c:
                 x, y = p[0], p[1]
                 if x < 130 and y < 40:
                     return True
-        except Exception:
-            pass
         return False
 
-    # Select master contour while avoiding assigning left-arm to contours inside its unreachable rectangle
+    # Select master contour while ABSOLUTELY preventing left arm from being assigned forbidden contours
     master_contour = None
     if master == 'left':
+        # Left master: MUST find a contour outside forbidden area, no fallback allowed
         for c in sorted_contours:
             if not _contour_in_left_forbidden(c):
                 master_contour = c
                 break
         if master_contour is None:
-            # If no contour is reachable by the left arm, swap roles and pick a right master
-            # This prevents assigning an unreachable contour to the left arm even when left was requested.
+            # MANDATORY: If no contour is reachable by left arm, FORCE swap to right master
+            # LEFT ARM CAN NEVER BE ASSIGNED FORBIDDEN CONTOURS
             master = 'right'
             # Recompute sorted order for right master (rightmost)
             sorted_contours = sorted(contours, key=contour_center_x)
+            # Right master can take any contour (including forbidden ones if necessary)
             master_contour = sorted_contours[0]
     else:
+        # Right master: can work anywhere, including in left-forbidden areas
+        # Right arm is not restricted by the left forbidden rectangle
         master_contour = sorted_contours[0]
-    from shapely.geometry import Polygon
+    from shapely.geometry import Polygon, box, Point
+    from shapely.ops import unary_union
     import numpy as np
-    # Use the caller-specified buffer_radius around the contour
-    # (default is 40 mm)
-    master_poly = Polygon(master_contour)
-    forbidden_poly = master_poly.buffer(buffer_radius)
-    # Add a 'tail' in the forbidden direction, width matches buffer (60mm)
-    xs = [p[0] for p in master_contour]
-    ys = [p[1] for p in master_contour]
-    min_x, max_x = min(xs), max(xs)
-    min_y, max_y = min(ys), max(ys)
-    SHEET_LIMIT = 1e4  # Large value, should be bigger than any real sheet
-    if master == "right":
-        # Tail to the left, width matches buffer, goes to far left
-        tail_poly = Polygon([
-            (-SHEET_LIMIT, min_y - buffer_radius),
-            (min_x, min_y - buffer_radius),
-            (min_x, max_y + buffer_radius),
-            (-SHEET_LIMIT, max_y + buffer_radius)
-        ])
+    
+    # Handle case where no safe master contour was found
+    if master_contour is None:
+        # No assignment possible - all contours are forbidden
+        return None, None, contours, [], box(0, 0, 130, 40)  # Return empty forbidden area
+    
+    # Create forbidden zones: each point in master contour gets its own circular buffer
+    forbidden_circles = []
+    
+    # 1. Create circular forbidden zone around each point in the master contour
+    for point in master_contour:
+        x, y = point[0], point[1]
+        circle = Point(x, y).buffer(buffer_radius)
+        forbidden_circles.append(circle)
+    
+    # 2. Union all circles to create the base forbidden area
+    if forbidden_circles:
+        master_forbidden_area = unary_union(forbidden_circles)
     else:
-        # Tail to the right, width matches buffer, goes to far right
-        tail_poly = Polygon([
-            (max_x, min_y - buffer_radius),
-            (SHEET_LIMIT, min_y - buffer_radius),
-            (SHEET_LIMIT, max_y + buffer_radius),
-            (max_x, max_y + buffer_radius)
-        ])
-    forbidden_poly = forbidden_poly.union(tail_poly)
+        # Fallback if no points
+        master_poly = Polygon(master_contour)
+        master_forbidden_area = master_poly.buffer(buffer_radius)
+    
+    # 3. Calculate the bounds of the complete forbidden area to determine tail width
+    bounds = master_forbidden_area.bounds  # (minx, miny, maxx, maxy)
+    forbidden_min_x, forbidden_min_y, forbidden_max_x, forbidden_max_y = bounds
+    forbidden_width = forbidden_max_x - forbidden_min_x
+    forbidden_height = forbidden_max_y - forbidden_min_y
+    
+    # 4. Create tail extending in the forbidden direction from CENTER of forbidden area
+    # Calculate center of the forbidden area
+    forbidden_center_x = (forbidden_min_x + forbidden_max_x) / 2
+    forbidden_center_y = (forbidden_min_y + forbidden_max_y) / 2
+    
+    # Tail width should match the height of the forbidden area
+    tail_width = forbidden_height
+    TAIL_EXTENSION = 2000  # Large extension to cover workspace
+    
+    if master == "right":
+        # Tail extends to the left from CENTER of forbidden area
+        # Create tail centered on the forbidden area's center Y
+        tail_rect = box(
+            forbidden_center_x - TAIL_EXTENSION,  # Far left
+            forbidden_center_y - tail_width/2,    # Bottom: center Y minus half width
+            forbidden_center_x,                   # Right edge at forbidden area center X
+            forbidden_center_y + tail_width/2     # Top: center Y plus half width
+        )
+    else:
+        # Tail extends to the right from CENTER of forbidden area
+        tail_rect = box(
+            forbidden_center_x,                   # Left edge at forbidden area center X
+            forbidden_center_y - tail_width/2,    # Bottom: center Y minus half width
+            forbidden_center_x + TAIL_EXTENSION,  # Far right
+            forbidden_center_y + tail_width/2     # Top: center Y plus half width
+        )
+    
+    # 5. Left arm unreachable rectangle (always forbidden for left arm assignments)
+    left_forbidden_rect = box(0, 0, 130, 40)
+    
+    # 6. Combine all forbidden zones
+    forbidden_polygons = [master_forbidden_area, tail_rect, left_forbidden_rect]
+    forbidden_poly = unary_union(forbidden_polygons)
+    
     # Find the first slave contour that is completely outside forbidden area (no intersection at all)
     from shapely.geometry import Polygon
     slave_contour = None
@@ -148,6 +202,16 @@ def master_slave_assign_contours(contours, master, buffer_radius=40, buffer_x=10
             unassigned.append(c)
     # Ensure slave is only assigned if it does NOT overlap forbidden area
     # (already enforced above, but this is explicit)
+    
+    # FINAL SAFETY CHECK: Absolutely ensure left arm NEVER gets forbidden contours
+    # This is a critical safety constraint for robot operation
+    # Right arm can work anywhere, including in the left-forbidden rectangle
+    if master == 'left' and master_contour and _contour_in_left_forbidden(master_contour):
+        raise ValueError("CRITICAL ERROR: Left arm was assigned a forbidden contour as master! This should never happen.")
+    
+    if slave_contour and slave_side == 'left' and _contour_in_left_forbidden(slave_contour):
+        raise ValueError("CRITICAL ERROR: Left arm was assigned a forbidden contour as slave! This should never happen.")
+    
     return master_contour, slave_contour, remaining, unassigned, forbidden_poly
 """
 Coordinate transformation module for Robot Drawing System.
