@@ -119,21 +119,28 @@ class RobotController:
                                             ok = False
                                         else:
                                             time.sleep(0.02)
-                                            if len(contour) > 1:
-                                                # send batches; if successful, account for all contour points (including start)
-                                                if not self.send_batch_moves(contour[1:], batch_size=batch_size, target=target):
-                                                    print(f"[{target}] Failed to send batch moves")
-                                                    ok = False
-                                                else:
-                                                    # Increment shared points_sent by full contour length
-                                                    if progress_callback:
-                                                        with points_lock:
-                                                            points_sent['value'] += len(contour)
-                                                            cur = points_sent['value']
-                                                        try:
-                                                            progress_callback(idx + 1, total_batches, cur, total_points)
-                                                        except Exception:
-                                                            pass
+                                            
+                                            # Explicitly move to first point with pen down
+                                            start_x, start_y = contour[0]
+                                            if not self.send_move(start_x, start_y, target=target):
+                                                print(f"[{target}] Failed to send explicit move to first point")
+                                                ok = False
+                                            else:
+                                                if len(contour) > 1:
+                                                    # send batches for remaining points; if successful, account for all contour points (including start)
+                                                    if not self.send_batch_moves(contour[1:], batch_size=batch_size, target=target):
+                                                        print(f"[{target}] Failed to send batch moves")
+                                                        ok = False
+                                                    else:
+                                                        # Increment shared points_sent by full contour length
+                                                        if progress_callback:
+                                                            with points_lock:
+                                                                points_sent['value'] += len(contour)
+                                                                cur = points_sent['value']
+                                                            try:
+                                                                progress_callback(idx + 1, total_batches, cur, total_points)
+                                                            except Exception:
+                                                                pass
                                             # Lift pen after contour
                                             if not self.send_pen_up(target=target):
                                                 print(f"[{target}] Failed to send PEN_UP (after contour)")
@@ -189,23 +196,34 @@ class RobotController:
                                         ok = False
                                     else:
                                         time.sleep(move_delay)
-                                        for x, y in contour[1:]:
-                                            if not self.send_move(x, y, target=target):
-                                                print(f"[{target}] Failed to send point")
-                                                ok = False
-                                                break
-                                            else:
-                                                # Increment progress per point sent
-                                                if progress_callback:
-                                                    with points_lock:
-                                                        points_sent['value'] += 1
-                                                        cur = points_sent['value']
-                                                    try:
-                                                        progress_callback(idx + 1, total_batches, cur, total_points)
-                                                    except Exception:
-                                                        pass
+                                        
+                                        # Explicitly move to first point with pen down to ensure precise start
+                                        start_x, start_y = contour[0]
+                                        if not self.send_move(start_x, start_y, target=target):
+                                            print(f"[{target}] Failed to send explicit move to first point")
+                                            ok = False
+                                        else:
                                             if move_delay > 0:
                                                 time.sleep(move_delay)
+                                            
+                                            # Draw remaining points
+                                            for x, y in contour[1:]:
+                                                if not self.send_move(x, y, target=target):
+                                                    print(f"[{target}] Failed to send point")
+                                                    ok = False
+                                                    break
+                                                else:
+                                                    # Increment progress per point sent
+                                                    if progress_callback:
+                                                        with points_lock:
+                                                            points_sent['value'] += 1
+                                                            cur = points_sent['value']
+                                                        try:
+                                                            progress_callback(idx + 1, total_batches, cur, total_points)
+                                                        except Exception:
+                                                            pass
+                                                    if move_delay > 0:
+                                                        time.sleep(move_delay)
                                         if not self.send_pen_up(target=target):
                                             print(f"[{target}] Failed to send PEN_UP (after contour)")
                                             ok = False
@@ -920,7 +938,14 @@ class RobotController:
             self.send_pen_down()
             time.sleep(move_delay)
             
-            # Draw each point individually
+            # Explicitly move to first point with pen down to ensure precise start
+            start_x, start_y = contour[0]
+            if not self.send_move(start_x, start_y):
+                print(f"Failed to send explicit move to first point")
+                return False
+            time.sleep(move_delay)
+            
+            # Draw each remaining point individually
             for point_idx, (x, y) in enumerate(contour[1:], 1):
                 if not self.send_move(x, y):
                     print(f"Failed to send point {point_idx + 1}")
@@ -987,6 +1012,13 @@ class RobotController:
             # Put pen down to start drawing this contour
             self.send_pen_down()
             time.sleep(0.02)  # Ultra-minimal delay
+            
+            # Explicitly move to first point with pen down to ensure precise start
+            start_x, start_y = contour[0]
+            if not self.send_move(start_x, start_y):
+                print(f"Failed to send explicit move to first point")
+                return False
+            time.sleep(0.02)
             
             # Use large batches with integer coordinates for remaining points
             remaining_points = contour[1:]
