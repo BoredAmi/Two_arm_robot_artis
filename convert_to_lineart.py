@@ -48,7 +48,8 @@ def convert_to_lineart(face_image_path, prompt_type="minimalist"):
                 image=image_file,
                 prompt=prompt,
                 quality="medium",  # Use medium quality as requested
-                n=1
+                n=1,
+                size="1536x1024"
             )
 
         # Handle response based on format (URL or base64)
