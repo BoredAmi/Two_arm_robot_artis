@@ -242,7 +242,7 @@ class RobotDrawer:
 
     def generate_logo_coordinates(self, size_mm=20):
         """
-        Generate logo coordinates by processing logo_short.png and placing it at corner.
+        Generate logo coordinates by processing logo_short.png and placing it at top-right corner.
         
         Args:
             size_mm: Logo size in millimeters
@@ -280,10 +280,10 @@ class RobotDrawer:
             # Scale logo to fit in size_mm, maintaining aspect ratio
             scale_factor = size_mm / max(logo_pixel_width, logo_pixel_height)
             
-            # Calculate logo position (bottom-right corner with margin)
+            # Calculate logo position (top-right corner with margin)
             margin = 5  # 5mm margin from corner
             logo_x_offset = self.max_x - self.margin_x - size_mm - margin
-            logo_y_offset = self.max_y - self.margin_y - size_mm - margin
+            logo_y_offset = self.margin_y + margin  # Changed: now at top instead of bottom
             
             # Transform logo contours to robot coordinates
             logo_robot_contours = []
