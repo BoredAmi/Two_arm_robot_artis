@@ -322,24 +322,8 @@ class SimpleRobotGUI:
                               bg=self.COLORS['background'], fg='#333')
         title_label.pack(pady=(0, 30))
         
-        # Compact top row: show selected file, Browse and Setup buttons
-        top_controls = tk.Frame(main_frame, bg=self.COLORS['background'])
-        top_controls.pack(fill=tk.X, pady=(0, 10))
-
-        # Compact file label shown on main window
-        self.file_label_main = tk.Label(top_controls, text="No image selected",
-            font=('Arial', 10), bg=self.COLORS['background'], fg='#666', anchor='w')
-        self.file_label_main.pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-        browse_btn_main = tk.Button(top_controls, text="Browse Images", command=self.browse_image,
-            bg='#4CAF50', fg='white', font=self.BUTTON_FONT, relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
-        browse_btn_main.pack(side=tk.RIGHT, padx=(10, 0))
-
-        setup_btn = tk.Button(top_controls, text="Setup...", command=self.open_setup_window,
-                  bg='#607D8B', fg='white', font=self.BUTTON_FONT, relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
-        setup_btn.pack(side=tk.RIGHT)
-
-        # Create main workflow sections (only 2 and 3 visible by default)
+        # Create main workflow sections (1, 2, and 3)
+        self.create_step_section(main_frame, "1. Select Image or Drawing", self.create_file_selection_section)
         self.create_step_section(main_frame, "2. Connect to Robot", self.create_connection_section)
         self.create_step_section(main_frame, "3. Preview & Send to Robot", self.create_action_section)
 
@@ -375,6 +359,33 @@ class SimpleRobotGUI:
         content_frame.pack(fill=tk.BOTH, expand=True)
         
         content_func(content_frame)
+    
+    def create_file_selection_section(self, parent):
+        """Create file selection section (Zone 1)"""
+        # File selection controls
+        file_controls = tk.Frame(parent, bg='white')
+        file_controls.pack(fill=tk.X, pady=(0, 10))
+
+        # Current file display
+        self.file_label_main = tk.Label(file_controls, text="No image selected",
+            font=('Arial', 10), bg='white', fg='#666', anchor='w')
+        self.file_label_main.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        # Buttons frame
+        buttons_frame = tk.Frame(file_controls, bg='white')
+        buttons_frame.pack(side=tk.RIGHT)
+
+        # Browse Images button
+        browse_btn_main = tk.Button(buttons_frame, text="Browse Images", command=self.browse_image,
+            bg='#4CAF50', fg='white', font=self.BUTTON_FONT, relief='flat', 
+            padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
+        browse_btn_main.pack(side=tk.RIGHT, padx=(10, 0))
+
+        # Setup button
+        setup_btn = tk.Button(buttons_frame, text="Setup...", command=self.open_setup_window,
+                  bg='#607D8B', fg='white', font=self.BUTTON_FONT, relief='flat', 
+                  padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
+        setup_btn.pack(side=tk.RIGHT)
     
     def create_image_section(self, parent):
         """Create image selection section"""
