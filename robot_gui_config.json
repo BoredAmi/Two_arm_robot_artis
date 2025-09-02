@@ -1,6 +1,7 @@
 {
   "robot_ip": "192.168.125.1",
   "robot_port": "1025",
+  "robot_port_l": "1026",
   "use_center_origin": false,
   "enable_logo": true,
   "logo_size": 27,
