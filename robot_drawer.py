@@ -257,9 +257,9 @@ class RobotDrawer:
             return []
         
         try:
-            # Process logo image to get contours
+            # Process logo image to get contours (with logo protection to prevent frame filtering)
             print(f"Processing logo image: {logo_path}")
-            logo_contour_data = self.processor.extract_edge_following_path(logo_path, precision="high", detection_method="threshold")
+            logo_contour_data = self.processor.extract_edge_following_path(logo_path, precision="high", detection_method="threshold", protect_logo=True)
             
             if not logo_contour_data or not logo_contour_data.get('contours'):
                 print("No contours found in logo image")

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.patches import Rectangle
 
-def animate_points(ax, paths, colors=None, interval=1, on_frame=None, show_left_forbidden=True, forbidden_rect=(0, 0, 130, 40), invert_y=True):
+def animate_points(ax, paths, colors=None, interval=1, on_frame=None, show_left_forbidden=True, forbidden_rect=(0, 0, 130, 40), invert_y=True, arm_roles=None):
     """
     Animate drawing of all points in all paths, N points at a time (very fast).
     - ax: matplotlib Axes
@@ -13,11 +13,23 @@ def animate_points(ax, paths, colors=None, interval=1, on_frame=None, show_left_
     - on_frame: callback(frame) for integration with Tkinter
     - points_per_frame: how many points to draw per frame (default 10)
     - invert_y: whether to invert y-axis so (0,0) is at top-left (default True)
+    - arm_roles: list of 'left' or 'right' for each path (for dual-arm mode)
     Returns: FuncAnimation object
     """
     points_per_frame = 10  # You can change this value for more/less speed
     if colors is None:
-        colors = [plt.cm.tab20(i % 20) for i in range(len(paths))]
+        if arm_roles is not None:
+            # Professional/Industrial color scheme - standardized safety colors
+            colors = []
+            for role in arm_roles:
+                if role == 'right':
+                    colors.append('#004E89')  # Deep Blue - professional, reliable
+                elif role == 'left':
+                    colors.append('#FF6B35')  # Safety Orange - industrial safety standard
+                else:
+                    colors.append('#9E9E9E')  # Gray - fallback for unknown roles
+        else:
+            colors = [plt.cm.tab20(i % 20) for i in range(len(paths))]
     
     # Apply y-axis inversion if requested and not already inverted
     if invert_y and not ax.yaxis_inverted():
@@ -40,12 +52,12 @@ def animate_points(ax, paths, colors=None, interval=1, on_frame=None, show_left_
         if show_left_forbidden:
             try:
                 x0, y0, w, h = forbidden_rect
-                # Semi-transparent pink fill for the forbidden area
-                forb_fill = Rectangle((x0, y0), w, h, facecolor='pink', alpha=0.3, edgecolor='red', linewidth=2, linestyle='--')
+                # Industrial safety red fill for the forbidden area
+                forb_fill = Rectangle((x0, y0), w, h, facecolor='#FFCDD2', alpha=0.7, edgecolor='#FF1744', linewidth=2, linestyle='--')
                 ax.add_patch(forb_fill)
                 # Add text label to identify the forbidden area
                 ax.text(x0 + w/2, y0 + h/2, 'Left\nForbidden\n(0,0)-(130,40)', 
-                       ha='center', va='center', fontsize=8, color='red', weight='bold')
+                       ha='center', va='center', fontsize=8, color='#C62828', weight='bold')
             except Exception as e:
                 print(f"Error adding forbidden rectangle: {e}")
         return lines
