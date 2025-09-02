@@ -224,17 +224,17 @@ class RobotDrawer:
         """Send movement command to robot"""
         return self.robot.send_move(x, y)
     
-    def send_pen_up(self):
-        """Send pen up command"""
-        return self.robot.send_pen_up()
+    def send_pen_up(self, target='right'):
+        """Send pen up command to specified target(s)"""
+        return self.robot.send_pen_up(target=target)
     
     def send_pen_down(self):
         """Send pen down command"""
         return self.robot.send_pen_down()
     
-    def send_stop(self):
-        """Send stop command"""
-        return self.robot.send_stop()
+    def send_stop(self, target='right'):
+        """Send stop command to specified target(s)"""
+        return self.robot.send_stop(target=target)
     
     def send_start(self):
         """Send START command with extended timeout for robot initialization"""

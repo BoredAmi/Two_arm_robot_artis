@@ -2584,9 +2584,17 @@ class SimpleRobotGUI:
             try:
                 # Send emergency stop to robot
                 if self.drawer.robot and self.drawer.robot.socket:
-                    self.drawer.send_pen_up()  # Lift pen first
-                    self.drawer.send_stop()    # Send stop command
-                    self.status_text.set("Emergency stop sent to robot")
+                    # Send IMMEDIATE stop command to appropriate arms (no pen movement to avoid collisions)
+                    if self.dual_arm_mode.get():
+                        # In dual-arm mode, stop both arms immediately
+                        print("🛑 EMERGENCY STOP: Sending IMMEDIATE halt to BOTH arms")
+                        self.drawer.send_stop(target='both')
+                        self.status_text.set("EMERGENCY STOP sent to both arms")
+                    else:
+                        # Single arm mode, stop right arm immediately
+                        print("🛑 EMERGENCY STOP: Sending IMMEDIATE halt to RIGHT arm")
+                        self.drawer.send_stop(target='right')
+                        self.status_text.set("EMERGENCY STOP sent to robot")
                 else:
                     self.status_text.set("Drawing stopped (no robot connection)")
                 messagebox.showinfo("Stop", "Drawing process stopped and robot commands halted")
