@@ -875,12 +875,12 @@ class SimpleRobotGUI:
                 remaining = rest
                 master_role = 'left' if master_role == 'right' else 'right'
 
-            # Prepare legend
+            # Prepare legend with Professional/Industrial colors
             legend_handles = [
-                mpatches.Patch(color='red', alpha=0.15, label='Forbidden zone', hatch='//'),
-                mpatches.Patch(color='pink', alpha=0.3, label='Left-forbidden rectangle'),
-                mpatches.Patch(color='red', label='Master'),
-                mpatches.Patch(color='blue', label='Slave'),
+                mpatches.Patch(color='#FF1744', alpha=0.15, label='Forbidden zone (Safety Red)', hatch='//'),
+                mpatches.Patch(color='#FFCDD2', alpha=0.7, label='Left-forbidden rectangle'),
+                mpatches.Patch(color='#004E89', label='Right Arm (Deep Blue)'),
+                mpatches.Patch(color='#FF6B35', label='Left Arm (Safety Orange)'),
             ]
 
             def plot_contour(ax, contour, color, lw=2, alpha=1.0, zorder=1):
@@ -934,8 +934,8 @@ class SimpleRobotGUI:
                     left_forbidden_x = [0, 130, 130, 0, 0]
                     left_forbidden_y = [0, 0, 40, 40, 0]
                     left_forbidden_y_transformed = [max_y - y for y in left_forbidden_y]
-                    ax.fill(left_forbidden_x, left_forbidden_y_transformed, color='pink', alpha=0.3, zorder=1)
-                    ax.plot(left_forbidden_x, left_forbidden_y_transformed, color='red', linewidth=2, 
+                    ax.fill(left_forbidden_x, left_forbidden_y_transformed, color='#FFCDD2', alpha=0.7, zorder=1)
+                    ax.plot(left_forbidden_x, left_forbidden_y_transformed, color='#FF1744', linewidth=2, 
                            linestyle='--', alpha=0.8, zorder=1)
                 ax.set_title(f'Step {frame+1} / {len(steps)}')
                 # Update step label text
@@ -959,6 +959,9 @@ class SimpleRobotGUI:
 
                 # Plot forbidden area clipped to view box to avoid huge tails
                 if forbidden_poly is not None:
+                    # Always use safety red for forbidden zones (consistent safety warning)
+                    forbidden_color = '#FF1744'  # Safety Red for all forbidden areas
+                    
                     try:
                         from shapely.geometry import box as shapely_box
                         view_box = shapely_box(ax.get_xlim()[0], ax.get_ylim()[0], ax.get_xlim()[1], ax.get_ylim()[1])
@@ -976,13 +979,16 @@ class SimpleRobotGUI:
                                 x_f, y_f = poly.exterior.xy
                                 # Transform forbidden polygon coordinates
                                 y_f_transformed = [max_y - y for y in y_f]
-                                ax.fill(x_f, y_f_transformed, color='red', alpha=0.15, zorder=2, hatch='//')
+                                ax.fill(x_f, y_f_transformed, color=forbidden_color, alpha=0.15, zorder=2, hatch='//')
 
-                # Plot master and slave
+                # Plot master and slave with Professional/Industrial colors (Deep Blue=right, Safety Orange=left)
                 if master:
-                    plot_contour(ax, master, color='red', lw=3, alpha=1.0, zorder=3)
+                    master_color = '#004E89' if master_role == 'right' else '#FF6B35'
+                    plot_contour(ax, master, color=master_color, lw=3, alpha=1.0, zorder=3)
                 if slave:
-                    plot_contour(ax, slave, color='blue', lw=3, alpha=1.0, zorder=3)
+                    slave_role = 'left' if master_role == 'right' else 'right'
+                    slave_color = '#004E89' if slave_role == 'right' else '#FF6B35'
+                    plot_contour(ax, slave, color=slave_color, lw=3, alpha=1.0, zorder=3)
 
                 canvas.draw_idle()
 
@@ -1009,9 +1015,18 @@ class SimpleRobotGUI:
                 ax.plot(effective_boundary_x, effective_boundary_y, 'g-', linewidth=1.5, alpha=0.7, label='Drawing Area (with margins)')
             if self.drawer.drawing_points and any(len(p) > 0 for p in self.drawer.drawing_points):
                 from matplotlib_anim_point_helper import animate_points
-                colors = plt.cm.tab20(np.linspace(0, 1, len(self.drawer.drawing_points)))
+                
+                # Use Professional/Industrial colors with arm roles if in dual-arm mode
+                if self.dual_arm_mode.get():
+                    # Create alternating arm roles for demonstration (this could be improved with actual assignments)
+                    arm_roles = ['left' if i % 2 == 0 else 'right' for i in range(len(self.drawer.drawing_points))]
+                    colors = None  # Let the animation helper determine colors based on arm_roles
+                else:
+                    arm_roles = None
+                    colors = plt.cm.tab20(np.linspace(0, 1, len(self.drawer.drawing_points)))
+                
                 self._current_anim = animate_points(
-                    ax, self.drawer.drawing_points, colors=colors, interval=1,
+                    ax, self.drawer.drawing_points, colors=colors, arm_roles=arm_roles, interval=1,
                     on_frame=lambda f: canvas.draw_idle(), show_left_forbidden=True, invert_y=False)
                 canvas.draw_idle()
             else:

@@ -79,7 +79,7 @@ class ImageProcessor:
         self.precision_factors = self.DEFAULT_PRECISION_FACTORS.copy()
         self.enable_tsp = enable_tsp
     
-    def load_and_process_image(self, image_path, precision="high", enable_tsp=None, detection_method="threshold"):
+    def load_and_process_image(self, image_path, precision="high", enable_tsp=None, detection_method="threshold", protect_logo=False):
         """
         Load image and extract edge following paths for optimal robot drawing.
         
@@ -88,6 +88,7 @@ class ImageProcessor:
             precision: Edge detection precision ("highest", "high", "medium", "low")
             enable_tsp: Override TSP setting for this operation. If None, uses instance setting.
             detection_method: Edge detection method ("canny", "threshold", "adaptive", or "canny_filled")
+            protect_logo: If True, disables border cropping and frame filtering (for logo processing)
         """
         # Temporarily override TSP setting if specified
         original_tsp_setting = self.enable_tsp
@@ -95,13 +96,13 @@ class ImageProcessor:
             self.enable_tsp = enable_tsp
             
         try:
-            result = self.extract_edge_following_path(image_path, precision, detection_method)
+            result = self.extract_edge_following_path(image_path, precision, detection_method, protect_logo)
             return result
         finally:
             # Restore original TSP setting
             self.enable_tsp = original_tsp_setting
     
-    def extract_edge_following_path(self, image_path, precision="high", detection_method="threshold"):
+    def extract_edge_following_path(self, image_path, precision="high", detection_method="threshold", protect_logo=False):
         """
         Extract edge pixels as sequential paths for robot to follow edges directly.
         
@@ -118,6 +119,7 @@ class ImageProcessor:
             precision (str): Edge detection precision level
                            ("highest", "high", "medium", "low")
             detection_method (str): Edge detection method ("canny", "threshold", "adaptive", or "canny_filled")
+            protect_logo (bool): If True, disables border cropping and frame filtering (for logo processing)
         
         Returns:
             dict: Dictionary containing:
@@ -139,6 +141,19 @@ class ImageProcessor:
             
             # Flip image 180 degrees (rotate around center)
             image = cv2.rotate(image, cv2.ROTATE_180)
+            
+            # Optional: Crop border to remove edge effects that cause frame detection
+            # Skip border cropping for logos to preserve their complete content
+            if not protect_logo:
+                border_crop = 10  # Pixels to crop from each edge
+                if border_crop > 0:
+                    h, w = image.shape[:2]
+                    if h > 2*border_crop and w > 2*border_crop:
+                        image = image[border_crop:h-border_crop, border_crop:w-border_crop]
+                        print(f"Cropped {border_crop}px border to prevent frame detection")
+            else:
+                print("Logo mode: Skipping border cropping to preserve logo content")
+            
             print(f"Loaded and flipped image 180°: {image.shape} pixels")
             print(f"Precision mode: {precision}")
             print(f"Detection method: {detection_method}")
@@ -204,7 +219,8 @@ class ImageProcessor:
             
             print(f"Found {len(contours)} edge contours")
             
-            # Filter contours to remove very small ones (noise)
+            # Filter contours to remove very small ones (noise) AND border contours (frame)
+            # For logos, skip border filtering to preserve logo content
             # For adaptive threshold, use more aggressive filtering to reduce processing time
             min_length = self.MIN_CONTOUR_LENGTH
             if detection_method.lower() == "adaptive":
@@ -214,11 +230,21 @@ class ImageProcessor:
                 filtered_contours = []
                 for c in contours:
                     if len(c) >= min_length and cv2.contourArea(c) >= 50:  # Minimum area threshold
-                        filtered_contours.append(c)
+                        # Filter out border contours (frame detection) only if not protecting logo
+                        if protect_logo or not self._is_border_contour(c, edges.shape):
+                            filtered_contours.append(c)
             else:
-                filtered_contours = [c for c in contours if len(c) >= min_length]
+                filtered_contours = []
+                for c in contours:
+                    if len(c) >= min_length:
+                        # Filter out border contours (frame detection) only if not protecting logo
+                        if protect_logo or not self._is_border_contour(c, edges.shape):
+                            filtered_contours.append(c)
             
-            print(f"Filtered to {len(filtered_contours)} contours with >= {min_length} points")
+            if protect_logo:
+                print(f"Logo mode: Filtered to {len(filtered_contours)} contours with >= {min_length} points (border filtering disabled)")
+            else:
+                print(f"Filtered to {len(filtered_contours)} contours with >= {min_length} points (border contours removed)")
             
             # Apply precision-based simplification
             simplification_factor = self.precision_factors.get(precision, 0.0008)
@@ -249,6 +275,48 @@ class ImageProcessor:
             print(f"Error extracting edge following path: {e}")
             return None
     
+    def _is_border_contour(self, contour, image_shape):
+        """
+        Check if a contour touches the image borders (likely a frame contour).
+        
+        Args:
+            contour: OpenCV contour
+            image_shape: Shape of the image (height, width)
+        
+        Returns:
+            True if contour touches borders and should be filtered out
+        """
+        height, width = image_shape
+        border_margin = 5  # Pixels from edge to consider as "border"
+        
+        # Get contour points
+        points = contour.reshape(-1, 2)
+        
+        # Check if any points are near the borders
+        for x, y in points:
+            # Check if point is near any border
+            if (x <= border_margin or x >= width - border_margin or 
+                y <= border_margin or y >= height - border_margin):
+                
+                # Additional check: if contour is very large relative to image, it's likely a frame
+                contour_area = cv2.contourArea(contour)
+                image_area = width * height
+                
+                # If contour covers more than 20% of image area and touches border, it's likely a frame
+                if contour_area > (image_area * 0.2):
+                    return True
+                    
+                # If contour has points spanning most of the image width/height, it's likely a frame
+                x_coords = points[:, 0]
+                y_coords = points[:, 1]
+                x_span = np.max(x_coords) - np.min(x_coords)
+                y_span = np.max(y_coords) - np.min(y_coords)
+                
+                if (x_span > width * 0.8 or y_span > height * 0.8):
+                    return True
+        
+        return False
+
     def _thin_edges(self, edges):
         """
         Apply morphological thinning to get single-pixel-width edges.
