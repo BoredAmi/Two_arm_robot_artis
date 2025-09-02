@@ -65,6 +65,16 @@ class RobotDrawer:
         # Remove any None actions (shouldn't happen, but for safety)
         right_actions = [a if a is not None else 'wait' for a in right_actions]
         left_actions = [a if a is not None else 'wait' for a in left_actions]
+        
+        # Check if drawing should stop before starting
+        if self.should_stop():
+            print("Drawing stopped before dual-arm execution")
+            return False
+        
+        # Pass the stop check to the robot controller
+        if hasattr(self.robot, 'set_stop_check'):
+            self.robot.set_stop_check(self.stop_check)
+        
         # Start dual-arm drawing
         return self.robot.draw_paths_dual(right_actions, left_actions, progress_callback=progress_callback)
     """
@@ -90,7 +100,7 @@ class RobotDrawer:
     DEFAULT_IP = "192.168.125.1"
     DEFAULT_PORT = 1025
     
-    def __init__(self, ip=DEFAULT_IP, port=DEFAULT_PORT, 
+    def __init__(self, ip=DEFAULT_IP, port=DEFAULT_PORT, port_l=None,
                  max_x=DEFAULT_MAX_X, max_y=DEFAULT_MAX_Y, 
                  enable_smoothing=True, smoothing_type="bezier", enable_tsp=True, use_center_origin=True,
                  margin_x=10, margin_y=10):
@@ -99,7 +109,8 @@ class RobotDrawer:
         
         Args:
             ip (str): Robot IP address
-            port (int): Robot communication port
+            port (int): Robot communication port for right robot
+            port_l (int): Robot communication port for left robot (dual-arm mode). If None, uses default.
             max_x (int): Maximum X coordinate in mm
             max_y (int): Maximum Y coordinate in mm
             enable_smoothing (bool): Enable path smoothing
@@ -113,7 +124,10 @@ class RobotDrawer:
             margin_y (int): Vertical margin in mm (padding from edges)
         """
         # Initialize all subsystem components
-        self.robot = RobotController(ip, port)
+        if port_l is None:
+            self.robot = RobotController(ip, port)
+        else:
+            self.robot = RobotController(ip, port, port_l)
         self.processor = ImageProcessor(enable_tsp=enable_tsp)
         self.transformer = CoordinateTransformer(max_x, max_y, enable_smoothing, smoothing_type, use_center_origin, margin_x, margin_y)
         self.visualizer = DrawingVisualizer(max_x, max_y)
@@ -121,6 +135,7 @@ class RobotDrawer:
         # Initialize state variables
         self.drawing_points = []
         self.image_data = None
+        self.stop_check = None  # Function to check if drawing should stop
         self.max_x = max_x
         self.max_y = max_y
         self.margin_x = margin_x
@@ -128,6 +143,29 @@ class RobotDrawer:
         self.enable_tsp = enable_tsp
         self.use_center_origin = use_center_origin
         self.detection_method = "threshold"  # Default detection method
+    
+    def set_stop_check(self, stop_check_func):
+        """
+        Set a function that will be called to check if drawing should stop.
+        
+        Args:
+            stop_check_func: A function that returns True to continue, False to stop
+        """
+        self.stop_check = stop_check_func
+    
+    def should_stop(self):
+        """
+        Check if drawing should stop.
+        
+        Returns:
+            True if drawing should stop, False if it should continue
+        """
+        if self.stop_check is None:
+            return False
+        try:
+            return not self.stop_check()
+        except:
+            return True  # If there's an error checking, assume we should stop
     
     def load_image(self, image_path, precision="high", enable_tsp=None, detection_method="threshold", logo_settings=None):
         """
@@ -202,6 +240,15 @@ class RobotDrawer:
         Args:
             progress_callback: Optional callback function(current_batch, total_batches, points_sent, total_points)
         """
+        # Check if drawing should stop before starting
+        if self.should_stop():
+            print("Drawing stopped before execution")
+            return False
+        
+        # Pass the stop check to the robot controller
+        if hasattr(self.robot, 'set_stop_check'):
+            self.robot.set_stop_check(self.stop_check)
+        
         return self.robot.draw_paths(self.drawing_points, progress_callback=progress_callback)
     
     def preview_points(self, max_display=50):

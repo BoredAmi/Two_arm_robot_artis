@@ -72,6 +72,12 @@ class RobotController:
 
         def do_action_list(actions, target):
             for idx, action in enumerate(actions):
+                # Check if drawing should stop
+                if self.should_stop():
+                    print(f"[{target}] Drawing stopped at action {idx + 1}/{len(actions)}")
+                    results[target] = False
+                    break
+                    
                 if not results['right'] if target == 'right' else not results['left']:
                     break
                 ok = True
@@ -243,14 +249,16 @@ class RobotController:
 
                     except Exception as e:
                         print(f"[{target}] Error during drawing: {e}")
-                        try:
-                            self.send_pen_up(target=target)
-                        except Exception:
-                            pass
-                        try:
-                            self.send_stop(target=target)
-                        except Exception:
-                            pass
+                        # Only send cleanup commands if not in emergency stop
+                        if not self.should_stop():
+                            try:
+                                self.send_pen_up(target=target)
+                            except Exception:
+                                pass
+                            try:
+                                self.send_stop(target=target)
+                            except Exception:
+                                pass
                         ok = False
                 if not ok:
                     if target == 'right':
@@ -262,7 +270,9 @@ class RobotController:
                     barrier.wait()
                 except threading.BrokenBarrierError:
                     break
-            self.send_stop(target=target)
+            # Only send final stop if not already in emergency stop
+            if not self.should_stop():
+                self.send_stop(target=target)
 
         # Pad shorter list with None for zip_longest
         max_len = max(len(right_actions), len(left_actions))
@@ -308,18 +318,20 @@ class RobotController:
     # Default pause after robot reports RETREAT/OK to allow physical retreat (seconds)
     DEFAULT_POST_RETREAT_DELAY = 0.7
     
-    def __init__(self, ip=DEFAULT_IP, port=DEFAULT_PORT):
+    def __init__(self, ip=DEFAULT_IP, port=DEFAULT_PORT, port_l=DEFAULT_PORT_L):
         """
         Initialize robot controller.
         
         Args:
             ip (str): Robot controller IP address
-            port (int): TCP communication port
+            port (int): TCP communication port for right robot
+            port_l (int): TCP communication port for left robot (dual-arm mode)
         """
         self.ip = ip
         self.port = port
+        self.port_l = port_l  # Left robot port for dual-arm mode
         self.socket = None
-        self.socket2 = None  # For second port (1026)
+        self.socket2 = None  # For second port (left robot)
         self.use_batch_mode = True  # Default to batch mode for speed
         self.use_center_origin = True  # Default to center-based coordinates (current system)
         # Transition offset in X direction (positive moves to +X, negative to -X)
@@ -332,6 +344,31 @@ class RobotController:
         self.post_retreat_delay = self.DEFAULT_POST_RETREAT_DELAY
         # Track when an arm finished its retreat/positioning (seconds since epoch)
         self.last_retreat_done = {'right': 0.0, 'left': 0.0}
+        # Stop check function for emergency stops
+        self.stop_check = None
+    
+    def set_stop_check(self, stop_check_func):
+        """
+        Set a function that will be called to check if drawing should stop.
+        
+        Args:
+            stop_check_func: A function that returns True to continue, False to stop
+        """
+        self.stop_check = stop_check_func
+    
+    def should_stop(self):
+        """
+        Check if drawing should stop.
+        
+        Returns:
+            True if drawing should stop, False if it should continue
+        """
+        if self.stop_check is None:
+            return False
+        try:
+            return not self.stop_check()
+        except:
+            return True  # If there's an error checking, assume we should stop
     def set_transition_offset_x(self, mm):
         """Set the transition X offset (mm). Positive values move toward +X for left arm, negative for right arm."""
         try:
@@ -478,11 +515,11 @@ class RobotController:
             self.socket.connect((self.ip, self.port))
             print(f"Connected to ABB robot at {self.ip}:{self.port}")
 
-            # Connect to second port (1026)
+            # Connect to second port (left robot)
             self.socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket2.settimeout(self.DEFAULT_TIMEOUT)
-            self.socket2.connect((self.ip, self.DEFAULT_PORT_L))
-            print(f"Connected to ABB robot at {self.ip}:{self.DEFAULT_PORT_L}")
+            self.socket2.connect((self.ip, self.port_l))
+            print(f"Connected to ABB robot at {self.ip}:{self.port_l}")
 
             return True
         except Exception as e:
@@ -844,7 +881,11 @@ class RobotController:
                         return False
 
                     print(f"Robot responses: primary='{resp1}', secondary='{resp2}'")
-                    return (resp1 == 'OK') and (resp2 == 'OK')
+                    # Check responses based on command type
+                    if cmd.strip() == 'STOP':
+                        return (resp1 == 'STOPPED') and (resp2 == 'STOPPED')
+                    else:
+                        return (resp1 == 'OK') and (resp2 == 'OK')
                 else:
                     # Single-socket target (primary only)
                     try:
@@ -854,7 +895,11 @@ class RobotController:
                         return False
 
                     print(f"Robot response: {resp}")
-                    return resp == 'OK'
+                    # Check response based on command type
+                    if cmd.strip() == 'STOP':
+                        return resp == 'STOPPED'
+                    else:
+                        return resp == 'OK'
 
             return True
 
@@ -907,13 +952,17 @@ class RobotController:
                 
         except KeyboardInterrupt:
             print("\nDrawing interrupted by user")
-            self.send_pen_up()
-            self.send_stop()
+            # Only send cleanup commands if not in emergency stop
+            if not self.should_stop():
+                self.send_pen_up()
+                self.send_stop()
             return False
         except Exception as e:
             print(f"Error during drawing: {e}")
-            self.send_pen_up()
-            self.send_stop()
+            # Only send cleanup commands if not in emergency stop
+            if not self.should_stop():
+                self.send_pen_up()
+                self.send_stop()
             return False
 
     def _draw_with_individual_moves(self, drawing_points, move_delay):
@@ -921,6 +970,11 @@ class RobotController:
         print("Using individual move commands for maximum precision")
         
         for contour_idx, contour in enumerate(drawing_points):
+            # Check if drawing should stop
+            if self.should_stop():
+                print(f"Drawing stopped at contour {contour_idx + 1}/{len(drawing_points)}")
+                return False
+                
             print(f"Drawing contour {contour_idx + 1}/{len(drawing_points)} ({len(contour)} points)")
             
             if len(contour) == 0:
@@ -964,8 +1018,9 @@ class RobotController:
             self.send_between_command(next_start=next_start)
             time.sleep(move_delay)
         
-        # Send stop command when done
-        self.send_stop()
+        # Send stop command when done (only if not already in emergency stop)
+        if not self.should_stop():
+            self.send_stop()
         print("Individual move drawing completed!")
         return True
 
@@ -987,6 +1042,11 @@ class RobotController:
         current_position = None  # Track robot position
         
         for contour_idx, contour in enumerate(drawing_points):
+            # Check if drawing should stop
+            if self.should_stop():
+                print(f"Drawing stopped at contour {contour_idx + 1}/{len(drawing_points)}")
+                return False
+                
             print(f"Drawing contour {contour_idx + 1}/{len(drawing_points)} ({len(contour)} points)")
             
             if len(contour) == 0:
@@ -1063,8 +1123,9 @@ class RobotController:
             # Send between-contour command which will also move to intermediate point if next_start provided
             self.send_between_command(next_start=next_start)
         
-        # Send stop command when done
-        self.send_stop()
+        # Send stop command when done (only if not already in emergency stop)
+        if not self.should_stop():
+            self.send_stop()
         print("Ultra-fast drawing with path optimization completed!")
         return True
 

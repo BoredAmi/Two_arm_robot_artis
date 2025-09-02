@@ -52,6 +52,7 @@ class SimpleRobotGUI:
     # Default robot connection settings
     DEFAULT_ROBOT_IP = "192.168.125.1"
     DEFAULT_ROBOT_PORT = "1025"
+    DEFAULT_ROBOT_PORT_L = "1026"  # Left robot port for dual-arm mode
     
     # UI dimensions and colors
     WINDOW_WIDTH = 1100
@@ -117,6 +118,8 @@ class SimpleRobotGUI:
             self.robot_ip.set(self.config["robot_ip"])
         if self.config.get("robot_port"):
             self.robot_port.set(self.config["robot_port"])
+        if self.config.get("robot_port_l"):
+            self.robot_port_l.set(self.config["robot_port_l"])
         if self.config.get("use_center_origin") is not None:
             self.use_center_origin.set(self.config["use_center_origin"])
         if self.config.get("enable_logo") is not None:
@@ -194,6 +197,9 @@ class SimpleRobotGUI:
         except Exception:
             pass
 
+        # Update connection display with initial values
+        self.root.after(100, self._update_connection_display)
+
     def _load_config(self):
         try:
             import json, os
@@ -210,6 +216,7 @@ class SimpleRobotGUI:
             config = {
                 "robot_ip": self.robot_ip.get(),
                 "robot_port": self.robot_port.get(),
+                "robot_port_l": self.robot_port_l.get(),
                 "use_center_origin": self.use_center_origin.get(),
                 "enable_logo": self.enable_logo.get(),
                 "logo_size": self.logo_size.get(),
@@ -267,6 +274,7 @@ class SimpleRobotGUI:
         # Robot connection
         self.robot_ip = tk.StringVar(value=self.DEFAULT_ROBOT_IP)
         self.robot_port = tk.StringVar(value=self.DEFAULT_ROBOT_PORT)
+        self.robot_port_l = tk.StringVar(value=self.DEFAULT_ROBOT_PORT_L)  # Left robot port
         self.is_connected = False
         
         # Processing state
@@ -328,7 +336,7 @@ class SimpleRobotGUI:
         browse_btn_main.pack(side=tk.RIGHT, padx=(10, 0))
 
         setup_btn = tk.Button(top_controls, text="Setup...", command=self.open_setup_window,
-                  bg='#607D8B', fg='white', font=self.BUTTON_FONT, relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=12)
+                  bg='#607D8B', fg='white', font=self.BUTTON_FONT, relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
         setup_btn.pack(side=tk.RIGHT)
 
         # Create main workflow sections (only 2 and 3 visible by default)
@@ -385,6 +393,55 @@ class SimpleRobotGUI:
                       value="draw", bg='white', font=('Arial', 10),
                       activebackground='white', command=self.on_mode_change).pack(side=tk.LEFT)
         
+        # Robot Connection Settings
+        connection_frame = tk.Frame(parent, bg='white')
+        connection_frame.pack(fill=tk.X, pady=(15, 10))
+        
+        tk.Label(connection_frame, text="Robot Connection:", font=('Arial', 11, 'bold'), 
+                bg='white', fg='#2196F3').pack(anchor='w', pady=(0, 8))
+        
+        # IP Address row
+        ip_row = tk.Frame(connection_frame, bg='white')
+        ip_row.pack(fill=tk.X, pady=(0, 5))
+        
+        tk.Label(ip_row, text="Robot IP Address:", font=('Arial', 10, 'bold'), 
+                bg='white').pack(side=tk.LEFT)
+        
+        ip_entry = tk.Entry(ip_row, textvariable=self.robot_ip, 
+                           font=('Arial', 10), width=18, relief='solid', bd=1)
+        ip_entry.pack(side=tk.LEFT, padx=(10, 0))
+        ip_entry.bind('<KeyRelease>', lambda e: self._update_connection_display())
+        ip_entry.bind('<FocusOut>', lambda e: self._update_connection_display())
+        
+        # Ports row
+        ports_row = tk.Frame(connection_frame, bg='white')
+        ports_row.pack(fill=tk.X, pady=(0, 5))
+        
+        # Right robot port
+        tk.Label(ports_row, text="Right Robot Port:", font=('Arial', 10, 'bold'), 
+                bg='white').pack(side=tk.LEFT)
+        
+        port_entry = tk.Entry(ports_row, textvariable=self.robot_port, 
+                             font=('Arial', 10), width=8, relief='solid', bd=1)
+        port_entry.pack(side=tk.LEFT, padx=(10, 20))
+        port_entry.bind('<KeyRelease>', lambda e: self._update_connection_display())
+        port_entry.bind('<FocusOut>', lambda e: self._update_connection_display())
+        
+        # Left robot port
+        tk.Label(ports_row, text="Left Robot Port:", font=('Arial', 10, 'bold'), 
+                bg='white').pack(side=tk.LEFT)
+        
+        port_l_entry = tk.Entry(ports_row, textvariable=self.robot_port_l, 
+                               font=('Arial', 10), width=8, relief='solid', bd=1)
+        port_l_entry.pack(side=tk.LEFT, padx=(10, 0))
+        port_l_entry.bind('<KeyRelease>', lambda e: self._update_connection_display())
+        port_l_entry.bind('<FocusOut>', lambda e: self._update_connection_display())
+        
+        # Port info
+        port_info = tk.Label(connection_frame, text="ℹ️ Left port is used only in dual-arm drawing mode", 
+                            font=('Arial', 9), bg='white', fg='#666')
+        port_info.pack(anchor='w', pady=(0, 10))
+        
         # File selection section
         self.file_section = tk.Frame(parent, bg='white')
         self.file_section.pack(fill=tk.X, pady=(0, 10))
@@ -399,7 +456,7 @@ class SimpleRobotGUI:
         browse_btn = tk.Button(self.file_section, text="Browse Images", 
                 command=self.browse_image,
                 bg='#4CAF50', fg='white', font=self.BUTTON_FONT,
-                relief='flat', padx=18, pady=12, cursor='hand2')
+                relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
         browse_btn.pack(side=tk.RIGHT, padx=(10, 0))
         
         # Drawing section
@@ -413,14 +470,14 @@ class SimpleRobotGUI:
         draw_btn = tk.Button(draw_controls, text="🎨 Open Drawing Canvas", 
                 command=self.open_drawing_window,
                 bg='#9C27B0', fg='white', font=self.BUTTON_FONT,
-                relief='flat', padx=18, pady=12, cursor='hand2')
+                relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
         draw_btn.pack(side=tk.LEFT, padx=(0, 10))
         
         # Templates button
         templates_btn = tk.Button(draw_controls, text="📋 Templates", 
                 command=self.show_templates,
-                bg='#607D8B', fg='white', font=self.SMALL_BUTTON_FONT,
-                relief='flat', padx=18, pady=12, cursor='hand2')
+                bg='#607D8B', fg='white', font=self.BUTTON_FONT,
+                relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
         templates_btn.pack(side=tk.LEFT)
         
         # Initially hide draw section
@@ -610,45 +667,50 @@ class SimpleRobotGUI:
     
     def create_connection_section(self, parent):
         """Create robot connection section"""
-        # Connection settings
+        # Connection controls
         conn_frame = tk.Frame(parent, bg='white')
         conn_frame.pack(fill=tk.X, pady=(0, 10))
         
-        # IP Address
-        tk.Label(conn_frame, text="Robot IP:", font=('Arial', 10, 'bold'), 
-                bg='white').pack(side=tk.LEFT)
+        # Connection status and IP display
+        status_frame = tk.Frame(conn_frame, bg='white')
+        status_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
-        ip_entry = tk.Entry(conn_frame, textvariable=self.robot_ip, 
-                           font=('Arial', 10), width=15, relief='solid', bd=1)
-        ip_entry.pack(side=tk.LEFT, padx=(5, 15))
+        # Connection status
+        self.conn_status_label = tk.Label(status_frame, text="⚫ Not Connected", 
+                         font=('Arial', 10), bg='white', fg='#f44336')
+        self.conn_status_label.pack(anchor='w')
         
-        # Port
-        tk.Label(conn_frame, text="Port:", font=('Arial', 10, 'bold'), 
-                bg='white').pack(side=tk.LEFT)
+        # Current IP and ports display
+        self.ip_display_label = tk.Label(status_frame, text=f"Target: {self.robot_ip.get()}:{self.robot_port.get()}", 
+                         font=('Arial', 9), bg='white', fg='#666')
+        self.ip_display_label.pack(anchor='w')
         
-        port_entry = tk.Entry(conn_frame, textvariable=self.robot_port, 
-                             font=('Arial', 10), width=8, relief='solid', bd=1)
-        port_entry.pack(side=tk.LEFT, padx=(5, 15))
+        # Dual-arm info when enabled
+        self.dual_info_label = tk.Label(status_frame, text="", 
+                         font=('Arial', 9), bg='white', fg='#666')
+        self.dual_info_label.pack(anchor='w')
+        
+        # Buttons frame
+        buttons_frame = tk.Frame(conn_frame, bg='white')
+        buttons_frame.pack(side=tk.RIGHT)
         
         # Connect button
-        self.connect_btn = tk.Button(conn_frame, text="Connect", 
+        self.connect_btn = tk.Button(buttons_frame, text="Connect", 
             command=self.toggle_connection,
             bg='#FF9800', fg='white', font=self.BUTTON_FONT,
-            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2')
+            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
         self.connect_btn.pack(side=tk.RIGHT, padx=(0, 10))
         
         # Get Picture button
-        self.get_pic_btn = tk.Button(conn_frame, text="📷 Get Picture", 
+        self.get_pic_btn = tk.Button(buttons_frame, text="📷 Get Picture", 
             command=self.get_picture_from_robot,
             bg='#9C27B0', fg='white', font=self.BUTTON_FONT,
-            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2',
+            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH,
             state='normal')
         self.get_pic_btn.pack(side=tk.RIGHT)
         
-        # Connection status
-        self.conn_status_label = tk.Label(parent, text="⚫ Not Connected", 
-                         font=('Arial', 10), bg='white', fg='#f44336')
-        self.conn_status_label.pack(anchor='w')
+        # Update display when dual-arm mode changes
+        self.dual_arm_mode.trace('w', self._update_connection_display)
     
     def create_action_section(self, parent):
         """Create preview and action section"""
@@ -684,39 +746,39 @@ class SimpleRobotGUI:
         self.face_drawing_btn = tk.Button(middle_panel, text="👤 Face\nDrawing", 
             command=self.convert_to_face_drawing,
             bg='#E91E63', fg='white', font=self.BUTTON_FONT,
-            relief='flat', padx=18, pady=12, cursor='hand2',
-            state='disabled', width=14)
+            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2',
+            state='disabled', width=self.BUTTON_WIDTH)
         self.face_drawing_btn.pack(pady=(10, 5))
 
         # Caricature button
         self.caricature_btn = tk.Button(middle_panel, text="🎭 Caricature", 
             command=self.convert_to_caricature,
             bg='#FF9800', fg='white', font=self.BUTTON_FONT,
-            relief='flat', padx=18, pady=12, cursor='hand2',
-            state='disabled', width=14)
+            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2',
+            state='disabled', width=self.BUTTON_WIDTH)
         self.caricature_btn.pack(pady=5)
 
         # Draw button
         self.draw_btn = tk.Button(middle_panel, text="🎨 Start\nDrawing", 
             command=self.start_robot_drawing,
             bg='#4CAF50', fg='white', font=self.BUTTON_FONT,
-            relief='flat', padx=18, pady=12, cursor='hand2',
-            state='disabled', width=14)
+            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2',
+            state='disabled', width=self.BUTTON_WIDTH)
         self.draw_btn.pack(pady=5)
 
         # Zoom viewer button
         zoom_btn = tk.Button(middle_panel, text="🔍 Zoom\nViewer",
             command=self.open_detailed_path_window,
-            bg='#607D8B', fg='white', font=self.SMALL_BUTTON_FONT,
-            relief='flat', padx=18, pady=12, cursor='hand2',
-            width=14)
+            bg='#607D8B', fg='white', font=self.BUTTON_FONT,
+            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2',
+            width=self.BUTTON_WIDTH)
         zoom_btn.pack(pady=5)
         
         # Emergency stop button (initially hidden)
         self.stop_btn = tk.Button(middle_panel, text="⏹ Stop", 
                     command=self.emergency_stop,
-                    bg='#f44336', fg='white', font=('Arial', 9, 'bold'),
-                    relief='flat', padx=15, pady=8, width=12)
+                    bg='#f44336', fg='white', font=self.BUTTON_FONT,
+                    relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
         
         self.drawing_active = False
 
@@ -1243,18 +1305,17 @@ class SimpleRobotGUI:
         """Handle TSP optimization setting change"""
         # Preserve existing connection if any
         old_robot = None
-        old_ip = None
-        old_port = None
         was_connected = False
         
         if hasattr(self.drawer, 'robot') and self.drawer.robot and self.drawer.robot.socket:
             old_robot = self.drawer.robot
-            old_ip = self.drawer.ip
-            old_port = self.drawer.port
             was_connected = True
         
         # Update the drawer's TSP setting with coordinate system
         self.drawer = RobotDrawer(
+            ip=self.robot_ip.get(),
+            port=int(self.robot_port.get()),
+            port_l=int(self.robot_port_l.get()),
             max_x=self.max_x.get(), 
             max_y=self.max_y.get(), 
             enable_tsp=self.enable_tsp.get(),
@@ -1266,8 +1327,6 @@ class SimpleRobotGUI:
         # Restore connection if it existed
         if was_connected and old_robot:
             self.drawer.robot = old_robot
-            self.drawer.ip = old_ip
-            self.drawer.port = old_port
         
         # Only reprocess if we have an image/drawing loaded
         current_path = None
@@ -1395,6 +1454,9 @@ class SimpleRobotGUI:
         
         # Update the drawer with new dimensions and coordinate system
         self.drawer = RobotDrawer(
+            ip=self.robot_ip.get(),
+            port=int(self.robot_port.get()),
+            port_l=int(self.robot_port_l.get()),
             max_x=self.max_x.get(), 
             max_y=self.max_y.get(), 
             enable_tsp=self.enable_tsp.get(),
@@ -1406,8 +1468,6 @@ class SimpleRobotGUI:
         # Restore connection if it existed
         if was_connected and old_robot:
             self.drawer.robot = old_robot
-            self.drawer.ip = old_ip
-            self.drawer.port = old_port
         
         # Update the preview plot dimensions
         self.update_robot_preview()
@@ -1473,18 +1533,17 @@ class SimpleRobotGUI:
         """Recreate robot drawer with new margin settings while preserving connection"""
         # Preserve existing connection if any
         old_robot = None
-        old_ip = None
-        old_port = None
         was_connected = False
         
         if hasattr(self.drawer, 'robot') and self.drawer.robot and self.drawer.robot.socket:
             old_robot = self.drawer.robot
-            old_ip = self.drawer.ip
-            old_port = self.drawer.port
             was_connected = True
         
         # Create new drawer with margins
         self.drawer = RobotDrawer(
+            ip=self.robot_ip.get(),
+            port=int(self.robot_port.get()),
+            port_l=int(self.robot_port_l.get()),
             max_x=self.max_x.get(), 
             max_y=self.max_y.get(), 
             enable_tsp=self.enable_tsp.get(),
@@ -1496,8 +1555,6 @@ class SimpleRobotGUI:
         # Restore connection if it existed
         if was_connected and old_robot:
             self.drawer.robot = old_robot
-            self.drawer.ip = old_ip
-            self.drawer.port = old_port
     
     def open_drawing_window(self):
         """Open the drawing canvas window"""
@@ -2009,11 +2066,13 @@ class SimpleRobotGUI:
         try:
             ip = self.robot_ip.get().strip()
             port = int(self.robot_port.get().strip())
+            port_l = int(self.robot_port_l.get().strip())
             
             # Create new drawer with custom connection
             self.drawer = RobotDrawer(
                 ip=ip, 
-                port=port, 
+                port=port,
+                port_l=port_l,
                 max_x=self.max_x.get(), 
                 max_y=self.max_y.get(), 
                 enable_tsp=self.enable_tsp.get(),
@@ -2078,6 +2137,19 @@ class SimpleRobotGUI:
         # Keep get picture button available for local camera
         self.status_text.set("Connection error")
         messagebox.showerror("Error", f"Connection error: {error}")
+
+    def _update_connection_display(self, *args):
+        """Update connection display with current IP and port settings"""
+        if hasattr(self, 'ip_display_label'):
+            # Update main connection display
+            self.ip_display_label.config(text=f"Target: {self.robot_ip.get()}:{self.robot_port.get()}")
+        
+        if hasattr(self, 'dual_info_label'):
+            # Update dual-arm info
+            if self.dual_arm_mode.get():
+                self.dual_info_label.config(text=f"Dual-arm: {self.robot_ip.get()}:{self.robot_port_l.get()}")
+            else:
+                self.dual_info_label.config(text="")
 
     def _on_close(self):
         """Handler run when the main window is closed: save config and disconnect robot."""
@@ -2545,37 +2617,27 @@ class SimpleRobotGUI:
         coord_system = "center" if self.use_center_origin.get() else "corner"
         command_type = "START" if self.use_center_origin.get() else "START_CORNER"
         
-        # Confirm
-        result = messagebox.askyesno(
-            "Start Drawing", 
-            f"Start drawing {len(self.drawer.drawing_points)} paths with {total_points} points?\n\n"
-            f"Using ultra-fast mode with path optimization\n"
-            f"Coordinate system: {coord_system} origin\n"
-            f"Robot command: {command_type}\n\n"
-            "The robot may take up to 90 seconds to initialize before beginning movement."
-        )
-        
-        if result:
-            import time
-            self._draw_start_time = time.time()
-            # Update robot with current coordinate system before starting
-            if hasattr(self.drawer, 'robot') and self.drawer.robot:
-                self.drawer.robot.set_coordinate_system(self.use_center_origin.get())
-            # Show progress elements in status bar
-            self.progress_container.pack(side=tk.RIGHT, before=self.progress_indicator)
-            self.stop_btn.pack(pady=(10, 0))
-            self.drawing_active = True
-            self.status_text.set(f"Initializing robot with {coord_system} coordinates ({command_type})...")
-            self.draw_btn.config(state='disabled')
-            self.progress_indicator.config(text="🤖 Initializing...")
-            # Setup progress tracking
-            total_points = sum(len(path) for path in self.drawer.drawing_points)
-            self.bottom_progress_bar.config(maximum=total_points)
-            self.bottom_progress_bar.config(value=0)
-            self.bottom_progress_label.config(text=f"0 / {total_points} points")
-            thread = threading.Thread(target=self._draw_thread)
-            thread.daemon = True
-            thread.start()
+        # Start drawing immediately without confirmation
+        import time
+        self._draw_start_time = time.time()
+        # Update robot with current coordinate system before starting
+        if hasattr(self.drawer, 'robot') and self.drawer.robot:
+            self.drawer.robot.set_coordinate_system(self.use_center_origin.get())
+        # Show progress elements in status bar
+        self.progress_container.pack(side=tk.RIGHT, before=self.progress_indicator)
+        self.stop_btn.pack(pady=(10, 0))
+        self.drawing_active = True
+        self.status_text.set(f"Initializing robot with {coord_system} coordinates ({command_type})...")
+        self.draw_btn.config(state='disabled')
+        self.progress_indicator.config(text="🤖 Initializing...")
+        # Setup progress tracking
+        total_points = sum(len(path) for path in self.drawer.drawing_points)
+        self.bottom_progress_bar.config(maximum=total_points)
+        self.bottom_progress_bar.config(value=0)
+        self.bottom_progress_label.config(text=f"0 / {total_points} points")
+        thread = threading.Thread(target=self._draw_thread)
+        thread.daemon = True
+        thread.start()
     
     def emergency_stop(self):
         """Emergency stop the drawing process"""
@@ -2626,6 +2688,11 @@ class SimpleRobotGUI:
             coord_system = "center" if self.use_center_origin.get() else "corner"
             command_type = "START" if self.use_center_origin.get() else "START_CORNER"
             
+            # Check if we should continue (emergency stop may have been pressed)
+            if not self.drawing_active:
+                print("Drawing stopped before START command")
+                return
+            
             print(f"Sending {command_type} command to robot...")
             self.root.after(0, lambda: self.status_text.set(f"Sending {command_type} command to robot..."))
             
@@ -2636,6 +2703,11 @@ class SimpleRobotGUI:
                 success = self.drawer.robot._send_command("START\n", wait_response=True, timeout=self.drawer.robot.START_COMMAND_TIMEOUT, target='both')
             else:
                 success = self.drawer.robot.send_start()  # This automatically chooses START vs START_CORNER
+
+            # Check if we should continue after START command
+            if not self.drawing_active:
+                print("Drawing stopped after START command")
+                return
 
             if not success:
                 print(f"Robot did not respond with OK to {command_type} command")
@@ -2658,11 +2730,27 @@ class SimpleRobotGUI:
                 # Use optimized drawing with real batch progress tracking
                 print("Starting ultra-fast drawing with batch progress tracking...")
                 
-                # Create progress callback that updates GUI
+                # Create progress callback that updates GUI and checks for stop
                 def progress_callback(current_batch, total_batches, points_sent, total_points):
                     if self.drawing_active:  # Only update if drawing is still active
                         percent = (points_sent / total_points) * 100 if total_points > 0 else 0
                         self.root.after(0, self._update_progress, points_sent, total_points, percent)
+                        return True  # Continue drawing
+                    else:
+                        return False  # Stop drawing
+                
+                # Create a stop check function for the drawer
+                def should_continue():
+                    return self.drawing_active
+                
+                # Pass the stop check to the drawer
+                if hasattr(self.drawer, 'set_stop_check'):
+                    self.drawer.set_stop_check(should_continue)
+                
+                # Final check before starting drawing operations
+                if not self.drawing_active:
+                    print("Drawing stopped before starting drawing operations")
+                    return
                 
                 # Start the optimized drawing process with progress tracking
                 if self.dual_arm_mode.get():
