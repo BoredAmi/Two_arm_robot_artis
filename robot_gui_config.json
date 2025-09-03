@@ -9,7 +9,7 @@
   "max_y": 210,
   "margin_x": 10,
   "margin_y": 10,
-  "quality_var": "high",
+  "quality_var": "highest",
   "detection_method": "adaptive",
   "enable_tsp": false,
   "use_batch_mode": true,

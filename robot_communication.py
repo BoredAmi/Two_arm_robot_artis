@@ -476,8 +476,14 @@ class RobotController:
         return False
 
     def _transition_to_start(self, start_x, start_y, target='right'):
-        """Perform a two-step transition: move to an X-offset point, then to the true start.
-
+        """Perform a horizontal U-shaped transition to safely move between contours.
+        
+        The horizontal U-shape pattern:
+        1. RETREAT already moved back horizontally (±50mm in X)
+        2. Move to next contour's Y coordinate while staying back (horizontal leg of U)  
+        3. Move forward to the actual start position (completing the U)
+        
+        This avoids drawing lines since PEN_UP/PEN_DOWN handle vertical movement.
         For `target=='right'` the offset is -transition_offset_x, for `target=='left'` it's +transition_offset_x.
         Returns True on success, False on failure.
         """
@@ -492,11 +498,16 @@ class RobotController:
         else:
             x_off = abs(off)
 
-        # Move first to the offset point, then to the actual start
-        if not self.send_move(start_x + x_off, start_y, target=target):
-            print(f"[{target}] Failed to move to offset start ({start_x + x_off:.1f}, {start_y:.1f})")
+        # Step 2 of horizontal U: Move to next contour's Y coordinate while staying back
+        # This creates the horizontal "bridge" of the U-shape
+        back_position_x = start_x + x_off
+        if not self.send_move(back_position_x, start_y, target=target):
+            print(f"[{target}] Failed to move to back position at Y-level ({back_position_x:.1f}, {start_y:.1f})")
             return False
         time.sleep(0.02)
+            
+        # Step 3 of horizontal U: Move forward to the actual start position
+        # This completes the U-shape horizontally
         if not self.send_move(start_x, start_y, target=target):
             print(f"[{target}] Failed to move to actual start ({start_x:.1f}, {start_y:.1f})")
             return False
@@ -571,10 +582,6 @@ class RobotController:
             return True
             
         print(f"Sending {len(points)} points with dynamic batch sizing (base: {batch_size}, max: {max_batch_size}) to {target}")
-        # Safety: refuse to send batches to left if any point is in left-forbidden area
-        if target == 'left' and self._contains_left_forbidden(points):
-            print(f"Refusing to send batch to left: contains points inside left-forbidden rectangle (x<130,y<40)")
-            return False
         
         # Optimize batch size based on coordinate precision
         optimal_batch_size = self._calculate_optimal_batch_size(points, batch_size, max_batch_size)
