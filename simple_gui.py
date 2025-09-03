@@ -515,7 +515,7 @@ class SimpleRobotGUI:
         tk.Label(detection_frame, text="Detection Method:", font=('Arial', 10, 'bold'), 
                 bg='white').pack(side=tk.LEFT)
         
-        for i, (text, value) in enumerate([("Adaptive", "adaptive"), ("Threshold", "threshold"), ("Canny Edge", "canny"), ("Canny+Fill", "canny_filled")]):
+        for i, (text, value) in enumerate([("Adaptive", "adaptive"), ("Threshold", "threshold"), ("Canny Edge", "canny")]):
             rb = tk.Radiobutton(detection_frame, text=text, variable=self.detection_method, 
                                value=value, bg='white', font=('Arial', 9),
                                activebackground='white', command=self.on_detection_method_change)

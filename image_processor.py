@@ -87,7 +87,7 @@ class ImageProcessor:
             image_path: Path to the image file
             precision: Edge detection precision ("highest", "high", "medium", "low")
             enable_tsp: Override TSP setting for this operation. If None, uses instance setting.
-            detection_method: Edge detection method ("canny", "threshold", "adaptive", or "canny_filled")
+            detection_method: Edge detection method ("canny", "threshold", or "adaptive")
             protect_logo: If True, disables border cropping and frame filtering (for logo processing)
         """
         # Temporarily override TSP setting if specified
@@ -118,7 +118,7 @@ class ImageProcessor:
             image_path (str): Path to the image file to process
             precision (str): Edge detection precision level
                            ("highest", "high", "medium", "low")
-            detection_method (str): Edge detection method ("canny", "threshold", "adaptive", or "canny_filled")
+            detection_method (str): Edge detection method ("canny", "threshold", or "adaptive")
             protect_logo (bool): If True, disables border cropping and frame filtering (for logo processing)
         
         Returns:
@@ -188,23 +188,6 @@ class ImageProcessor:
                                             cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 
                                             block_size, c_value)
                 print(f"Adaptive threshold (Gaussian): block_size={block_size}, C={c_value}")
-            elif detection_method.lower() == "canny_filled":
-                # Apply Canny edge detection, fill the shapes, then threshold
-                print("Canny + Fill + Threshold method")
-                
-                # Step 1: Apply Canny edge detection
-                canny_edges = cv2.Canny(gray, self.CANNY_LOW_THRESHOLD, self.CANNY_HIGH_THRESHOLD)
-                
-                # Step 2: Close gaps in edges to create closed contours
-                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-                closed_edges = cv2.morphologyEx(canny_edges, cv2.MORPH_CLOSE, kernel, iterations=2)
-                
-                # Step 3: Fill the closed contours
-                filled_image = self._fill_canny_contours(closed_edges)
-                
-                # Step 4: Apply threshold to the filled image
-                ret, edges = cv2.threshold(filled_image, 127, 255, cv2.THRESH_BINARY)
-                print("Applied Canny edge detection, filled contours, and thresholded")
             else:  # threshold method (default)
                 # Apply binary threshold with OTSU for automatic threshold selection
                 ret, edges = cv2.threshold(gray, self.THRESHOLD_VALUE, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -375,7 +358,7 @@ class ImageProcessor:
         
         Args:
             image_path (str): Path to the image file
-            detection_method (str): Edge detection method ("canny", "threshold", "adaptive", or "canny_filled")
+            detection_method (str): Edge detection method ("canny", "threshold", or "adaptive")
         
         Returns:
             dict: Dictionary containing original image, edges, and grayscale version
@@ -407,19 +390,6 @@ class ImageProcessor:
             edges = cv2.adaptiveThreshold(gray, self.ADAPTIVE_MAX_VALUE, 
                                         cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 
                                         block_size, c_value)
-        elif detection_method.lower() == "canny_filled":
-            # Apply Canny, then morphological closing, then fill contours, then threshold
-            canny = cv2.Canny(gray, self.CANNY_LOW_THRESHOLD, self.CANNY_HIGH_THRESHOLD)
-            
-            # Apply morphological closing to connect nearby edges
-            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-            closed = cv2.morphologyEx(canny, cv2.MORPH_CLOSE, kernel)
-            
-            # Fill contours to create solid shapes
-            filled = self._fill_canny_contours(closed)
-            
-            # Apply threshold to clean up the result
-            ret, edges = cv2.threshold(filled, self.THRESHOLD_VALUE, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         else:  # threshold method (default)
             ret, edges = cv2.threshold(gray, self.THRESHOLD_VALUE, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         
