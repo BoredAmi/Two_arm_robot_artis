@@ -58,7 +58,7 @@ class SimpleRobotGUI:
     WINDOW_WIDTH = 1100
     WINDOW_HEIGHT = 800
     PREVIEW_WIDTH = 520
-    PREVIEW_HEIGHT = 520
+    PREVIEW_HEIGHT = 347  # Changed to 3:2 aspect ratio (520 * 2/3 ≈ 347) to match 1536x1024
 
     # Button fonts for larger UI elements
     BUTTON_FONT = ('Arial', 12, 'bold')
@@ -2017,7 +2017,8 @@ class SimpleRobotGUI:
         """
         Load and display preview image in the original image canvas.
         
-        Resizes the image to fit the preview area while maintaining aspect ratio.
+        Optimized for 1536x1024 images (3:2 aspect ratio).
+        Resizes the image to fill the preview area while maintaining aspect ratio.
         """
         try:
             # Load with OpenCV
@@ -2028,20 +2029,50 @@ class SimpleRobotGUI:
             # Convert BGR to RGB for display
             image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-            # Resize for preview while maintaining aspect ratio
+            # Get original dimensions
             h, w = image_rgb.shape[:2]
-            scale = min(self.PREVIEW_WIDTH/w, self.PREVIEW_HEIGHT/h)
-            new_w, new_h = int(w*scale), int(h*scale)
+            
+            # For 1536x1024 images, we can optimize the scaling
+            if w == 1536 and h == 1024:
+                # Perfect fit: scale directly to preview size
+                scale = self.PREVIEW_WIDTH / w  # This gives us 520/1536 ≈ 0.338
+                new_w = self.PREVIEW_WIDTH
+                new_h = int(h * scale)  # Should be very close to PREVIEW_HEIGHT
+            else:
+                # General case: calculate scale to fill the entire preview area
+                scale_w = self.PREVIEW_WIDTH / w
+                scale_h = self.PREVIEW_HEIGHT / h
+                scale = max(scale_w, scale_h)  # Use max to fill, not min to fit
+                
+                # Calculate new dimensions
+                new_w, new_h = int(w * scale), int(h * scale)
+            
+            # Resize image
             image_resized = cv2.resize(image_rgb, (new_w, new_h))
+            
+            # If image is larger than preview area, crop from center
+            if new_w > self.PREVIEW_WIDTH or new_h > self.PREVIEW_HEIGHT:
+                # Calculate crop coordinates to center the image
+                start_x = max(0, (new_w - self.PREVIEW_WIDTH) // 2)
+                start_y = max(0, (new_h - self.PREVIEW_HEIGHT) // 2)
+                end_x = min(new_w, start_x + self.PREVIEW_WIDTH)
+                end_y = min(new_h, start_y + self.PREVIEW_HEIGHT)
+                
+                # Crop the image
+                image_resized = image_resized[start_y:end_y, start_x:end_x]
+                
+                # Update dimensions after cropping
+                new_h, new_w = image_resized.shape[:2]
 
             # Convert to PhotoImage for tkinter
             pil_image = Image.fromarray(image_resized)
             self.preview_image = ImageTk.PhotoImage(pil_image)
 
-            # Display centered in canvas if canvas exists
+            # Display in canvas - optimized for 3:2 aspect ratio
             if hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
                 try:
                     self.original_canvas.delete("all")
+                    # Center the image in the frame
                     x = (self.PREVIEW_WIDTH - new_w) // 2
                     y = (self.PREVIEW_HEIGHT - new_h) // 2
                     self.original_canvas.create_image(x, y, anchor=tk.NW, image=self.preview_image)
@@ -2844,6 +2875,129 @@ class SimpleRobotGUI:
         
         messagebox.showerror("Error", f"Drawing error: {error}")
     
+    def _start_conversion_feedback(self, conversion_type):
+        """Start visual feedback for image conversion process"""
+        # Show progress container with indeterminate progress bar
+        self.progress_container.pack(side=tk.RIGHT, before=self.progress_indicator)
+        self.bottom_progress_bar.config(mode='indeterminate')
+        self.bottom_progress_bar.start(10)  # Start animated progress bar
+        self.bottom_progress_label.config(text=f"Converting to {conversion_type}...")
+        
+        # Update status
+        self.status_text.set(f"Converting to {conversion_type}...")
+        self.progress_indicator.config(text=f"🔄 Converting...")
+        
+        # Flash the main window to get user attention
+        try:
+            self.root.bell()  # System sound
+        except Exception:
+            pass
+            
+        # Add animated overlay to the image preview
+        self._start_conversion_overlay(conversion_type)
+    
+    def _stop_conversion_feedback(self):
+        """Stop visual feedback for image conversion process"""
+        # Stop and hide progress bar
+        self.bottom_progress_bar.stop()
+        self.progress_container.pack_forget()
+        
+        # Stop overlay animation
+        self._stop_conversion_overlay()
+    
+    def _start_conversion_overlay(self, conversion_type):
+        """Add animated overlay to image preview during conversion"""
+        try:
+            if hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
+                canvas_width = self.original_canvas.winfo_width()
+                canvas_height = self.original_canvas.winfo_height()
+                
+                if canvas_width > 100 and canvas_height > 100:  # Canvas is properly sized
+                    # Create semi-transparent overlay
+                    self.conversion_overlay = self.original_canvas.create_rectangle(
+                        0, 0, canvas_width, canvas_height, 
+                        fill='#2196F3', stipple='gray50', tags="conversion_overlay")
+                    
+                    # Create large centered text
+                    self.conversion_text = self.original_canvas.create_text(
+                        canvas_width // 2, canvas_height // 2, 
+                        text=f"🔄 Converting to\n{conversion_type}...", 
+                        fill='white', font=('Arial', 16, 'bold'), 
+                        tags="conversion_overlay", justify='center')
+                    
+                    # Start text animation
+                    self.conversion_dots = 0
+                    self._animate_conversion_text(conversion_type)
+        except Exception:
+            pass
+    
+    def _animate_conversion_text(self, conversion_type):
+        """Animate the conversion overlay text"""
+        try:
+            if hasattr(self, 'conversion_text') and self.original_canvas.winfo_exists():
+                # Cycle through different dot patterns
+                dots = "." * (self.conversion_dots % 4)
+                self.conversion_dots += 1
+                
+                # Update text with animated dots
+                self.original_canvas.itemconfig(
+                    self.conversion_text, 
+                    text=f"🔄 Converting to\n{conversion_type}{dots}")
+                
+                # Schedule next animation frame
+                self.conversion_animation_id = self.root.after(500, lambda: self._animate_conversion_text(conversion_type))
+        except Exception:
+            pass
+    
+    def _stop_conversion_overlay(self):
+        """Remove conversion overlay and stop animations"""
+        try:
+            # Cancel animation
+            if hasattr(self, 'conversion_animation_id'):
+                self.root.after_cancel(self.conversion_animation_id)
+                
+            # Remove overlay elements
+            if hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
+                self.original_canvas.delete("conversion_overlay")
+        except Exception:
+            pass
+    
+    def _show_conversion_notification(self, message, msg_type="info"):
+        """Show a temporary notification for conversion status"""
+        # Create a temporary notification in the original canvas area
+        try:
+            if hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
+                # Clear any existing notification
+                self.original_canvas.delete("notification")
+                
+                # Add notification text overlay
+                if msg_type == "info":
+                    bg_color = "#2196F3"
+                    text_color = "white"
+                elif msg_type == "success":
+                    bg_color = "#4CAF50" 
+                    text_color = "white"
+                else:  # error
+                    bg_color = "#f44336"
+                    text_color = "white"
+                
+                # Create notification rectangle and text
+                canvas_width = self.original_canvas.winfo_width()
+                canvas_height = self.original_canvas.winfo_height()
+                
+                if canvas_width > 1 and canvas_height > 1:  # Canvas is initialized
+                    rect_id = self.original_canvas.create_rectangle(
+                        10, 10, canvas_width - 10, 60, 
+                        fill=bg_color, outline="", tags="notification")
+                    text_id = self.original_canvas.create_text(
+                        canvas_width // 2, 35, text=message, 
+                        fill=text_color, font=('Arial', 11, 'bold'), tags="notification")
+                    
+                    # Remove notification after 3 seconds
+                    self.root.after(3000, lambda: self.original_canvas.delete("notification"))
+        except Exception:
+            pass  # Fail silently if canvas notification doesn't work
+    
     def convert_to_face_drawing(self):
         """Convert current image to line art using convert_to_lineart.py"""
         # Determine current path based on mode
@@ -2860,10 +3014,21 @@ class SimpleRobotGUI:
             messagebox.showwarning("Warning", "Please load an image or create a drawing first")
             return
         
-        # Disable the button during processing
-        self.face_drawing_btn.config(state='disabled')
-        self.status_text.set("Converting to line art...")
-        self.progress_indicator.config(text="🎨 Converting...")
+        # Show progress indicators
+        self._start_conversion_feedback("Face Drawing")
+        
+        # Show temporary notification
+        self._show_conversion_notification("Starting Face Drawing conversion...", "info")
+        
+        # Disable the button during processing and change appearance dramatically
+        self.face_drawing_btn.config(
+            state='disabled', 
+            text="⏳ Converting\nFace Drawing...", 
+            bg='#9E9E9E', 
+            fg='white',
+            relief='sunken'
+        )
+        self.caricature_btn.config(state='disabled', bg='#BDBDBD')  # Make other button also visibly disabled
         
         # Run conversion in background thread
         thread = threading.Thread(target=self._face_drawing_thread, args=(current_path,))
@@ -2892,6 +3057,9 @@ class SimpleRobotGUI:
     def _face_drawing_success(self, output_path):
         """Handle successful face drawing conversion"""
         try:
+            # Stop progress animation
+            self._stop_conversion_feedback()
+            
             # Switch to load mode if not already
             self.drawing_mode.set("load")
             self.on_mode_change()
@@ -2911,30 +3079,56 @@ class SimpleRobotGUI:
             self.status_text.set("Line art generated - processing for robot...")
             self.auto_process_image()
             
-            # Re-enable the face drawing button
-            self.face_drawing_btn.config(state='normal')
+            # Re-enable buttons and restore appearance
+            self.face_drawing_btn.config(
+                state='normal', 
+                text="👤 Face\nDrawing", 
+                bg='#E91E63', 
+                fg='white',
+                relief='flat'
+            )
+            self.caricature_btn.config(state='normal', bg='#FF9800')
             self.progress_indicator.config(text="✅ Line Art Ready")
+            
+            # Show success notification
+            self._show_conversion_notification("✅ Face Drawing conversion completed!", "success")
             
             messagebox.showinfo("Success", "Image converted to line art successfully!\nUsing out.png for robot drawing.")
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load line art: {e}")
-            self.face_drawing_btn.config(state='normal')
-            self.status_text.set("Failed to load line art")
-            self.progress_indicator.config(text="❌ Failed")
+            self._face_drawing_failed()
     
     def _face_drawing_failed(self):
         """Handle face drawing conversion failure"""
-        self.face_drawing_btn.config(state='normal')
+        self._stop_conversion_feedback()
+        self.face_drawing_btn.config(
+            state='normal', 
+            text="👤 Face\nDrawing", 
+            bg='#E91E63', 
+            fg='white',
+            relief='flat'
+        )
+        self.caricature_btn.config(state='normal', bg='#FF9800')
         self.progress_indicator.config(text="❌ Failed")
         self.status_text.set("Line art conversion failed")
+        self._show_conversion_notification("❌ Face Drawing conversion failed!", "error")
         messagebox.showerror("Error", "Failed to generate line art. Check if out.png was created.")
     
     def _face_drawing_error(self, error):
         """Handle face drawing conversion error"""
-        self.face_drawing_btn.config(state='normal')
+        self._stop_conversion_feedback()
+        self.face_drawing_btn.config(
+            state='normal', 
+            text="👤 Face\nDrawing", 
+            bg='#E91E63', 
+            fg='white',
+            relief='flat'
+        )
+        self.caricature_btn.config(state='normal', bg='#FF9800')
         self.progress_indicator.config(text="❌ Error")
         self.status_text.set("Line art conversion error")
+        self._show_conversion_notification("❌ Face Drawing conversion error!", "error")
         messagebox.showerror("Error", f"Line art conversion error: {error}")
     
     def convert_to_caricature(self):
@@ -2953,10 +3147,21 @@ class SimpleRobotGUI:
             messagebox.showwarning("Warning", "Please load an image or create a drawing first")
             return
         
-        # Disable the button during processing
-        self.caricature_btn.config(state='disabled')
-        self.status_text.set("Converting to caricature...")
-        self.progress_indicator.config(text="🎭 Converting...")
+        # Show progress indicators
+        self._start_conversion_feedback("Caricature")
+        
+        # Show temporary notification
+        self._show_conversion_notification("Starting Caricature conversion...", "info")
+        
+        # Disable the button during processing and change appearance dramatically
+        self.caricature_btn.config(
+            state='disabled', 
+            text="⏳ Converting\nCaricature...", 
+            bg='#9E9E9E', 
+            fg='white',
+            relief='sunken'
+        )
+        self.face_drawing_btn.config(state='disabled', bg='#BDBDBD')  # Make other button also visibly disabled
         
         # Run conversion in background thread
         thread = threading.Thread(target=self._caricature_thread, args=(current_path,))
@@ -2985,6 +3190,9 @@ class SimpleRobotGUI:
     def _caricature_success(self, output_path):
         """Handle successful caricature conversion"""
         try:
+            # Stop progress animation
+            self._stop_conversion_feedback()
+            
             # Switch to load mode if not already
             self.drawing_mode.set("load")
             self.on_mode_change()
@@ -3004,30 +3212,56 @@ class SimpleRobotGUI:
             self.status_text.set("Caricature generated - processing for robot...")
             self.auto_process_image()
             
-            # Re-enable the caricature button
-            self.caricature_btn.config(state='normal')
+            # Re-enable buttons and restore appearance
+            self.caricature_btn.config(
+                state='normal', 
+                text="🎭 Caricature", 
+                bg='#FF9800', 
+                fg='white',
+                relief='flat'
+            )
+            self.face_drawing_btn.config(state='normal', bg='#E91E63')
             self.progress_indicator.config(text="✅ Caricature Ready")
+            
+            # Show success notification
+            self._show_conversion_notification("✅ Caricature conversion completed!", "success")
             
             messagebox.showinfo("Success", "Image converted to caricature successfully!\nUsing out.png for robot drawing.")
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load caricature: {e}")
-            self.caricature_btn.config(state='normal')
-            self.status_text.set("Failed to load caricature")
-            self.progress_indicator.config(text="❌ Failed")
+            self._caricature_failed()
     
     def _caricature_failed(self):
         """Handle caricature conversion failure"""
-        self.caricature_btn.config(state='normal')
+        self._stop_conversion_feedback()
+        self.caricature_btn.config(
+            state='normal', 
+            text="🎭 Caricature", 
+            bg='#FF9800', 
+            fg='white',
+            relief='flat'
+        )
+        self.face_drawing_btn.config(state='normal', bg='#E91E63')
         self.progress_indicator.config(text="❌ Failed")
         self.status_text.set("Caricature conversion failed")
+        self._show_conversion_notification("❌ Caricature conversion failed!", "error")
         messagebox.showerror("Error", "Failed to generate caricature. Check if out.png was created.")
     
     def _caricature_error(self, error):
         """Handle caricature conversion error"""
-        self.caricature_btn.config(state='normal')
+        self._stop_conversion_feedback()
+        self.caricature_btn.config(
+            state='normal', 
+            text="🎭 Caricature", 
+            bg='#FF9800', 
+            fg='white',
+            relief='flat'
+        )
+        self.face_drawing_btn.config(state='normal', bg='#E91E63')
         self.progress_indicator.config(text="❌ Error")
         self.status_text.set("Caricature conversion error")
+        self._show_conversion_notification("❌ Caricature conversion error!", "error")
         messagebox.showerror("Error", f"Caricature conversion error: {error}")
     
     def run(self):

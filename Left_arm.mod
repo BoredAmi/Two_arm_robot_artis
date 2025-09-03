@@ -1,4 +1,4 @@
-MODULE DrawingModule
+MODULE Module1
     !==================================================
     ! ROBOT DRAWING SYSTEM - RAPID MODULE v1.0
     ! Compatible with Python Robot Drawing System
@@ -8,6 +8,7 @@ MODULE DrawingModule
     VAR socketdev client_socket;        ! Connection to Python client
     VAR socketdev server_socket;        ! Server socket listener
     VAR string received_string;         ! Buffer for incoming commands
+    
     
     ! Z-axis positions for pen control
     CONST num z_down:=0;                ! Pen touching paper (drawing)
@@ -24,8 +25,8 @@ MODULE DrawingModule
     PERS wobjdata current_wobject;
     
     ! Movement parameters - optimized for smooth, precise drawing
-    CONST speeddata move_speed := v500;   ! Increased drawing speed for faster operation
-    CONST speeddata fast_speed := v500;   ! Increased batch speed for faster moves
+    CONST speeddata move_speed := v1500;   ! Increased drawing speed for faster operation
+    CONST speeddata fast_speed := v1500;   ! Increased batch speed for faster moves
     CONST zonedata move_zone := z0;        ! Larger zone for faster, blended corners
     CONST zonedata batch_zone := z0;       ! Same larger zone for batch moves
     CONST num z_height := 0;               ! Fixed Z for drawing plane
@@ -37,16 +38,18 @@ MODULE DrawingModule
     PROC main()
         ! Suppress corner path warnings to prevent stop points
         
+
+        
         MotionSup \Off;
     AccSet 100, 100;  ! higher acceleration for faster movement
         ! Initialize robot to base position
-        target_position:=base_position;
         
-        ! Setup TCP server on port 1025 (matches Python client)
+        
+        ! Setup TCP server on port 1026 (matches Python client)
         SocketCreate server_socket;
-        SocketBind server_socket, "0.0.0.0", 1025;
+        SocketBind server_socket, "0.0.0.0", 1026;
         SocketListen server_socket;
-        TPWrite "Drawing server ready on port 1025";
+        TPWrite "Drawing server ready on port 1026";
         
         ! Main server loop - handles multiple client connections
         WHILE TRUE DO
@@ -124,7 +127,7 @@ MODULE DrawingModule
                 HandleBatchCommand cmd;
             ELSEIF StrMatch(cmd, 1, "PEN_UP") = 1 THEN
                 ! Lift pen for non-drawing moves - use moderate speed with smooth zone
-                current_z:=z_up; 
+                current_z:=z_up;
                 MoveL Offs(target_position,0,0,current_z),fast_speed,move_zone,tool1 \WObj:=current_wobject;
                 SendResponse("OK");
             ELSEIF StrMatch(cmd, 1, "PEN_DOWN") = 1 THEN
@@ -137,8 +140,19 @@ MODULE DrawingModule
             ELSEIF StrMatch(cmd, 1, "START_CORNER") = 1 THEN
                 setup_corner;
             ELSEIF StrMatch(cmd, 1, "WAIT") = 1 THEN
-                MoveL Offs(base_position,0,0,current_z),fast_speed,move_zone,tool1 \WObj:=current_wobject;
-                SendResponse("OK"); 
+                MoveL Offs(base_position,290,0,current_z),fast_speed,move_zone,tool1 \WObj:=current_wobject;
+                SendResponse("OK");
+            ELSEIF StrMatch(cmd, 1, "RETREAT")=1 THEN
+                ! Horizontal U-shaped retreat for extra safety between contours
+                ! Step 1: Move back from current position (retreat horizontally)
+                VAR robtarget retreat_position;
+                retreat_position := Offs(target_position,50,0,current_z);
+                MoveL retreat_position,fast_speed,move_zone,tool1 \WObj:=current_wobject;
+                
+                ! Update target position to retreat position to avoid return movement
+                target_position := retreat_position;
+                WaitRob \InPos;
+                SendResponse("OK)");
             ELSE
                 SendResponse("ERROR: Unknown command");
             ENDIF
@@ -190,12 +204,12 @@ MODULE DrawingModule
                     ! Even count = Y coordinate, complete the point
                     y_coord := coord_value;
                     
-                    ! Safety check - validate workspace bounds
-                    IF x_coord < -145 OR x_coord > 290 OR y_coord < -105 OR y_coord > 210 THEN
-                        SendResponse("ERROR: Batch coordinates out of bounds");
-                        TPWrite "ERROR: Batch coordinates out of bounds";
-                        RETURN;
-                    ENDIF
+!                    ! Safety check - validate workspace bounds
+!                    IF x_coord < -145 OR x_coord > 290 OR y_coord < -105 OR y_coord > 210 THEN
+!                        SendResponse("ERROR: Batch coordinates out of bounds");
+!                        TPWrite "ERROR: Batch coordinates out of bounds";
+!                        RETURN;
+!                    ENDIF
                     
                     ! Store complete coordinate pair
                     batch_count := batch_count + 1;
@@ -219,7 +233,7 @@ MODULE DrawingModule
         FOR point_idx FROM 1 TO batch_count DO
             target_position := batch_targets{point_idx};
             ! Use consistent smooth movement for all batch points to avoid corner stops
-            MoveL target_position, fast_speed, batch_zone, tool1 \WObj:=current_wobject ;
+            MoveL target_position, fast_speed, move_zone, tool1 \WObj:=current_wobject ;
         ENDFOR
         
         SendResponse("OK");
@@ -256,11 +270,11 @@ MODULE DrawingModule
         ENDIF
         
         ! Safety check - validate workspace bounds (290mm x 210mm)
-        IF x_coord < -145 OR x_coord > 290 OR y_coord < -105 OR y_coord > 210 THEN
-            SendResponse("ERROR: Coordinates out of bounds");
-            TPWrite "ERROR: Coordinates out of bounds";
-            RETURN;
-        ENDIF
+!        IF x_coord < -145 OR x_coord > 350 OR y_coord < -105 OR y_coord > 210 THEN
+!            SendResponse("ERROR: Coordinates out of bounds");
+!            TPWrite "ERROR: Coordinates out of bounds";
+!            RETURN;
+!        ENDIF
         
         ! Execute movement relative to base_position with precise movement
         target_position := offs(base_position, x_coord, y_coord, current_z);
@@ -276,7 +290,7 @@ MODULE DrawingModule
         TPWrite "Stop command received";
         ! Return to base position safely with smooth movement
         target_position := base_position;
-        MoveL Offs(target_position, 0, 0, current_z), fast_speed, move_zone, tool1 \WObj:=current_wobject;
+        MoveL Offs(base_position, 290, 0, current_z), fast_speed, move_zone, tool1 \WObj:=current_wobject;
         SendResponse("STOPPED");
     ENDPROC
     
@@ -284,16 +298,18 @@ MODULE DrawingModule
     ! RESPONSE SENDER - Sends status back to Python
     !==================================================
     PROC SendResponse(string msg)
-    ! Send the response and terminate with CRLF so the Python client can read a full line (OK\r\n)
-    SocketSend client_socket \Str:=msg;
-    ! Send CRLF separately to avoid relying on string concatenation semantics
-    SocketSend client_socket \Str:="\0D\0A";
+        ! Send the response and terminate with CRLF so the Python client can read a full line (OK\r\n)
+        SocketSend client_socket \Str:=msg;
+        ! Send CRLF separately to avoid relying on string concatenation semantics
+        SocketSend client_socket \Str:="\0D\0A";
     ENDPROC
     
+
     PROC setup_corner()
         current_wobject:=const_kartka;
-        base_position:= [[20.52,14.06,95.45],[0.0224413,-0.70675,0.022442,-0.706751],[1,0,-2,4],[159.113,9E+09,9E+09,9E+09,9E+09,9E+09]];
-        Movej Offs(base_position,0,0,0),fast_speed,fine,tool1\WObj:=current_wobject;
+        base_position:=  [[10.57,13.92,93.28],[0.747181,-0.0011063,-0.664605,0.00436501],[-1,1,1,4],[133.869,9E+09,9E+09,9E+09,9E+09,9E+09]];
+        MoveJ Offs(base_position,290,0,0),fast_speed,fine,tool1\WObj:=current_wobject;
+        target_position:=offs(base_position,290,0,0);
         SendResponse("OK");
     ENDPROC
 ENDMODULE
