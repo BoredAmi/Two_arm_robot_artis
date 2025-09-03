@@ -10,7 +10,7 @@
   "margin_x": 10,
   "margin_y": 10,
   "quality_var": "highest",
-  "detection_method": "adaptive",
+  "detection_method": "canny",
   "enable_tsp": false,
   "use_batch_mode": true,
   "drawing_mode": "load",
