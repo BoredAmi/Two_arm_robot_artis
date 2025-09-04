@@ -663,10 +663,15 @@ class SimpleRobotGUI:
         tk.Label(frame_filter_frame, text="Image Processing:", font=('Arial', 10, 'bold'), 
                 bg='white').pack(side=tk.LEFT)
         
-        frame_filter_checkbox = tk.Checkbutton(frame_filter_frame, text="Remove border frames (helps with scanned images)", 
+        frame_filter_checkbox = tk.Checkbutton(frame_filter_frame, text="🚫 Remove edge borders (CAUTION: may remove drawing content near edges)", 
                                               variable=self.enable_frame_filtering, bg='white', font=('Arial', 9),
                                               activebackground='white', command=self.on_frame_filtering_change)
         frame_filter_checkbox.pack(side=tk.LEFT, padx=(10, 0))
+        
+        # Add warning label
+        warning_label = tk.Label(frame_filter_frame, text="⚠️ Only enable for scanned documents with unwanted borders", 
+                                font=('Arial', 8), bg='white', fg='#ff6600')
+        warning_label.pack(side=tk.LEFT, padx=(10, 0))
 
         # Drawing dimensions selector
         dimensions_frame = tk.Frame(parent, bg='white')
@@ -1582,9 +1587,9 @@ class SimpleRobotGUI:
     def on_frame_filtering_change(self):
         """Handle frame filtering setting changes"""
         if self.enable_frame_filtering.get():
-            self.status_text.set("Frame filtering enabled - border frames will be removed")
+            self.status_text.set("⚠️ Edge border removal ENABLED - may remove drawing content near edges!")
         else:
-            self.status_text.set("Frame filtering disabled - original image borders preserved")
+            self.status_text.set("✅ Edge border removal DISABLED - all drawing content preserved")
         
         # Reprocess if we have an image/drawing loaded
         current_path = None

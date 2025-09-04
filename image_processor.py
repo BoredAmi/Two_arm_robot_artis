@@ -142,17 +142,18 @@ class ImageProcessor:
             # Flip image 180 degrees (rotate around center)
             image = cv2.rotate(image, cv2.ROTATE_180)
             
-            # Optional: Crop border to remove edge effects that cause frame detection
-            # Skip border cropping for logos to preserve their complete content
+            # SOLUTION: Add white border padding to prevent edge detection
+            # This is better than cropping because it preserves all content
             if not protect_logo:
-                border_crop = 10  # Pixels to crop from each edge
-                if border_crop > 0:
-                    h, w = image.shape[:2]
-                    if h > 2*border_crop and w > 2*border_crop:
-                        image = image[border_crop:h-border_crop, border_crop:w-border_crop]
-                        print(f"Cropped {border_crop}px border to prevent frame detection")
+                border_padding = 20  # Pixels of white padding to add
+                if border_padding > 0:
+                    # Add white border padding around the entire image
+                    image = cv2.copyMakeBorder(image, border_padding, border_padding, 
+                                             border_padding, border_padding, 
+                                             cv2.BORDER_CONSTANT, value=[255, 255, 255])
+                    print(f"Added {border_padding}px white padding to prevent edge detection")
             else:
-                print("Logo mode: Skipping border cropping to preserve logo content")
+                print("Logo mode: Skipping border padding to preserve exact logo dimensions")
             
             print(f"Loaded and flipped image 180°: {image.shape} pixels")
             print(f"Precision mode: {precision}")
@@ -202,9 +203,8 @@ class ImageProcessor:
             
             print(f"Found {len(contours)} edge contours")
             
-            # Filter contours to remove very small ones (noise) AND border contours (frame)
-            # For logos, skip border filtering to preserve logo content
-            # For adaptive threshold, use more aggressive filtering to reduce processing time
+            # Filter contours to remove very small ones (noise)
+            # With border padding, most edge contours should already be eliminated
             min_length = self.MIN_CONTOUR_LENGTH
             if detection_method.lower() == "adaptive":
                 min_length = max(20, self.MIN_CONTOUR_LENGTH * 2)  # More aggressive filtering for adaptive
@@ -213,21 +213,18 @@ class ImageProcessor:
                 filtered_contours = []
                 for c in contours:
                     if len(c) >= min_length and cv2.contourArea(c) >= 50:  # Minimum area threshold
-                        # Filter out border contours (frame detection) only if not protecting logo
+                        # Optional: still check for border contours if not protecting logo (but should be rare now)
                         if protect_logo or not self._is_border_contour(c, edges.shape):
                             filtered_contours.append(c)
             else:
                 filtered_contours = []
                 for c in contours:
                     if len(c) >= min_length:
-                        # Filter out border contours (frame detection) only if not protecting logo
+                        # Optional: still check for border contours if not protecting logo (but should be rare now) 
                         if protect_logo or not self._is_border_contour(c, edges.shape):
                             filtered_contours.append(c)
             
-            if protect_logo:
-                print(f"Logo mode: Filtered to {len(filtered_contours)} contours with >= {min_length} points (border filtering disabled)")
-            else:
-                print(f"Filtered to {len(filtered_contours)} contours with >= {min_length} points (border contours removed)")
+            print(f"Filtered to {len(filtered_contours)} contours with >= {min_length} points (border padding should prevent most edge issues)")
             
             # Apply precision-based simplification
             simplification_factor = self.precision_factors.get(precision, 0.0008)
