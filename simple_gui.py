@@ -2,9 +2,10 @@
 Simple, user-friendly GUI for Robot Drawing System.
 
 This module provides a clean, intuitive graphical interface for the Robot Drawing System.
-It offers two main input methods:
+It offers three main input methods:
 1. Load image files (JPG, PNG, BMP, etc.)
 2. Create drawings using an interactive canvas
+3. Generate images from text descriptions using AI
 
 Features:
 - Real-time image processing and preview
@@ -13,13 +14,13 @@ Features:
 - Template shapes for quick testing
 - TSP optimization controls
 - Quality/precision settings
+- AI-powered text-to-image generation
 
 The GUI is designed to be accessible to users of all technical levels while providing
 access to advanced features for power users.
 
 Version: 1.0
 """
-import tkinter as tk
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import threading
@@ -126,6 +127,8 @@ class SimpleRobotGUI:
             self.enable_logo.set(self.config["enable_logo"])
         if self.config.get("logo_size") is not None:
             self.logo_size.set(self.config["logo_size"])
+        if self.config.get("enable_frame_filtering") is not None:
+            self.enable_frame_filtering.set(self.config["enable_frame_filtering"])
         if self.config.get("max_x") is not None:
             self.max_x.set(self.config["max_x"])
         if self.config.get("max_y") is not None:
@@ -175,6 +178,15 @@ class SimpleRobotGUI:
         # Create the user interface (compact main view). Full setup is in a separate window.
         self.create_simple_interface()
 
+        # Restore text prompt after UI is created
+        if self.config.get("text_prompt") is not None:
+            try:
+                if hasattr(self, 'text_entry'):
+                    self.text_entry.delete("1.0", tk.END)
+                    self.text_entry.insert("1.0", self.config["text_prompt"])
+            except Exception:
+                pass
+
         # Start voice listener (background thread). Calls into _on_voice_command -> main thread dispatcher.
         try:
             self._voice_listener = VoiceCommandListener(callback=self._on_voice_command)
@@ -220,6 +232,7 @@ class SimpleRobotGUI:
                 "use_center_origin": self.use_center_origin.get(),
                 "enable_logo": self.enable_logo.get(),
                 "logo_size": self.logo_size.get(),
+                "enable_frame_filtering": self.enable_frame_filtering.get(),
                 "max_x": self.max_x.get(),
                 "max_y": self.max_y.get(),
                 "margin_x": self.margin_x.get(),
@@ -254,6 +267,14 @@ class SimpleRobotGUI:
                 config["dual_arm_mode"] = bool(self.dual_arm_mode.get())
             except Exception:
                 config["dual_arm_mode"] = False
+            # Save text prompt for text generation mode
+            try:
+                if hasattr(self, 'text_entry'):
+                    config["text_prompt"] = self.text_entry.get("1.0", tk.END).strip()
+                else:
+                    config["text_prompt"] = ""
+            except Exception:
+                config["text_prompt"] = ""
             # Persist forbidden buffer if present
             try:
                 config["forbidden_buffer"] = int(self.forbidden_buffer_var.get()) if hasattr(self, 'forbidden_buffer_var') else 40
@@ -269,7 +290,8 @@ class SimpleRobotGUI:
         """Initialize all GUI state variables."""
         # File and drawing state
         self.image_path = tk.StringVar()
-        self.drawing_mode = tk.StringVar(value="load")  # "load" or "draw"
+        self.drawing_mode = tk.StringVar(value="load")  # "load", "draw", or "text"
+        self.text_prompt = tk.StringVar()  # For text-to-image generation
         
         # Robot connection
         self.robot_ip = tk.StringVar(value=self.DEFAULT_ROBOT_IP)
@@ -289,6 +311,9 @@ class SimpleRobotGUI:
         # Logo settings
         self.enable_logo = tk.BooleanVar(value=False)  # Logo disabled by default
         self.logo_size = tk.IntVar(value=20)  # Logo size in mm
+        
+        # Frame filtering settings
+        self.enable_frame_filtering = tk.BooleanVar(value=False)  # Frame filtering disabled by default
         
         # Drawing dimensions (mm)
         self.max_x = tk.IntVar(value=290)  # Default robot workspace width
@@ -402,6 +427,10 @@ class SimpleRobotGUI:
         
         tk.Radiobutton(mode_frame, text="🎨 Draw Your Own", variable=self.drawing_mode, 
                       value="draw", bg='white', font=('Arial', 10),
+                      activebackground='white', command=self.on_mode_change).pack(side=tk.LEFT, padx=(0, 20))
+        
+        tk.Radiobutton(mode_frame, text="🤖 Generate from Text", variable=self.drawing_mode, 
+                      value="text", bg='white', font=('Arial', 10),
                       activebackground='white', command=self.on_mode_change).pack(side=tk.LEFT)
         
         # Robot Connection Settings
@@ -494,6 +523,49 @@ class SimpleRobotGUI:
         # Initially hide draw section
         self.draw_section.pack_forget()
         
+        # Text generation section
+        self.text_section = tk.Frame(parent, bg='white')
+        self.text_section.pack(fill=tk.X, pady=(0, 10))
+        
+        # Text input controls
+        text_controls = tk.Frame(self.text_section, bg='white')
+        text_controls.pack(fill=tk.X, pady=(0, 10))
+        
+        # Prompt label
+        tk.Label(text_controls, text="Enter your description:", font=('Arial', 10, 'bold'), 
+                bg='white').pack(anchor='w', pady=(0, 5))
+        
+        # Text input area
+        text_input_frame = tk.Frame(text_controls, bg='white')
+        text_input_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        self.text_entry = tk.Text(text_input_frame, height=3, width=60, 
+                                 font=('Arial', 10), relief='solid', bd=1,
+                                 wrap=tk.WORD)
+        self.text_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
+        
+        # Generate button
+        generate_btn = tk.Button(text_input_frame, text="🤖 Generate Image", 
+                command=self.generate_from_text,
+                bg='#FF5722', fg='white', font=self.BUTTON_FONT,
+                relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
+        generate_btn.pack(side=tk.RIGHT)
+        
+        # Example prompts
+        examples_frame = tk.Frame(text_controls, bg='white')
+        examples_frame.pack(fill=tk.X)
+        
+        tk.Label(examples_frame, text="Examples:", font=('Arial', 9, 'bold'), 
+                bg='white', fg='#666').pack(anchor='w')
+        
+        examples_text = tk.Label(examples_frame, 
+                text="• Simple house with a door and windows\n• Cat sitting on a chair\n• Geometric pattern with circles and triangles\n• Portrait of a person smiling", 
+                font=('Arial', 8), bg='white', fg='#888', justify='left')
+        examples_text.pack(anchor='w', pady=(2, 0))
+        
+        # Initially hide text section
+        self.text_section.pack_forget()
+        
         # Quality selector
         quality_frame = tk.Frame(parent, bg='white')
         quality_frame.pack(fill=tk.X)
@@ -583,6 +655,18 @@ class SimpleRobotGUI:
         
         tk.Label(coord_logo_frame, text="mm", font=('Arial', 9), 
                 bg='white').pack(side=tk.LEFT)
+
+        # Frame filtering section (new row)
+        frame_filter_frame = tk.Frame(parent, bg='white')
+        frame_filter_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        tk.Label(frame_filter_frame, text="Image Processing:", font=('Arial', 10, 'bold'), 
+                bg='white').pack(side=tk.LEFT)
+        
+        frame_filter_checkbox = tk.Checkbutton(frame_filter_frame, text="Remove border frames (helps with scanned images)", 
+                                              variable=self.enable_frame_filtering, bg='white', font=('Arial', 9),
+                                              activebackground='white', command=self.on_frame_filtering_change)
+        frame_filter_checkbox.pack(side=tk.LEFT, padx=(10, 0))
 
         # Drawing dimensions selector
         dimensions_frame = tk.Frame(parent, bg='white')
@@ -1231,7 +1315,12 @@ class SimpleRobotGUI:
                         self.draw_section.pack_forget()
                     except Exception:
                         pass
-                # Clear drawing path when switching to file mode
+                if hasattr(self, 'text_section') and self.text_section.winfo_exists():
+                    try:
+                        self.text_section.pack_forget()
+                    except Exception:
+                        pass
+                # Clear drawing path and text when switching to file mode
                 self.temp_drawing_path = None
                 # Reset to no image if no file is selected
                 if not self.image_path.get():
@@ -1257,10 +1346,15 @@ class SimpleRobotGUI:
                                                             font=('Arial', 10), fill='#999')
                         except Exception:
                             pass
-            else:
+            elif self.drawing_mode.get() == "draw":
                 if hasattr(self, 'file_section') and self.file_section.winfo_exists():
                     try:
                         self.file_section.pack_forget()
+                    except Exception:
+                        pass
+                if hasattr(self, 'text_section') and self.text_section.winfo_exists():
+                    try:
+                        self.text_section.pack_forget()
                     except Exception:
                         pass
                 if hasattr(self, 'draw_section') and self.draw_section.winfo_exists():
@@ -1270,6 +1364,42 @@ class SimpleRobotGUI:
                         pass
                 # Clear file path when switching to draw mode
                 self.image_path.set("")
+                try:
+                    if hasattr(self, 'draw_btn') and self.draw_btn:
+                        self.draw_btn.config(state='disabled')
+                except Exception:
+                    pass
+                try:
+                    if hasattr(self, 'face_drawing_btn') and self.face_drawing_btn:
+                        self.face_drawing_btn.config(state='disabled')
+                except Exception:
+                    pass
+                if hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
+                    try:
+                        self.original_canvas.delete("all")
+                        self.original_canvas.create_text(150, 100, text="No image loaded", 
+                                                        font=('Arial', 10), fill='#999')
+                    except Exception:
+                        pass
+            elif self.drawing_mode.get() == "text":
+                if hasattr(self, 'file_section') and self.file_section.winfo_exists():
+                    try:
+                        self.file_section.pack_forget()
+                    except Exception:
+                        pass
+                if hasattr(self, 'draw_section') and self.draw_section.winfo_exists():
+                    try:
+                        self.draw_section.pack_forget()
+                    except Exception:
+                        pass
+                if hasattr(self, 'text_section') and self.text_section.winfo_exists():
+                    try:
+                        self.text_section.pack(fill=tk.X, pady=(0, 10))
+                    except Exception:
+                        pass
+                # Clear file path and drawing path when switching to text mode
+                self.image_path.set("")
+                self.temp_drawing_path = None
                 try:
                     if hasattr(self, 'draw_btn') and self.draw_btn:
                         self.draw_btn.config(state='disabled')
@@ -1299,7 +1429,7 @@ class SimpleRobotGUI:
         if self.drawing_mode.get() == "draw":
             if hasattr(self, 'temp_drawing_path') and self.temp_drawing_path:
                 current_path = self.temp_drawing_path
-        else:
+        elif self.drawing_mode.get() in ["load", "text"]:
             if self.image_path.get():
                 current_path = self.image_path.get()
         
@@ -1389,7 +1519,7 @@ class SimpleRobotGUI:
             if self.drawing_mode.get() == "draw":
                 if hasattr(self, 'temp_drawing_path') and self.temp_drawing_path:
                     current_path = self.temp_drawing_path
-            else:
+            elif self.drawing_mode.get() in ["load", "text"]:
                 if self.image_path.get():
                     current_path = self.image_path.get()
             
@@ -1410,7 +1540,7 @@ class SimpleRobotGUI:
         if self.drawing_mode.get() == "draw":
             if hasattr(self, 'temp_drawing_path') and self.temp_drawing_path:
                 current_path = self.temp_drawing_path
-        else:
+        elif self.drawing_mode.get() in ["load", "text"]:
             if self.image_path.get():
                 current_path = self.image_path.get()
         
@@ -1431,6 +1561,30 @@ class SimpleRobotGUI:
             self.status_text.set(f"Logo enabled (Size: {self.logo_size.get()}mm)")
         else:
             self.status_text.set("Logo disabled")
+        
+        # Reprocess if we have an image/drawing loaded
+        current_path = None
+        if self.drawing_mode.get() == "draw":
+            if hasattr(self, 'temp_drawing_path') and self.temp_drawing_path:
+                current_path = self.temp_drawing_path
+        else:
+            if self.image_path.get():
+                current_path = self.image_path.get()
+        
+        if current_path:
+            self.auto_process_image()
+            try:
+                if hasattr(self.drawer, 'drawing_points') and self.drawer.drawing_points:
+                    self._regenerate_forbidden_zones()
+            except Exception:
+                pass
+    
+    def on_frame_filtering_change(self):
+        """Handle frame filtering setting changes"""
+        if self.enable_frame_filtering.get():
+            self.status_text.set("Frame filtering enabled - border frames will be removed")
+        else:
+            self.status_text.set("Frame filtering disabled - original image borders preserved")
         
         # Reprocess if we have an image/drawing loaded
         current_path = None
@@ -1527,7 +1681,7 @@ class SimpleRobotGUI:
         if self.drawing_mode.get() == "draw":
             if hasattr(self, 'temp_drawing_path') and self.temp_drawing_path:
                 current_path = self.temp_drawing_path
-        else:
+        elif self.drawing_mode.get() in ["load", "text"]:
             if self.image_path.get():
                 current_path = self.image_path.get()
         
@@ -2447,7 +2601,8 @@ class SimpleRobotGUI:
                 current_path,
                 precision=self.quality_var.get(),
                 detection_method=self.detection_method.get(),
-                logo_settings=logo_settings
+                logo_settings=logo_settings,
+                protect_logo=not self.enable_frame_filtering.get()  # Invert because protect_logo=True disables filtering
             )
             
             if success:
@@ -2997,6 +3152,115 @@ class SimpleRobotGUI:
                     self.root.after(3000, lambda: self.original_canvas.delete("notification"))
         except Exception:
             pass  # Fail silently if canvas notification doesn't work
+    
+    def generate_from_text(self):
+        """Generate image from text prompt using OpenAI's DALL-E"""
+        if not hasattr(self, 'text_entry'):
+            messagebox.showerror("Error", "Text input not available")
+            return
+            
+        # Get text from text widget
+        text_prompt = self.text_entry.get("1.0", tk.END).strip()
+        
+        if not text_prompt:
+            messagebox.showwarning("Input Required", "Please enter a description for the image you want to generate.")
+            return
+        
+        # Confirm with user
+        if not messagebox.askyesno("Generate Image", 
+                                  f"Generate line art image from:\n\n'{text_prompt}'\n\nThis will use OpenAI API credits. Continue?"):
+            return
+        
+        # Start generation in background thread
+        self._start_text_generation_feedback()
+        
+        # Run in thread to avoid blocking UI
+        import threading
+        thread = threading.Thread(target=self._text_generation_thread, args=(text_prompt,))
+        thread.daemon = True
+        thread.start()
+    
+    def _text_generation_thread(self, text_prompt):
+        """Background thread for text-to-image generation"""
+        try:
+            from convert_to_lineart import generate_image_from_text
+            
+            # Generate image
+            result = generate_image_from_text(text_prompt, style="line_art")
+            
+            # Schedule UI update on main thread
+            self.root.after(0, self._text_generation_success, result['output_path'])
+            
+        except Exception as e:
+            # Schedule error handling on main thread
+            self.root.after(0, self._text_generation_error, str(e))
+    
+    def _text_generation_success(self, output_path):
+        """Handle successful text-to-image generation"""
+        try:
+            self._stop_text_generation_feedback()
+            
+            # Set the generated image as current image
+            self.image_path.set(output_path)
+            
+            # Load preview
+            self.load_preview_image()
+            
+            # Update status
+            self.status_text.set("Image generated successfully! Processing for robot drawing...")
+            
+            # Show success notification
+            self._show_conversion_notification("✅ Image generated successfully from your text prompt!", "success")
+            
+            # Enable processing buttons
+            if hasattr(self, 'draw_btn') and self.draw_btn:
+                self.draw_btn.config(state='normal')
+            if hasattr(self, 'face_drawing_btn') and self.face_drawing_btn:
+                self.face_drawing_btn.config(state='normal')
+            
+            # Automatically process the generated image to create drawing paths
+            self.root.after(1000, self._auto_process_generated_image)  # Small delay to ensure UI updates complete
+                
+        except Exception as e:
+            self._text_generation_error(f"Error loading generated image: {e}")
+    
+    def _auto_process_generated_image(self):
+        """Automatically process the generated image to create drawing paths"""
+        try:
+            self.status_text.set("Processing generated image for robot drawing...")
+            # Trigger automatic image processing
+            self.auto_process_image()
+        except Exception as e:
+            self.status_text.set("Generated image processing failed")
+            messagebox.showerror("Processing Error", f"Failed to process generated image:\n\n{e}")
+    
+    def _text_generation_error(self, error):
+        """Handle text-to-image generation error"""
+        self._stop_text_generation_feedback()
+        self.status_text.set("Text generation failed")
+        messagebox.showerror("Generation Error", f"Failed to generate image from text:\n\n{error}")
+    
+    def _start_text_generation_feedback(self):
+        """Start visual feedback for text generation"""
+        self.status_text.set("Generating image from text...")
+        
+        # Disable generate button during processing
+        if hasattr(self, 'text_section'):
+            for child in self.text_section.winfo_children():
+                if isinstance(child, tk.Frame):
+                    for grandchild in child.winfo_children():
+                        if isinstance(grandchild, tk.Button) and "Generate" in grandchild.cget('text'):
+                            grandchild.config(state='disabled', text="🔄 Generating...")
+    
+    def _stop_text_generation_feedback(self):
+        """Stop visual feedback for text generation"""
+        # Re-enable generate button
+        if hasattr(self, 'text_section'):
+            for child in self.text_section.winfo_children():
+                if isinstance(child, tk.Frame):
+                    for grandchild in child.winfo_children():
+                        if isinstance(grandchild, tk.Button) and ("Generating" in grandchild.cget('text') or "Generate" in grandchild.cget('text')):
+                            grandchild.config(state='normal', text="🤖 Generate Image")
     
     def convert_to_face_drawing(self):
         """Convert current image to line art using convert_to_lineart.py"""
