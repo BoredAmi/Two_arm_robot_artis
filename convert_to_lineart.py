@@ -347,6 +347,7 @@ def save_text_generation_to_catalog(text_prompt, output_path, style, base_dir):
 def convert_to_lineart(face_image_path, prompt_type="minimalist"):
     """Convert a face image to line art using OpenAI's image editing capabilities."""
     try:
+        print(f"Converting image '{face_image_path}' to line art using prompt type '{prompt_type}'")
         # Get the appropriate prompt
         if prompt_type in PROMPTS:
             prompt = PROMPTS[prompt_type]
