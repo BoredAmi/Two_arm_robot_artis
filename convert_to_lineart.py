@@ -208,7 +208,7 @@ def generate_image_from_text(text_prompt, style="line_art"):
         - Minimalist design like a coloring book illustration
         """
         
-        # Generate image using DALL-E
+        
         result = client.images.generate(
             model="gpt-image-1", 
             prompt=enhanced_prompt,
