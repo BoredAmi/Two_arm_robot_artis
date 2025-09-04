@@ -19,7 +19,7 @@ Features:
 The GUI is designed to be accessible to users of all technical levels while providing
 access to advanced features for power users.
 
-Version: 1.0
+Version: 1.0 - EXPO MODE
 """
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -27,6 +27,7 @@ import threading
 import time
 import subprocess
 import os
+from datetime import datetime
 from PIL import Image, ImageTk
 import cv2
 import numpy as np
@@ -55,19 +56,19 @@ class SimpleRobotGUI:
     DEFAULT_ROBOT_PORT = "1025"
     DEFAULT_ROBOT_PORT_L = "1026"  # Left robot port for dual-arm mode
     
-    # UI dimensions and colors
-    WINDOW_WIDTH = 1100
-    WINDOW_HEIGHT = 800
-    PREVIEW_WIDTH = 520
-    PREVIEW_HEIGHT = 347  # Changed to 3:2 aspect ratio (520 * 2/3 ≈ 347) to match 1536x1024
+    # UI dimensions and colors - Optimized for 1920x1080 display
+    WINDOW_WIDTH = 1600
+    WINDOW_HEIGHT = 900
+    PREVIEW_WIDTH = 640
+    PREVIEW_HEIGHT = 480  # 4:3 aspect ratio for better image display
 
-    # Button fonts for larger UI elements
-    BUTTON_FONT = ('Arial', 12, 'bold')
-    SMALL_BUTTON_FONT = ('Arial', 11)
+    # Button fonts for larger UI elements - Expo-friendly sizing
+    BUTTON_FONT = ('Arial', 14, 'bold')
+    SMALL_BUTTON_FONT = ('Arial', 12)
     # Uniform button sizing (width in chars, height via padding)
-    BUTTON_WIDTH = 16
-    BUTTON_PADX = 20
-    BUTTON_PADY = 12
+    BUTTON_WIDTH = 18
+    BUTTON_PADX = 25
+    BUTTON_PADY = 15
     
     # Color scheme
     COLORS = {
@@ -91,7 +92,7 @@ class SimpleRobotGUI:
         self.config = self._load_config()
 
         self.root = tk.Tk()
-        self.root.title("Robot Drawing System")
+        self.root.title("🤖 Robot Drawing System - EXPO MODE")
         self.root.geometry(f"{self.WINDOW_WIDTH}x{self.WINDOW_HEIGHT}")
         self.root.configure(bg=self.COLORS['background'])
 
@@ -334,26 +335,387 @@ class SimpleRobotGUI:
         
         # Drawing operation state
         self.drawing_active = False
+        
+        # Forbidden buffer (for dual-arm mode)
+        self.forbidden_buffer_var = tk.IntVar(value=40)
     
     def create_simple_interface(self):
-        """Create a clean, step-by-step interface."""
+        """Create a 2x2 grid layout with tile buttons for expo."""
         # Main container with padding
-        main_frame = tk.Frame(self.root, bg=self.COLORS['background'], padx=20, pady=20)
+        main_frame = tk.Frame(self.root, bg=self.COLORS['background'], padx=10, pady=10)
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Application title
-        title_label = tk.Label(main_frame, text="Robot Drawing System", 
-                              font=('Arial', 18, 'bold'), 
+        title_label = tk.Label(main_frame, text="🤖 Robot Drawing System - EXPO", 
+                              font=('Arial', 24, 'bold'), 
                               bg=self.COLORS['background'], fg='#333')
-        title_label.pack(pady=(0, 30))
+        title_label.pack(pady=(0, 10))
         
-        # Create main workflow sections (1, 2, and 3)
-        self.create_step_section(main_frame, "1. Select Image or Drawing", self.create_file_selection_section)
-        self.create_step_section(main_frame, "2. Connect to Robot", self.create_connection_section)
-        self.create_step_section(main_frame, "3. Preview & Send to Robot", self.create_action_section)
-
+        subtitle_label = tk.Label(main_frame, text="Simple • Fast • Interactive Robot Art", 
+                                 font=('Arial', 14), 
+                                 bg=self.COLORS['background'], fg='#666')
+        subtitle_label.pack(pady=(0, 15))
+        
+        # Create TRUE 2x2 grid layout (equal tile sizes - no column spanning)
+        grid_frame = tk.Frame(main_frame, bg=self.COLORS['background'])
+        grid_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Configure grid weights for TRULY EQUAL distribution (2x2 grid)
+        grid_frame.grid_rowconfigure(0, weight=1, minsize=200)
+        grid_frame.grid_rowconfigure(1, weight=1, minsize=200)
+        grid_frame.grid_columnconfigure(0, weight=1, minsize=400)  # Equal column widths
+        grid_frame.grid_columnconfigure(1, weight=1, minsize=400)  # Equal column widths
+        
+        # Tile 1: Take Picture (Top Left) - Full button
+        self.take_photo_btn = tk.Button(grid_frame, 
+                                      text="1. TAKE PICTURE\n\n📷\n\nClick to capture photo",
+                                      command=self.get_picture_from_robot,
+                                      font=('Arial', 18, 'bold'), bg='#2196F3', fg='white',
+                                      relief=tk.RAISED, bd=3, cursor='hand2')
+        self.take_photo_btn.grid(row=0, column=0, sticky='nsew', padx=5, pady=5)
+        
+        # Tile 2: See Photo (Top Right) - Single column, equal size
+        self.preview_frame = tk.Frame(grid_frame, bg='#4CAF50', relief=tk.RAISED, bd=3)
+        self.preview_frame.grid(row=0, column=1, sticky='nsew', padx=5, pady=5)  # NO COLUMNSPAN!
+        
+        # Fixed height header
+        header_frame = tk.Frame(self.preview_frame, bg='#4CAF50', height=40)
+        header_frame.pack(fill=tk.X)
+        header_frame.pack_propagate(False)  # Maintain fixed height
+        
+        tk.Label(header_frame, text="2. SEE YOUR PHOTO", font=('Arial', 18, 'bold'), 
+                bg='#4CAF50', fg='white').pack(pady=5)
+        
+        # Fixed size image preview container
+        preview_container = tk.Frame(self.preview_frame, bg='lightgray', height=160)
+        preview_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
+        preview_container.pack_propagate(False)  # Maintain fixed height to prevent ratio changes
+        
+        # Image preview with dynamic scaling
+        self.preview_label = tk.Label(preview_container, text="Take a photo\nto see preview here", 
+                                    bg='lightgray', 
+                                    font=('Arial', 14), relief=tk.SUNKEN, bd=2,
+                                    justify=tk.CENTER)
+        self.preview_label.pack(fill=tk.BOTH, expand=True)
+        
+        # Bind resize event to refresh image scaling
+        preview_container.bind('<Configure>', self.on_preview_resize)
+        
+        # Tile 3: Combined Portrait/Caricature with diagonal stairs effect - Single column, equal size
+        self.style_frame = tk.Frame(grid_frame, bg='#333333', relief=tk.RAISED, bd=3)
+        self.style_frame.grid(row=1, column=0, sticky='nsew', padx=5, pady=5)  # NO COLUMNSPAN!
+        
+        # Configure grid weights for the style frame (10 rows, 20 columns for ultra-fine triangle stairs)
+        for i in range(20):
+            self.style_frame.grid_columnconfigure(i, weight=1)
+        for i in range(10):
+            self.style_frame.grid_rowconfigure(i, weight=1)
+        
+        # Create ultra-granular diagonal triangle effect - Portrait (orange) upper left triangle
+        # Row 0 - Full width Portrait
+        self.portrait_btn1 = tk.Button(
+            self.style_frame, text="👤 PORTRAIT", font=("Arial", 15, "bold"),
+            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("portrait")
+        )
+        self.portrait_btn1.grid(row=0, column=0, columnspan=20, sticky="nsew", padx=1, pady=1)
+        
+        # Row 1 - 18/20 width Portrait
+        self.portrait_btn2 = tk.Button(
+            self.style_frame, text="Face Drawing", font=("Arial", 13, "bold"),
+            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("portrait")
+        )
+        self.portrait_btn2.grid(row=1, column=0, columnspan=18, sticky="nsew", padx=1, pady=1)
+        
+        # Row 2 - 16/20 width Portrait
+        self.portrait_btn3 = tk.Button(
+            self.style_frame, text="Style", font=("Arial", 12, "bold"),
+            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("portrait")
+        )
+        self.portrait_btn3.grid(row=2, column=0, columnspan=16, sticky="nsew", padx=1, pady=1)
+        
+        # Row 3 - 14/20 width Portrait
+        self.portrait_btn4 = tk.Button(
+            self.style_frame, text="Natural", font=("Arial", 11, "bold"),
+            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("portrait")
+        )
+        self.portrait_btn4.grid(row=3, column=0, columnspan=14, sticky="nsew", padx=1, pady=1)
+        
+        # Row 4 - 12/20 width Portrait
+        self.portrait_btn5 = tk.Button(
+            self.style_frame, text="Realistic", font=("Arial", 10, "bold"),
+            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("portrait")
+        )
+        self.portrait_btn5.grid(row=4, column=0, columnspan=12, sticky="nsew", padx=1, pady=1)
+        
+        # Row 5 - 10/20 width Portrait
+        self.portrait_btn6 = tk.Button(
+            self.style_frame, text="Art", font=("Arial", 9, "bold"),
+            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("portrait")
+        )
+        self.portrait_btn6.grid(row=5, column=0, columnspan=10, sticky="nsew", padx=1, pady=1)
+        
+        # Row 6 - 8/20 width Portrait
+        self.portrait_btn7 = tk.Button(
+            self.style_frame, text="Pro", font=("Arial", 8, "bold"),
+            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("portrait")
+        )
+        self.portrait_btn7.grid(row=6, column=0, columnspan=8, sticky="nsew", padx=1, pady=1)
+        
+        # Row 7 - 6/20 width Portrait
+        self.portrait_btn8 = tk.Button(
+            self.style_frame, text="✓", font=("Arial", 8, "bold"),
+            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("portrait")
+        )
+        self.portrait_btn8.grid(row=7, column=0, columnspan=6, sticky="nsew", padx=1, pady=1)
+        
+        # Row 8 - 4/20 width Portrait
+        self.portrait_btn9 = tk.Button(
+            self.style_frame, text="◆", font=("Arial", 7, "bold"),
+            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("portrait")
+        )
+        self.portrait_btn9.grid(row=8, column=0, columnspan=4, sticky="nsew", padx=1, pady=1)
+        
+        # Row 9 - 2/20 width Portrait
+        self.portrait_btn10 = tk.Button(
+            self.style_frame, text="•", font=("Arial", 7, "bold"),
+            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("portrait")
+        )
+        self.portrait_btn10.grid(row=9, column=0, columnspan=2, sticky="nsew", padx=1, pady=1)
+        
+        # Caricature (purple) lower right triangle - creating smooth stairs
+        # Row 1 - 2/20 width Caricature (right side)
+        self.caricature_btn1 = tk.Button(
+            self.style_frame, text="😄", font=("Arial", 13, "bold"),
+            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("caricature")
+        )
+        self.caricature_btn1.grid(row=1, column=18, columnspan=2, sticky="nsew", padx=1, pady=1)
+        
+        # Row 2 - 4/20 width Caricature
+        self.caricature_btn2 = tk.Button(
+            self.style_frame, text="Fun", font=("Arial", 12, "bold"),
+            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("caricature")
+        )
+        self.caricature_btn2.grid(row=2, column=16, columnspan=4, sticky="nsew", padx=1, pady=1)
+        
+        # Row 3 - 6/20 width Caricature
+        self.caricature_btn3 = tk.Button(
+            self.style_frame, text="Cartoon", font=("Arial", 11, "bold"),
+            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("caricature")
+        )
+        self.caricature_btn3.grid(row=3, column=14, columnspan=6, sticky="nsew", padx=1, pady=1)
+        
+        # Row 4 - 8/20 width Caricature
+        self.caricature_btn4 = tk.Button(
+            self.style_frame, text="Funny", font=("Arial", 10, "bold"),
+            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("caricature")
+        )
+        self.caricature_btn4.grid(row=4, column=12, columnspan=8, sticky="nsew", padx=1, pady=1)
+        
+        # Row 5 - 10/20 width Caricature
+        self.caricature_btn5 = tk.Button(
+            self.style_frame, text="Exaggerated", font=("Arial", 9, "bold"),
+            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("caricature")
+        )
+        self.caricature_btn5.grid(row=5, column=10, columnspan=10, sticky="nsew", padx=1, pady=1)
+        
+        # Row 6 - 12/20 width Caricature
+        self.caricature_btn6 = tk.Button(
+            self.style_frame, text="Stylized", font=("Arial", 8, "bold"),
+            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("caricature")
+        )
+        self.caricature_btn6.grid(row=6, column=8, columnspan=12, sticky="nsew", padx=1, pady=1)
+        
+        # Row 7 - 14/20 width Caricature
+        self.caricature_btn7 = tk.Button(
+            self.style_frame, text="Comedy", font=("Arial", 8, "bold"),
+            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("caricature")
+        )
+        self.caricature_btn7.grid(row=7, column=6, columnspan=14, sticky="nsew", padx=1, pady=1)
+        
+        # Row 8 - 16/20 width Caricature
+        self.caricature_btn8 = tk.Button(
+            self.style_frame, text="Express", font=("Arial", 7, "bold"),
+            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("caricature")
+        )
+        self.caricature_btn8.grid(row=8, column=4, columnspan=16, sticky="nsew", padx=1, pady=1)
+        
+        # Row 9 - 18/20 width Caricature (almost full)
+        self.caricature_btn9 = tk.Button(
+            self.style_frame, text="🎭 SELECT CARICATURE", font=("Arial", 7, "bold"),
+            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            command=lambda: self.set_style_and_convert("caricature")
+        )
+        self.caricature_btn9.grid(row=9, column=2, columnspan=18, sticky="nsew", padx=1, pady=1)
+        
+        # Store references for backward compatibility
+        self.face_drawing_btn = self.portrait_btn1
+        self.caricature_btn = self.caricature_btn1
+        
+        # Create visual triangle overlay that looks like two simple triangular buttons
+        self.create_triangle_button_overlay()
+        
+        # Tile 4: Start Drawing (Bottom Right) - Single column, equal size
+        self.start_drawing_btn = tk.Button(grid_frame, 
+                                         text="4. START DRAWING\n\n🤖\n\nBegin robot art!",
+                                         command=self.start_drawing,
+                                         font=('Arial', 16, 'bold'), bg='#E91E63', fg='white',
+                                         relief=tk.RAISED, bd=3, cursor='hand2')
+        self.start_drawing_btn.grid(row=1, column=1, sticky='nsew', padx=5, pady=5)  # column=1 not 2!
+        
+        # Create alias for backward compatibility with existing code
+        self.draw_btn = self.start_drawing_btn
+        
+        # Initialize drawing style variable
+        self.drawing_style = tk.StringVar(value="normal")
+        
+        # Add status indicators
+        self.create_status_indicators(main_frame)
+        
         # Status bar at bottom
         self.create_status_bar(main_frame)
+    
+    def create_triangle_button_overlay(self):
+        """Create visual overlay that makes it look like two triangle buttons while keeping staircase functional"""
+        # Create a canvas that shows triangle shapes but allows clicks to pass through
+        overlay_canvas = tk.Canvas(self.style_frame, highlightthickness=0)
+        overlay_canvas.place(x=0, y=0, relwidth=1, relheight=1)
+        
+        # Store reference for updates
+        self.triangle_overlay = overlay_canvas
+        
+        # Bind to canvas events but allow clicks to pass through to buttons underneath
+        overlay_canvas.bind('<Configure>', lambda e: self.draw_triangle_buttons(overlay_canvas))
+        overlay_canvas.bind('<Button-1>', self.handle_triangle_click)
+        
+        # Initial draw
+        self.root.after(100, lambda: self.draw_triangle_buttons(overlay_canvas))
+    
+    def draw_triangle_buttons(self, canvas):
+        """Draw two triangle button shapes that visually cover the staircase"""
+        if not canvas.winfo_exists():
+            return
+            
+        canvas.delete("all")  # Clear canvas
+        
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
+        
+        if width <= 1 or height <= 1:
+            return
+        
+        # Draw upper-left triangle (PORTRAIT) - orange
+        portrait_triangle = [
+            0, 0,           # Top-left
+            width, 0,       # Top-right
+            0, height       # Bottom-left
+        ]
+        canvas.create_polygon(
+            portrait_triangle,
+            fill='#FF9800',     # Orange background
+            outline='#E65100',  # Darker orange border
+            width=3,
+            tags="portrait_triangle"
+        )
+        
+        # Draw lower-right triangle (CARICATURE) - purple  
+        caricature_triangle = [
+            width, 0,       # Top-right
+            width, height,  # Bottom-right
+            0, height       # Bottom-left
+        ]
+        canvas.create_polygon(
+            caricature_triangle,
+            fill='#9C27B0',     # Purple background
+            outline='#6A1B9A',  # Darker purple border
+            width=3,
+            tags="caricature_triangle"
+        )
+        
+        # Add text labels on the triangles
+        canvas.create_text(
+            width * 0.25, height * 0.25,  # Upper-left quadrant
+            text="👤 PORTRAIT\nFace Drawing",
+            fill='white',
+            font=('Arial', 14, 'bold'),
+            justify=tk.CENTER,
+            tags="portrait_text"
+        )
+        
+        canvas.create_text(
+            width * 0.75, height * 0.75,  # Lower-right quadrant  
+            text="😄 CARICATURE\nFun Cartoon",
+            fill='white',
+            font=('Arial', 14, 'bold'),
+            justify=tk.CENTER,
+            tags="caricature_text"
+        )
+        
+        # Draw diagonal separator line
+        canvas.create_line(
+            width, 0,           # Top-right
+            0, height,          # Bottom-left
+            fill='#333333',
+            width=4,
+            tags="separator_line"
+        )
+    
+    def handle_triangle_click(self, event):
+        """Handle clicks on the triangle overlay and pass them to appropriate underlying buttons"""
+        canvas = event.widget
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
+        
+        x, y = event.x, event.y
+        
+        # Determine which triangle was clicked based on position relative to diagonal
+        # Diagonal line equation: y = height - (height/width) * x
+        diagonal_y_at_x = height - (height/width) * x
+        
+        if y < diagonal_y_at_x:
+            # Clicked in upper triangle (Portrait area)
+            self.set_style_and_convert("portrait")
+        else:
+            # Clicked in lower triangle (Caricature area)  
+            self.set_style_and_convert("caricature")
+    
+    def create_status_indicators(self, parent):
+        """Create compact status indicators"""
+        status_frame = tk.Frame(parent, bg=self.COLORS['background'])
+        status_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        # Robot connection status
+        self.robot_status = tk.Label(status_frame, text="🔴 Robot: Disconnected", 
+                                   font=('Arial', 12, 'bold'), bg=self.COLORS['background'], fg='red')
+        self.robot_status.pack(side=tk.LEFT)
+        
+        # Progress info
+        self.progress_label = tk.Label(status_frame, text="Ready to start!", 
+                                     font=('Arial', 12), bg=self.COLORS['background'], fg='gray')
+        self.progress_label.pack(side=tk.RIGHT)
+        
+        # Setup button
+        tk.Button(status_frame, text="⚙️ Advanced Setup", 
+                 command=self.open_setup_window,
+                 font=('Arial', 10), bg='#666666', fg='white',
+                 width=15, height=1).pack(side=tk.RIGHT, padx=(10, 20))
     
     def create_step_section(self, parent, title, content_func):
         """
@@ -374,7 +736,7 @@ class SimpleRobotGUI:
         header_frame.pack_propagate(False)
         
         header_label = tk.Label(header_frame, text=title, 
-                               font=('Arial', 12, 'bold'), 
+                               font=('Arial', 16, 'bold'), 
                                bg=self.COLORS['header_bg'], 
                                fg=self.COLORS['header_text'])
         header_label.pack(expand=True)
@@ -386,31 +748,31 @@ class SimpleRobotGUI:
         content_func(content_frame)
     
     def create_file_selection_section(self, parent):
-        """Create file selection section (Zone 1)"""
-        # File selection controls
-        file_controls = tk.Frame(parent, bg='white')
-        file_controls.pack(fill=tk.X, pady=(0, 10))
+        """Create minimal input section for expo - just camera and setup"""
+        # Current image display
+        image_display_frame = tk.Frame(parent, bg='white')
+        image_display_frame.pack(fill=tk.X, pady=(0, 20))
+        
+        self.file_label_main = tk.Label(image_display_frame, text="📷 Take a photo to start drawing",
+            font=('Arial', 14, 'bold'), bg='white', fg='#333', anchor='center')
+        self.file_label_main.pack(anchor='center', pady=(0, 10))
 
-        # Current file display
-        self.file_label_main = tk.Label(file_controls, text="No image selected",
-            font=('Arial', 10), bg='white', fg='#666', anchor='w')
-        self.file_label_main.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        # Main action buttons - just camera and setup
+        buttons_frame = tk.Frame(parent, bg='white')
+        buttons_frame.pack()
 
-        # Buttons frame
-        buttons_frame = tk.Frame(file_controls, bg='white')
-        buttons_frame.pack(side=tk.RIGHT)
+        # Take Photo button (main action)
+        self.take_photo_btn = tk.Button(buttons_frame, text="📷 TAKE PHOTO", 
+            command=self.get_picture_from_robot,
+            bg='#2196F3', fg='white', font=('Arial', 16, 'bold'), relief='flat', 
+            padx=40, pady=20, cursor='hand2', width=20)
+        self.take_photo_btn.pack(pady=(0, 15))
 
-        # Browse Images button
-        browse_btn_main = tk.Button(buttons_frame, text="Browse Images", command=self.browse_image,
-            bg='#4CAF50', fg='white', font=self.BUTTON_FONT, relief='flat', 
-            padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
-        browse_btn_main.pack(side=tk.RIGHT, padx=(10, 0))
-
-        # Setup button
-        setup_btn = tk.Button(buttons_frame, text="Setup...", command=self.open_setup_window,
-                  bg='#607D8B', fg='white', font=self.BUTTON_FONT, relief='flat', 
-                  padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
-        setup_btn.pack(side=tk.RIGHT)
+        # Setup button (smaller, for advanced users)
+        setup_btn = tk.Button(parent, text="⚙️ Advanced Setup & Other Options", command=self.open_setup_window,
+                  bg='#757575', fg='white', font=('Arial', 11), relief='flat', 
+                  padx=20, pady=10, cursor='hand2')
+        setup_btn.pack(pady=(20, 0))
     
     def create_image_section(self, parent):
         """Create image selection section"""
@@ -766,145 +1128,120 @@ class SimpleRobotGUI:
         tk.Label(buffer_frame, text="mm", font=('Arial', 9), bg='white').pack(side=tk.LEFT)
     
     def create_connection_section(self, parent):
-        """Create robot connection section"""
-        # Connection controls
-        conn_frame = tk.Frame(parent, bg='white')
-        conn_frame.pack(fill=tk.X, pady=(0, 10))
+        """Create minimal connection section - just status and connect"""
+        # Simple connection status
+        status_frame = tk.Frame(parent, bg='white')
+        status_frame.pack(fill=tk.X, pady=(0, 20))
         
-        # Connection status and IP display
-        status_frame = tk.Frame(conn_frame, bg='white')
-        status_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        # Connection status (centered)
+        self.conn_status_label = tk.Label(status_frame, text="⚫ Robot Not Connected", 
+                         font=('Arial', 14, 'bold'), bg='white', fg='#f44336')
+        self.conn_status_label.pack(pady=(0, 10))
         
-        # Connection status
-        self.conn_status_label = tk.Label(status_frame, text="⚫ Not Connected", 
-                         font=('Arial', 10), bg='white', fg='#f44336')
-        self.conn_status_label.pack(anchor='w')
-        
-        # Current IP and ports display
-        self.ip_display_label = tk.Label(status_frame, text=f"Target: {self.robot_ip.get()}:{self.robot_port.get()}", 
-                         font=('Arial', 9), bg='white', fg='#666')
-        self.ip_display_label.pack(anchor='w')
-        
-        # Dual-arm info when enabled
-        self.dual_info_label = tk.Label(status_frame, text="", 
-                         font=('Arial', 9), bg='white', fg='#666')
-        self.dual_info_label.pack(anchor='w')
-        
-        # Buttons frame
-        buttons_frame = tk.Frame(conn_frame, bg='white')
-        buttons_frame.pack(side=tk.RIGHT)
-        
-        # Connect button
-        self.connect_btn = tk.Button(buttons_frame, text="Connect", 
+        # Connect button (prominent)
+        self.connect_btn = tk.Button(status_frame, text="🔗 CONNECT ROBOT", 
             command=self.toggle_connection,
-            bg='#FF9800', fg='white', font=self.BUTTON_FONT,
-            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
-        self.connect_btn.pack(side=tk.RIGHT, padx=(0, 10))
+            bg='#FF9800', fg='white', font=('Arial', 16, 'bold'),
+            relief='flat', padx=40, pady=20, cursor='hand2', width=20)
+        self.connect_btn.pack()
         
-        # Get Picture button
-        self.get_pic_btn = tk.Button(buttons_frame, text="📷 Get Picture", 
-            command=self.get_picture_from_robot,
-            bg='#9C27B0', fg='white', font=self.BUTTON_FONT,
-            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH,
-            state='normal')
-        self.get_pic_btn.pack(side=tk.RIGHT)
-        
-        # Update display when dual-arm mode changes
-        self.dual_arm_mode.trace('w', self._update_connection_display)
+        # Connection info (small)
+        self.ip_display_label = tk.Label(status_frame, text=f"Robot: {self.robot_ip.get()}:{self.robot_port.get()}", 
+                         font=('Arial', 10), bg='white', fg='#666')
+        self.ip_display_label.pack(pady=(10, 0))
     
     def create_action_section(self, parent):
-        """Create preview and action section"""
-        # Preview area
-        preview_frame = tk.Frame(parent, bg='white')
-        preview_frame.pack(fill=tk.BOTH, expand=True)
+        """Create minimal action section - just image, effects, and start button"""
+        # Single centered layout
+        layout_frame = tk.Frame(parent, bg='white')
+        layout_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Three panels: left preview, middle actions, right preview
-        left_panel = tk.Frame(preview_frame, bg='white')
-        left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        # Image preview (centered, larger)
+        image_frame = tk.Frame(layout_frame, bg='white')
+        image_frame.pack(pady=(0, 30))
 
-        # Middle panel for buttons and progress
-        middle_panel = tk.Frame(preview_frame, bg='white', width=180)
-        middle_panel.pack(side=tk.LEFT, fill=tk.Y, padx=5)
-        middle_panel.pack_propagate(False)
+        tk.Label(image_frame, text="📸 Your Photo", font=('Arial', 14, 'bold'), 
+            bg='white').pack(pady=(0, 10))
 
-        right_panel = tk.Frame(preview_frame, bg='white')
-        right_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(10, 0))
-
-        # Original image preview (left)
-        tk.Label(left_panel, text="Original Image", font=('Arial', 10, 'bold'), 
-            bg='white').pack(pady=(0, 5))
-
-        self.original_canvas = tk.Canvas(left_panel, bg='#f8f8f8', 
-                        width=self.PREVIEW_WIDTH, height=self.PREVIEW_HEIGHT, relief='solid', bd=1)
+        self.original_canvas = tk.Canvas(image_frame, bg='#f8f8f8', 
+                        width=self.PREVIEW_WIDTH, height=self.PREVIEW_HEIGHT, relief='solid', bd=2)
         self.original_canvas.pack()
-        # Centered placeholder text; coordinates will be adjusted in load_preview_image
-        self.original_canvas.create_text(self.PREVIEW_WIDTH//2, self.PREVIEW_HEIGHT//2, text="No image loaded", 
-                        font=('Arial', 10), fill='#999')
+        self.original_canvas.create_text(self.PREVIEW_WIDTH//2, self.PREVIEW_HEIGHT//2, 
+                        text="Take a photo to see it here", 
+                        font=('Arial', 14), fill='#999')
 
-        # Middle panel content (buttons and progress)
-        # Face Drawing button
-        self.face_drawing_btn = tk.Button(middle_panel, text="👤 Face\nDrawing", 
+        # Effect selection (horizontal layout)
+        effects_frame = tk.Frame(layout_frame, bg='white')
+        effects_frame.pack(pady=(0, 30))
+
+        effects_frame_label = tk.Label(effects_frame, text="Choose Drawing Style:", 
+                               font=('Arial', 14, 'bold'), bg='white', fg='#333')
+        effects_frame_label.pack(pady=(0, 15))
+
+        effects_buttons = tk.Frame(effects_frame, bg='white')
+        effects_buttons.pack()
+
+        # Normal drawing (default)
+        self.normal_btn = tk.Button(effects_buttons, text="📄 Normal\nDrawing", 
+            command=lambda: self.set_drawing_mode('normal'),
+            bg='#4CAF50', fg='white', font=('Arial', 12, 'bold'),
+            relief='flat', padx=20, pady=15, cursor='hand2', width=12,
+            state='disabled')
+        self.normal_btn.pack(side=tk.LEFT, padx=(0, 15))
+
+        # Portrait mode
+        self.face_drawing_btn = tk.Button(effects_buttons, text="👤 Portrait\nMode", 
             command=self.convert_to_face_drawing,
-            bg='#E91E63', fg='white', font=self.BUTTON_FONT,
-            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2',
-            state='disabled', width=self.BUTTON_WIDTH)
-        self.face_drawing_btn.pack(pady=(10, 5))
+            bg='#E91E63', fg='white', font=('Arial', 12, 'bold'),
+            relief='flat', padx=20, pady=15, cursor='hand2', width=12,
+            state='disabled')
+        self.face_drawing_btn.pack(side=tk.LEFT, padx=(0, 15))
 
-        # Caricature button
-        self.caricature_btn = tk.Button(middle_panel, text="🎭 Caricature", 
+        # Caricature mode  
+        self.caricature_btn = tk.Button(effects_buttons, text="🎭 Caricature\nMode", 
             command=self.convert_to_caricature,
-            bg='#FF9800', fg='white', font=self.BUTTON_FONT,
-            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2',
-            state='disabled', width=self.BUTTON_WIDTH)
-        self.caricature_btn.pack(pady=5)
+            bg='#FF9800', fg='white', font=('Arial', 12, 'bold'),
+            relief='flat', padx=20, pady=15, cursor='hand2', width=12,
+            state='disabled')
+        self.caricature_btn.pack(side=tk.LEFT)
 
-        # Draw button
-        self.draw_btn = tk.Button(middle_panel, text="🎨 Start\nDrawing", 
+        # Main START button (very prominent)
+        start_frame = tk.Frame(layout_frame, bg='white')
+        start_frame.pack(pady=(0, 20))
+
+        self.draw_btn = tk.Button(start_frame, text="🎨 START DRAWING", 
             command=self.start_robot_drawing,
-            bg='#4CAF50', fg='white', font=self.BUTTON_FONT,
-            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2',
-            state='disabled', width=self.BUTTON_WIDTH)
-        self.draw_btn.pack(pady=5)
+            bg='#4CAF50', fg='white', font=('Arial', 18, 'bold'),
+            relief='flat', padx=50, pady=25, cursor='hand2', width=25,
+            state='disabled')
+        self.draw_btn.pack()
 
-        # Zoom viewer button
-        zoom_btn = tk.Button(middle_panel, text="🔍 Zoom\nViewer",
-            command=self.open_detailed_path_window,
-            bg='#607D8B', fg='white', font=self.BUTTON_FONT,
-            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2',
-            width=self.BUTTON_WIDTH)
-        zoom_btn.pack(pady=5)
+        # Emergency stop button (initially hidden)
+        self.stop_btn = tk.Button(start_frame, text="⏹ EMERGENCY STOP", 
+                    command=self.emergency_stop,
+                    bg='#f44336', fg='white', font=('Arial', 16, 'bold'),
+                    relief='flat', padx=40, pady=20, cursor='hand2', width=25)
+
+        # Store for matplotlib (moved to setup)
+        self.fig = None
+        self.ax = None
+        self.canvas_widget = None
+        
+        self.drawing_active = False
         
         # Emergency stop button (initially hidden)
-        self.stop_btn = tk.Button(middle_panel, text="⏹ Stop", 
+        self.stop_btn = tk.Button(start_frame, text="⏹ EMERGENCY\nSTOP", 
                     command=self.emergency_stop,
-                    bg='#f44336', fg='white', font=self.BUTTON_FONT,
-                    relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
+                    bg='#f44336', fg='white', font=('Arial', 12, 'bold'),
+                    relief='flat', padx=20, pady=15, cursor='hand2', width=16)
         
         self.drawing_active = False
 
-        # Robot path preview
-        tk.Label(right_panel, text="Robot Drawing Path", font=('Arial', 10, 'bold'), 
-            bg='white').pack(pady=(0, 5))
-
-        # Matplotlib figure for robot path sized to match the original image preview
-        # Convert preview pixel dimensions to inches for the Figure (dpi-based)
-        dpi = 100
-        fig_width = self.PREVIEW_WIDTH / dpi
-        fig_height = self.PREVIEW_HEIGHT / dpi
-
-        self.fig = Figure(figsize=(fig_width, fig_height), dpi=dpi, facecolor='white')
-        self.ax = self.fig.add_subplot(111)
-
-        self.canvas_widget = FigureCanvasTkAgg(self.fig, right_panel)
-        self.canvas_widget.get_tk_widget().pack()
-        # Ensure the Tk widget matches the preview pixel size
-        try:
-            self.canvas_widget.get_tk_widget().config(width=self.PREVIEW_WIDTH, height=self.PREVIEW_HEIGHT)
-        except Exception:
-            pass
-        
-        # Initialize the preview with correct coordinate system
-        self.update_robot_preview()
+    def set_drawing_mode(self, mode):
+        """Set the drawing mode to normal (no special effects)"""
+        if hasattr(self, 'current_image_path') and self.current_image_path:
+            # Just process the current image normally
+            self.auto_process_image()
 
     # ---------------------- Zoom / Detailed Viewer ----------------------
     # Removed embedded scroll/double-click zoom; only dedicated viewer retained
@@ -1788,7 +2125,477 @@ class SimpleRobotGUI:
         self.drawing_window.focus_set()
 
     def open_setup_window(self):
-        """Open a separate Setup window containing the full image/settings UI."""
+        """Open a comprehensive Setup window containing all advanced settings"""
+        if hasattr(self, 'setup_window') and self.setup_window.winfo_exists():
+            self.setup_window.lift()
+            return
+            
+        self.setup_window = tk.Toplevel(self.root)
+        self.setup_window.title("⚙️ Advanced Setup & Configuration")
+        self.setup_window.geometry("900x700")
+        self.setup_window.configure(bg='#f5f5f5')
+        
+        # Create notebook for organized tabs
+        notebook = ttk.Notebook(self.setup_window)
+        notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Tab 1: Input Methods & Image Loading
+        input_frame = ttk.Frame(notebook)
+        notebook.add(input_frame, text="Input Methods")
+        self.create_input_methods_tab(input_frame)
+        
+        # Tab 2: Image Processing Settings
+        processing_frame = ttk.Frame(notebook)
+        notebook.add(processing_frame, text="Image Processing")
+        self.create_processing_tab(processing_frame)
+        
+        # Tab 3: Robot Connection Settings  
+        connection_frame = ttk.Frame(notebook)
+        notebook.add(connection_frame, text="Robot Connection")
+        self.create_connection_tab(connection_frame)
+        
+        # Tab 4: Drawing Settings
+        drawing_frame = ttk.Frame(notebook)
+        notebook.add(drawing_frame, text="Drawing Settings")
+        self.create_drawing_tab(drawing_frame)
+        
+        # Tab 5: Advanced Options
+        advanced_frame = ttk.Frame(notebook)
+        notebook.add(advanced_frame, text="Advanced Options")
+        self.create_advanced_tab(advanced_frame)
+
+    def create_input_methods_tab(self, parent):
+        """Create input methods tab with all the options moved from main interface"""
+        main_frame = tk.Frame(parent, bg='white', padx=20, pady=20)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # File Loading Section
+        file_section = tk.LabelFrame(main_frame, text="Load Image Files", font=('Arial', 12, 'bold'),
+                                    bg='white', padx=15, pady=10)
+        file_section.pack(fill=tk.X, pady=(0, 15))
+        
+        # Current file display
+        self.file_label = tk.Label(file_section, text="No image selected", 
+                                  font=('Arial', 11), bg='white', fg='#666', 
+                                  anchor='w')
+        self.file_label.pack(fill=tk.X, pady=(0, 10))
+        
+        # Browse button
+        browse_btn = tk.Button(file_section, text="📁 Browse Images", 
+                command=self.browse_image,
+                bg='#4CAF50', fg='white', font=('Arial', 11, 'bold'),
+                relief='flat', padx=20, pady=10, cursor='hand2')
+        browse_btn.pack(pady=(0, 5))
+        
+        # Drawing Section
+        draw_section = tk.LabelFrame(main_frame, text="Create Drawings", font=('Arial', 12, 'bold'),
+                                    bg='white', padx=15, pady=10)
+        draw_section.pack(fill=tk.X, pady=(0, 15))
+        
+        # Drawing controls
+        draw_controls = tk.Frame(draw_section, bg='white')
+        draw_controls.pack()
+        
+        draw_btn = tk.Button(draw_controls, text="🎨 Open Drawing Canvas", 
+                command=self.open_drawing_window,
+                bg='#9C27B0', fg='white', font=('Arial', 11, 'bold'),
+                relief='flat', padx=20, pady=10, cursor='hand2')
+        draw_btn.pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Templates button
+        templates_btn = tk.Button(draw_controls, text="📋 Shape Templates", 
+                command=self.show_templates,
+                bg='#607D8B', fg='white', font=('Arial', 11, 'bold'),
+                relief='flat', padx=20, pady=10, cursor='hand2')
+        templates_btn.pack(side=tk.LEFT)
+        
+        # AI Generation Section
+        ai_section = tk.LabelFrame(main_frame, text="AI Image Generation", font=('Arial', 12, 'bold'),
+                                  bg='white', padx=15, pady=10)
+        ai_section.pack(fill=tk.BOTH, expand=True)
+        
+        tk.Label(ai_section, text="Enter detailed description:", font=('Arial', 11, 'bold'), 
+                bg='white').pack(anchor='w', pady=(0, 5))
+        
+        # Text input area
+        text_input_frame = tk.Frame(ai_section, bg='white')
+        text_input_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        
+        self.text_entry = tk.Text(text_input_frame, height=6, width=70, 
+                                 font=('Arial', 11), relief='solid', bd=1, wrap=tk.WORD)
+        self.text_entry.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        
+        # Generate button
+        generate_btn = tk.Button(ai_section, text="🤖 Generate Image from Text", 
+                command=self.generate_from_text,
+                bg='#FF5722', fg='white', font=('Arial', 11, 'bold'),
+                relief='flat', padx=20, pady=10, cursor='hand2')
+        generate_btn.pack(pady=(0, 10))
+        
+        # Example prompts
+        examples_frame = tk.Frame(ai_section, bg='white')
+        examples_frame.pack(fill=tk.X)
+        
+        tk.Label(examples_frame, text="Quick Examples:", font=('Arial', 10, 'bold'), 
+                bg='white').pack(anchor='w', pady=(0, 5))
+        
+        examples_grid = tk.Frame(examples_frame, bg='white')
+        examples_grid.pack(fill=tk.X)
+        
+        examples = [
+            "Simple house with door and windows",
+            "Cat sitting on a chair", 
+            "Geometric pattern with circles",
+            "Portrait of a person smiling",
+            "Tree with branches and leaves",
+            "Car from the side view"
+        ]
+        
+        for i, example in enumerate(examples):
+            btn = tk.Button(examples_grid, text=example,
+                           command=lambda e=example: self.text_entry.insert(tk.END, e + "\n"),
+                           bg='#e0e0e0', fg='#333', font=('Arial', 9),
+                           relief='flat', padx=8, pady=3, cursor='hand2')
+            btn.grid(row=i//2, column=i%2, sticky='ew', padx=2, pady=1)
+        
+        examples_grid.columnconfigure(0, weight=1)
+        examples_grid.columnconfigure(1, weight=1)
+        
+        # Preview Section
+        preview_section = tk.LabelFrame(main_frame, text="Robot Path Preview", font=('Arial', 12, 'bold'),
+                                       bg='white', padx=15, pady=10)
+        preview_section.pack(fill=tk.X, pady=(15, 0))
+        
+        preview_btn = tk.Button(preview_section, text="🔍 Open Detailed Path Viewer",
+                command=self.open_detailed_path_window,
+                bg='#607D8B', fg='white', font=('Arial', 11, 'bold'),
+                relief='flat', padx=20, pady=10, cursor='hand2')
+        preview_btn.pack()
+
+    def create_processing_tab(self, parent):
+        """Create image processing settings tab"""
+        main_frame = tk.Frame(parent, bg='white', padx=20, pady=20)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Quality Settings
+        quality_section = tk.LabelFrame(main_frame, text="Quality Settings", font=('Arial', 11, 'bold'), 
+                                       bg='white', padx=15, pady=10)
+        quality_section.pack(fill=tk.X, pady=(0, 15))
+        
+        tk.Label(quality_section, text="Processing Quality:", font=('Arial', 10, 'bold'), 
+                bg='white').pack(anchor='w', pady=(0, 5))
+        
+        quality_frame = tk.Frame(quality_section, bg='white')
+        quality_frame.pack(fill=tk.X)
+        
+        for i, (text, value) in enumerate([("Standard", "medium"), ("High", "high"), ("Ultra", "highest")]):
+            tk.Radiobutton(quality_frame, text=text, variable=self.quality_var, value=value,
+                          bg='white', font=('Arial', 10), command=self.on_quality_change).pack(side=tk.LEFT, padx=(0, 20))
+        
+        # Detection Method
+        detection_section = tk.LabelFrame(main_frame, text="Edge Detection Method", font=('Arial', 11, 'bold'),
+                                         bg='white', padx=15, pady=10)
+        detection_section.pack(fill=tk.X, pady=(0, 15))
+        
+        tk.Label(detection_section, text="Detection Algorithm:", font=('Arial', 10, 'bold'), 
+                bg='white').pack(anchor='w', pady=(0, 5))
+        
+        detection_frame = tk.Frame(detection_section, bg='white')
+        detection_frame.pack(fill=tk.X)
+        
+        for i, (text, value) in enumerate([("Adaptive", "adaptive"), ("Threshold", "threshold"), ("Canny Edge", "canny")]):
+            tk.Radiobutton(detection_frame, text=text, variable=self.detection_method, value=value,
+                          bg='white', font=('Arial', 10), command=self.on_detection_method_change).pack(side=tk.LEFT, padx=(0, 20))
+        
+        # Frame Filtering
+        frame_section = tk.LabelFrame(main_frame, text="Border Processing", font=('Arial', 11, 'bold'),
+                                     bg='white', padx=15, pady=10)
+        frame_section.pack(fill=tk.X, pady=(0, 15))
+        
+        frame_filter_checkbox = tk.Checkbutton(frame_section, text="🚫 Remove edge borders (CAUTION: may remove drawing content near edges)", 
+                                              variable=self.enable_frame_filtering, bg='white', font=('Arial', 10),
+                                              command=self.on_frame_filtering_change)
+        frame_filter_checkbox.pack(anchor='w', pady=(0, 5))
+        
+        warning_label = tk.Label(frame_section, text="⚠️ Only enable for scanned documents with unwanted borders", 
+                                font=('Arial', 9), bg='white', fg='#ff6600')
+        warning_label.pack(anchor='w')
+
+    def create_connection_tab(self, parent):
+        """Create robot connection settings tab"""
+        main_frame = tk.Frame(parent, bg='white', padx=20, pady=20)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Connection Settings
+        conn_section = tk.LabelFrame(main_frame, text="Robot Network Settings", font=('Arial', 11, 'bold'),
+                                    bg='white', padx=15, pady=10)
+        conn_section.pack(fill=tk.X, pady=(0, 15))
+        
+        # IP Address
+        ip_row = tk.Frame(conn_section, bg='white')
+        ip_row.pack(fill=tk.X, pady=(0, 10))
+        
+        tk.Label(ip_row, text="Robot IP Address:", font=('Arial', 10, 'bold'), 
+                bg='white', width=20, anchor='w').pack(side=tk.LEFT)
+        
+        ip_entry = tk.Entry(ip_row, textvariable=self.robot_ip, 
+                           font=('Arial', 10), width=20, relief='solid', bd=1)
+        ip_entry.pack(side=tk.LEFT, padx=(10, 0))
+        ip_entry.bind('<KeyRelease>', lambda e: self._update_connection_display())
+        
+        # Right Robot Port
+        port_row = tk.Frame(conn_section, bg='white')
+        port_row.pack(fill=tk.X, pady=(0, 10))
+        
+        tk.Label(port_row, text="Right Robot Port:", font=('Arial', 10, 'bold'), 
+                bg='white', width=20, anchor='w').pack(side=tk.LEFT)
+        
+        port_entry = tk.Entry(port_row, textvariable=self.robot_port, 
+                             font=('Arial', 10), width=10, relief='solid', bd=1)
+        port_entry.pack(side=tk.LEFT, padx=(10, 0))
+        port_entry.bind('<KeyRelease>', lambda e: self._update_connection_display())
+        
+        # Left Robot Port
+        port_l_row = tk.Frame(conn_section, bg='white')
+        port_l_row.pack(fill=tk.X, pady=(0, 5))
+        
+        tk.Label(port_l_row, text="Left Robot Port:", font=('Arial', 10, 'bold'), 
+                bg='white', width=20, anchor='w').pack(side=tk.LEFT)
+        
+        port_l_entry = tk.Entry(port_l_row, textvariable=self.robot_port_l, 
+                               font=('Arial', 10), width=10, relief='solid', bd=1)
+        port_l_entry.pack(side=tk.LEFT, padx=(10, 0))
+        port_l_entry.bind('<KeyRelease>', lambda e: self._update_connection_display())
+        
+        # Dual-arm mode
+        dual_arm_checkbox = tk.Checkbutton(conn_section, text="Enable dual-arm drawing mode (split & sync)",
+                        variable=self.dual_arm_mode, bg='white', font=('Arial', 10, 'bold'))
+        dual_arm_checkbox.pack(anchor='w', pady=(10, 0))
+        
+        # Connection Status and Controls
+        status_section = tk.LabelFrame(main_frame, text="Connection Status & Control", font=('Arial', 11, 'bold'),
+                                      bg='white', padx=15, pady=10)
+        status_section.pack(fill=tk.X, pady=(0, 15))
+        
+        # Status display
+        status_frame = tk.Frame(status_section, bg='white')
+        status_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        tk.Label(status_frame, text="Status:", font=('Arial', 10, 'bold'), 
+                bg='white', width=20, anchor='w').pack(side=tk.LEFT)
+        
+        self.conn_status_label = tk.Label(status_frame, text="🔴 Disconnected", 
+                                         font=('Arial', 10, 'bold'), bg='white', fg='red')
+        self.conn_status_label.pack(side=tk.LEFT, padx=(10, 0))
+        
+        # Connection button
+        button_frame = tk.Frame(status_section, bg='white')
+        button_frame.pack(fill=tk.X, pady=(0, 5))
+        
+        self.connect_btn = tk.Button(button_frame, text="Connect to Robot", 
+                                   command=self.toggle_connection,
+                                   font=('Arial', 12, 'bold'), bg='#4CAF50', fg='white',
+                                   width=20, height=2, relief=tk.RAISED, bd=2)
+        self.connect_btn.pack(pady=5)
+        
+        # Target info
+        self.robot_target_label = tk.Label(status_section, text="", 
+                                         font=('Arial', 9), bg='white', fg='gray')
+        self.robot_target_label.pack(pady=(5, 0))
+        
+        # Update the display
+        self._update_connection_display()
+
+    def create_drawing_tab(self, parent):
+        """Create drawing settings tab"""
+        main_frame = tk.Frame(parent, bg='white', padx=20, pady=20)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Optimization Settings
+        opt_section = tk.LabelFrame(main_frame, text="Path Optimization", font=('Arial', 11, 'bold'),
+                                   bg='white', padx=15, pady=10)
+        opt_section.pack(fill=tk.X, pady=(0, 15))
+        
+        tsp_checkbox = tk.Checkbutton(opt_section, text="Enable TSP optimization (shorter drawing paths)", 
+                                     variable=self.enable_tsp, bg='white', font=('Arial', 10),
+                                     command=self.on_tsp_change)
+        tsp_checkbox.pack(anchor='w', pady=(0, 5))
+        
+        batch_checkbox = tk.Checkbutton(opt_section, text="Use batch command mode (faster transmission)", 
+                                       variable=self.use_batch_mode, bg='white', font=('Arial', 10),
+                                       command=self.on_batch_mode_change)
+        batch_checkbox.pack(anchor='w')
+        
+        # Coordinate System
+        coord_section = tk.LabelFrame(main_frame, text="Coordinate System", font=('Arial', 11, 'bold'),
+                                     bg='white', padx=15, pady=10)
+        coord_section.pack(fill=tk.X, pady=(0, 15))
+        
+        coord_checkbox = tk.Checkbutton(coord_section, text="Use center origin (0,0 at center of workspace)", 
+                        variable=self.use_center_origin, bg='white', font=('Arial', 10),
+                        command=self.on_coordinate_system_change)
+        coord_checkbox.pack(anchor='w')
+        
+        # Drawing Dimensions
+        dim_section = tk.LabelFrame(main_frame, text="Drawing Area (mm)", font=('Arial', 11, 'bold'),
+                                   bg='white', padx=15, pady=10)
+        dim_section.pack(fill=tk.X, pady=(0, 15))
+        
+        # Width and Height controls
+        dim_controls = tk.Frame(dim_section, bg='white')
+        dim_controls.pack(fill=tk.X, pady=(0, 10))
+        
+        # Width
+        width_frame = tk.Frame(dim_controls, bg='white')
+        width_frame.pack(side=tk.LEFT, padx=(0, 20))
+        tk.Label(width_frame, text="Width:", font=('Arial', 10, 'bold'), bg='white').pack(anchor='w')
+        x_spinbox = tk.Spinbox(width_frame, from_=50, to=500, textvariable=self.max_x, 
+                              width=8, font=('Arial', 10), command=self.on_dimensions_change)
+        x_spinbox.pack()
+        x_spinbox.bind('<KeyRelease>', lambda e: self.on_dimensions_change())
+        
+        # Height
+        height_frame = tk.Frame(dim_controls, bg='white')
+        height_frame.pack(side=tk.LEFT, padx=(0, 20))
+        tk.Label(height_frame, text="Height:", font=('Arial', 10, 'bold'), bg='white').pack(anchor='w')
+        y_spinbox = tk.Spinbox(height_frame, from_=50, to=400, textvariable=self.max_y, 
+                              width=8, font=('Arial', 10), command=self.on_dimensions_change)
+        y_spinbox.pack()
+        y_spinbox.bind('<KeyRelease>', lambda e: self.on_dimensions_change())
+        
+        # Preset buttons
+        preset_frame = tk.Frame(dim_section, bg='white')
+        preset_frame.pack(fill=tk.X)
+        tk.Label(preset_frame, text="Presets:", font=('Arial', 10, 'bold'), bg='white').pack(anchor='w', pady=(0, 5))
+        
+        preset_buttons = tk.Frame(preset_frame, bg='white')
+        preset_buttons.pack()
+        
+        presets = [("A4", 290, 210), ("A5", 210, 148), ("Custom", None, None)]
+        for text, width, height in presets:
+            if width and height:
+                btn = tk.Button(preset_buttons, text=text, 
+                               command=lambda w=width, h=height: self.set_dimension_preset(w, h),
+                               bg='#607D8B', fg='white', font=('Arial', 9), padx=15, pady=5)
+                btn.pack(side=tk.LEFT, padx=(0, 5))
+        
+        # Safety Margins
+        margin_section = tk.LabelFrame(main_frame, text="Safety Margins (mm)", font=('Arial', 11, 'bold'),
+                                      bg='white', padx=15, pady=10)
+        margin_section.pack(fill=tk.X)
+        
+        margin_controls = tk.Frame(margin_section, bg='white')
+        margin_controls.pack(fill=tk.X, pady=(0, 10))
+        
+        # Horizontal margin
+        margin_x_frame = tk.Frame(margin_controls, bg='white')
+        margin_x_frame.pack(side=tk.LEFT, padx=(0, 20))
+        tk.Label(margin_x_frame, text="Horizontal:", font=('Arial', 10, 'bold'), bg='white').pack(anchor='w')
+        margin_x_spinbox = tk.Spinbox(margin_x_frame, from_=0, to=50, textvariable=self.margin_x, 
+                                     width=6, font=('Arial', 10), command=self.on_margins_change)
+        margin_x_spinbox.pack()
+        margin_x_spinbox.bind('<KeyRelease>', lambda e: self.on_margins_change())
+        
+        # Vertical margin
+        margin_y_frame = tk.Frame(margin_controls, bg='white')
+        margin_y_frame.pack(side=tk.LEFT)
+        tk.Label(margin_y_frame, text="Vertical:", font=('Arial', 10, 'bold'), bg='white').pack(anchor='w')
+        margin_y_spinbox = tk.Spinbox(margin_y_frame, from_=0, to=50, textvariable=self.margin_y, 
+                                     width=6, font=('Arial', 10), command=self.on_margins_change)
+        margin_y_spinbox.pack()
+        margin_y_spinbox.bind('<KeyRelease>', lambda e: self.on_margins_change())
+
+    def create_advanced_tab(self, parent):
+        """Create advanced options tab"""
+        main_frame = tk.Frame(parent, bg='white', padx=20, pady=20)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Logo Settings
+        logo_section = tk.LabelFrame(main_frame, text="Logo Settings", font=('Arial', 11, 'bold'),
+                                    bg='white', padx=15, pady=10)
+        logo_section.pack(fill=tk.X, pady=(0, 15))
+        
+        logo_checkbox = tk.Checkbutton(logo_section, text="Add logo_short.png to drawings", 
+                                      variable=self.enable_logo, bg='white', font=('Arial', 10),
+                                      command=self.on_logo_setting_change)
+        logo_checkbox.pack(anchor='w', pady=(0, 10))
+        
+        logo_size_frame = tk.Frame(logo_section, bg='white')
+        logo_size_frame.pack(fill=tk.X)
+        
+        tk.Label(logo_size_frame, text="Logo Size:", font=('Arial', 10, 'bold'), bg='white').pack(side=tk.LEFT)
+        logo_size_spinbox = tk.Spinbox(logo_size_frame, from_=10, to=50, width=6, 
+                                      textvariable=self.logo_size, font=('Arial', 10),
+                                      command=self.on_logo_setting_change)
+        logo_size_spinbox.pack(side=tk.LEFT, padx=(10, 5))
+        tk.Label(logo_size_frame, text="mm", font=('Arial', 10), bg='white').pack(side=tk.LEFT)
+        
+        # Dual-arm buffer settings
+        buffer_section = tk.LabelFrame(main_frame, text="Dual-arm Buffer Zone", font=('Arial', 11, 'bold'),
+                                      bg='white', padx=15, pady=10)
+        buffer_section.pack(fill=tk.X)
+        
+        tk.Label(buffer_section, text="Forbidden buffer radius:", font=('Arial', 10, 'bold'), bg='white').pack(anchor='w', pady=(0, 5))
+        
+        buffer_frame = tk.Frame(buffer_section, bg='white')
+        buffer_frame.pack(fill=tk.X)
+        
+        buffer_spin = tk.Spinbox(buffer_frame, from_=0, to=200, width=8, textvariable=self.forbidden_buffer_var, 
+                                font=('Arial', 10), command=lambda: self._on_forbidden_buffer_change())
+        buffer_spin.pack(side=tk.LEFT, padx=(0, 5))
+        tk.Label(buffer_frame, text="mm", font=('Arial', 10), bg='white').pack(side=tk.LEFT, padx=(0, 10))
+        
+        tk.Label(buffer_section, text="Creates safety zones around robot positions in dual-arm mode", 
+                font=('Arial', 9), bg='white', fg='#666').pack(anchor='w', pady=(5, 0))
+
+    def create_text_generation_tab(self, parent):
+        """Create AI text generation settings tab"""
+        main_frame = tk.Frame(parent, bg='white', padx=20, pady=20)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Text Input Section
+        input_section = tk.LabelFrame(main_frame, text="AI Image Generation", font=('Arial', 11, 'bold'),
+                                     bg='white', padx=15, pady=10)
+        input_section.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
+        
+        tk.Label(input_section, text="Enter detailed description:", font=('Arial', 10, 'bold'), 
+                bg='white').pack(anchor='w', pady=(0, 5))
+        
+        # Text input area
+        text_input_frame = tk.Frame(input_section, bg='white')
+        text_input_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        
+        self.text_entry = tk.Text(text_input_frame, height=8, width=70, 
+                                 font=('Arial', 11), relief='solid', bd=1, wrap=tk.WORD)
+        self.text_entry.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        
+        # Generate button
+        generate_btn = tk.Button(input_section, text="🤖 Generate Image from Text", 
+                command=self.generate_from_text,
+                bg='#FF5722', fg='white', font=('Arial', 12, 'bold'),
+                relief='flat', padx=20, pady=10, cursor='hand2')
+        generate_btn.pack(pady=(0, 15))
+        
+        # Example prompts
+        examples_section = tk.LabelFrame(input_section, text="Example Prompts", font=('Arial', 10, 'bold'),
+                                        bg='white', padx=10, pady=5)
+        examples_section.pack(fill=tk.X)
+        
+        examples = [
+            "Simple house with a door and two windows",
+            "Cat sitting on a chair, line drawing style", 
+            "Geometric pattern with circles and triangles",
+            "Portrait of a person smiling, sketch style",
+            "Tree with branches and leaves, simple outline",
+            "Car from the side view, basic shapes"
+        ]
+        
+        for i, example in enumerate(examples):
+            btn = tk.Button(examples_section, text=example,
+                           command=lambda e=example: self.text_entry.insert(tk.END, e + "\n"),
+                           bg='#e0e0e0', fg='#333', font=('Arial', 9),
+                           relief='flat', padx=10, pady=3, cursor='hand2')
+            btn.pack(fill=tk.X, pady=1)
         if hasattr(self, 'setup_window') and self.setup_window.winfo_exists():
             self.setup_window.lift()
             return
@@ -2174,10 +2981,9 @@ class SimpleRobotGUI:
     
     def load_preview_image(self):
         """
-        Load and display preview image in the original image canvas.
+        Load and display preview image scaled to fit the available space.
         
-        Optimized for 1536x1024 images (3:2 aspect ratio).
-        Resizes the image to fill the preview area while maintaining aspect ratio.
+        Scales height to fit container while maintaining aspect ratio.
         """
         try:
             # Load with OpenCV
@@ -2191,58 +2997,58 @@ class SimpleRobotGUI:
             # Get original dimensions
             h, w = image_rgb.shape[:2]
             
-            # For 1536x1024 images, we can optimize the scaling
-            if w == 1536 and h == 1024:
-                # Perfect fit: scale directly to preview size
-                scale = self.PREVIEW_WIDTH / w  # This gives us 520/1536 ≈ 0.338
-                new_w = self.PREVIEW_WIDTH
-                new_h = int(h * scale)  # Should be very close to PREVIEW_HEIGHT
-            else:
-                # General case: calculate scale to fill the entire preview area
-                scale_w = self.PREVIEW_WIDTH / w
-                scale_h = self.PREVIEW_HEIGHT / h
-                scale = max(scale_w, scale_h)  # Use max to fill, not min to fit
+            # Get available space from the preview container
+            if hasattr(self, 'preview_label') and self.preview_label.winfo_exists():
+                # Get the actual container dimensions
+                container_width = self.preview_label.winfo_width()
+                container_height = self.preview_label.winfo_height()
+                
+                # Use minimum reasonable dimensions if container isn't drawn yet
+                if container_width <= 1:
+                    container_width = 390  # Single column width minus padding
+                if container_height <= 1:
+                    container_height = 160  # Available height in preview area
+                
+                # Add small padding to prevent touching edges
+                available_width = container_width - 10
+                available_height = container_height - 10
+                
+                # Calculate scale to fit while maintaining aspect ratio
+                scale_w = available_width / w
+                scale_h = available_height / h
+                scale = min(scale_w, scale_h)  # Use min to fit entire image
                 
                 # Calculate new dimensions
                 new_w, new_h = int(w * scale), int(h * scale)
-            
-            # Resize image
-            image_resized = cv2.resize(image_rgb, (new_w, new_h))
-            
-            # If image is larger than preview area, crop from center
-            if new_w > self.PREVIEW_WIDTH or new_h > self.PREVIEW_HEIGHT:
-                # Calculate crop coordinates to center the image
-                start_x = max(0, (new_w - self.PREVIEW_WIDTH) // 2)
-                start_y = max(0, (new_h - self.PREVIEW_HEIGHT) // 2)
-                end_x = min(new_w, start_x + self.PREVIEW_WIDTH)
-                end_y = min(new_h, start_y + self.PREVIEW_HEIGHT)
                 
-                # Crop the image
-                image_resized = image_resized[start_y:end_y, start_x:end_x]
+                # Resize image
+                image_resized = cv2.resize(image_rgb, (new_w, new_h))
+
+                # Convert to PhotoImage for tkinter
+                pil_image = Image.fromarray(image_resized)
+                self.preview_image = ImageTk.PhotoImage(pil_image)
+
+                # Display in preview label
+                self.preview_label.config(image=self.preview_image, text="")
+                self.preview_label.image = self.preview_image  # Keep a reference
                 
-                # Update dimensions after cropping
-                new_h, new_w = image_resized.shape[:2]
-
-            # Convert to PhotoImage for tkinter
-            pil_image = Image.fromarray(image_resized)
-            self.preview_image = ImageTk.PhotoImage(pil_image)
-
-            # Display in canvas - optimized for 3:2 aspect ratio
-            if hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
-                try:
-                    self.original_canvas.delete("all")
-                    # Center the image in the frame
-                    x = (self.PREVIEW_WIDTH - new_w) // 2
-                    y = (self.PREVIEW_HEIGHT - new_h) // 2
-                    self.original_canvas.create_image(x, y, anchor=tk.NW, image=self.preview_image)
-                except Exception:
-                    pass
-
+                # Store current image path for other methods
+                self.current_image_path = self.image_path.get()
+                
+                print(f"Image scaled: {w}x{h} → {new_w}x{new_h} (container: {container_width}x{container_height})")
+                
         except Exception as e:
-            try:
-                messagebox.showerror("Error", f"Failed to load image: {e}")
-            except Exception:
-                print(f"Failed to load image: {e}")
+            print(f"Error loading preview: {e}")
+            # Reset preview to default state on error
+            if hasattr(self, 'preview_label'):
+                self.preview_label.config(image="", text="Error loading\nimage preview")
+    
+    def on_preview_resize(self, event):
+        """Handle preview container resize by refreshing image scaling"""
+        # Only refresh if we have an image loaded
+        if hasattr(self, 'current_image_path') and self.current_image_path:
+            # Add small delay to avoid too frequent updates during resize
+            self.root.after(100, self.load_preview_image)
     
     def toggle_connection(self):
         """Toggle robot connection"""
@@ -2295,7 +3101,12 @@ class SimpleRobotGUI:
         self.is_connected = True
         self.connect_btn.config(text="Disconnect", bg='#f44336', state='normal')
         self.conn_status_label.config(text="🟢 Connected", fg='#4CAF50')
-        self.get_pic_btn.config(state='normal')  # Ensure get picture button available
+        
+        # Update robot status in the new tile interface
+        if hasattr(self, 'robot_status'):
+            self.robot_status.config(text="🟢 Robot: Connected", fg='green')
+            
+        self.take_photo_btn.config(state='normal')  # Ensure get picture button available
 
         # Apply current settings to robot
         if hasattr(self.drawer, 'robot') and self.drawer.robot:
@@ -2328,6 +3139,11 @@ class SimpleRobotGUI:
     def _connection_failed(self):
         """Handle connection failure"""
         self.connect_btn.config(state='normal')
+        
+        # Update robot status in the new tile interface
+        if hasattr(self, 'robot_status'):
+            self.robot_status.config(text="🔴 Robot: Failed", fg='red')
+            
         # Keep get picture button available for local camera
         self.status_text.set("Failed to connect to robot")
         messagebox.showerror("Connection Error", "Could not connect to robot. Please check IP and port.")
@@ -2339,14 +3155,47 @@ class SimpleRobotGUI:
         self.status_text.set("Connection error")
         messagebox.showerror("Error", f"Connection error: {error}")
 
-    def _update_connection_display(self, *args):
-        """Update connection display with current IP and port settings"""
-        if hasattr(self, 'ip_display_label'):
-            # Update main connection display
-            self.ip_display_label.config(text=f"Target: {self.robot_ip.get()}:{self.robot_port.get()}")
+    def quick_text_generate(self):
+        """Quick text generation with simple prompt dialog"""
+        # Simple input dialog for text prompt
+        from tkinter import simpledialog
         
+        prompt = simpledialog.askstring(
+            "AI Image Generation", 
+            "Enter description for AI to generate:\n(e.g., 'simple house with door and windows')",
+            initialvalue="simple house with door and windows"
+        )
+        
+        if prompt:
+            # Create temporary text widget for compatibility with existing generate_from_text
+            if not hasattr(self, 'text_entry'):
+                self.text_entry = tk.Text(self.root)
+            self.text_entry.delete('1.0', tk.END)
+            self.text_entry.insert('1.0', prompt)
+            self.generate_from_text()
+
+    def _update_connection_display(self, *args):
+        """Update connection display for simplified expo interface"""
+        if hasattr(self, 'ip_display_label'):
+            # Update IP display with connection status  
+            ip_text = f"Target: {self.robot_ip.get()}:{self.robot_port.get()}"
+            if self.dual_arm_mode.get():
+                ip_text += f" & {self.robot_port_l.get()}"
+            self.ip_display_label.config(text=ip_text)
+        
+        if hasattr(self, 'conn_status_label'):
+            # Update connection status
+            if self.is_connected:
+                self.conn_status_label.config(text="🟢 Robot Connected", fg='#4CAF50')
+                if hasattr(self, 'connect_btn'):
+                    self.connect_btn.config(text="🔗 Disconnect", bg='#f44336')
+            else:
+                self.conn_status_label.config(text="⚫ Robot Not Connected", fg='#f44336')
+                if hasattr(self, 'connect_btn'):
+                    self.connect_btn.config(text="🔗 Connect Robot", bg='#FF9800')
+        
+        # Keep compatibility with old dual_info_label if it exists
         if hasattr(self, 'dual_info_label'):
-            # Update dual-arm info
             if self.dual_arm_mode.get():
                 self.dual_info_label.config(text=f"Dual-arm: {self.robot_ip.get()}:{self.robot_port_l.get()}")
             else:
@@ -2388,7 +3237,7 @@ class SimpleRobotGUI:
         """Capture picture from local camera (GUI hook)."""
         self.status_text.set("Capturing image from camera...")
         try:
-            self.get_pic_btn.config(state='disabled')
+            self.take_photo_btn.config(state='disabled')
         except Exception:
             pass
         thread = threading.Thread(target=self._get_picture_thread)
@@ -2504,7 +3353,7 @@ class SimpleRobotGUI:
             self.status_text.set("Robot image loaded - processing...")
             self.auto_process_image()
             
-            self.get_pic_btn.config(state='normal')
+            self.take_photo_btn.config(state='normal')
             # Neutral popup after local camera capture
             try:
                 messagebox.showinfo("Picture taken", "Picture taken")
@@ -2513,24 +3362,24 @@ class SimpleRobotGUI:
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load robot image: {e}")
-            self.get_pic_btn.config(state='normal')
+            self.take_photo_btn.config(state='normal')
             self.status_text.set("Failed to load robot image")
     
     def _get_picture_failed(self):
         """Handle get picture failure"""
-        self.get_pic_btn.config(state='normal')
+        self.take_photo_btn.config(state='normal')
         self.status_text.set("Failed to get picture from robot")
         messagebox.showerror("Error", "Failed to send get_pic command to robot")
     
     def _get_picture_no_image(self):
         """Handle case where image.png doesn't exist"""
-        self.get_pic_btn.config(state='normal')
+        self.take_photo_btn.config(state='normal')
         self.status_text.set("No image received from robot")
         messagebox.showwarning("Warning", "No image.png file found after capture")
     
     def _get_picture_error(self, error):
         """Handle get picture error"""
-        self.get_pic_btn.config(state='normal')
+        self.take_photo_btn.config(state='normal')
         self.status_text.set("Get picture error")
         messagebox.showerror("Error", f"Get picture error: {error}")
     
@@ -2541,7 +3390,8 @@ class SimpleRobotGUI:
     
     def _start_auto_processing(self):
         """Start automatic processing"""
-        self.progress_indicator.config(text="⏳ Processing...")
+        if hasattr(self, 'progress_indicator'):
+            self.progress_indicator.config(text="⏳ Processing...")
         
         thread = threading.Thread(target=self._process_thread)
         thread.daemon = True
@@ -2569,8 +3419,10 @@ class SimpleRobotGUI:
             return
         
         self.status_text.set("Processing image...")
-        self.process_btn.config(state='disabled')
-        self.progress_indicator.config(text="⏳ Processing...")
+        if hasattr(self, 'process_btn'):
+            self.process_btn.config(state='disabled')
+        if hasattr(self, 'progress_indicator'):
+            self.progress_indicator.config(text="⏳ Processing...")
         
         thread = threading.Thread(target=self._process_thread)
         thread.daemon = True
@@ -2620,15 +3472,21 @@ class SimpleRobotGUI:
     def _process_success(self):
         """Handle successful processing"""
         self.is_processed = True
-        self.progress_indicator.config(text="✅ Ready to Draw")
+        if hasattr(self, 'progress_indicator'):
+            self.progress_indicator.config(text="✅ Ready to Draw")
         self.status_text.set("Image processed successfully - ready to draw!")
         
         if self.is_connected:
-            self.draw_btn.config(state='normal')
+            if hasattr(self, 'draw_btn'):
+                self.draw_btn.config(state='normal')
+            if hasattr(self, 'start_drawing_btn'):
+                self.start_drawing_btn.config(state='normal')
         
-        # Enable face drawing button when image is processed
-        self.face_drawing_btn.config(state='normal')
-        self.caricature_btn.config(state='normal')
+        # Enable face drawing button when image is processed (only if it exists)
+        if hasattr(self, 'face_drawing_btn'):
+            self.face_drawing_btn.config(state='normal')
+        if hasattr(self, 'caricature_btn'):
+            self.caricature_btn.config(state='normal')
         
         # Update robot path preview
         self.update_robot_preview()
@@ -2686,19 +3544,25 @@ class SimpleRobotGUI:
     
     def _process_failed(self):
         """Handle processing failure"""
-        self.progress_indicator.config(text="❌ Failed")
+        if hasattr(self, 'progress_indicator'):
+            self.progress_indicator.config(text="❌ Failed")
         self.status_text.set("Processing failed")
         messagebox.showerror("Error", "Failed to process image")
     
     def _process_error(self, error):
         """Handle processing error"""
-        self.progress_indicator.config(text="❌ Error")
+        if hasattr(self, 'progress_indicator'):
+            self.progress_indicator.config(text="❌ Error")
         self.status_text.set("Processing error")
         messagebox.showerror("Error", f"Processing error: {error}")
     
     def update_robot_preview(self):
         """Update robot path preview with current coordinate system"""
         try:
+            # Skip matplotlib preview in simple interface mode
+            if not hasattr(self, 'ax') or self.ax is None:
+                return
+                
             max_x = self.max_x.get()
             max_y = self.max_y.get()
 
@@ -2802,6 +3666,81 @@ class SimpleRobotGUI:
         except Exception as e:
             print(f"Preview error: {e}")
     
+    def set_style_and_convert(self, style):
+        """Set drawing style and apply conversion if needed"""
+        self.drawing_style.set(style)
+        
+        # Debug popup to show selected style with detailed information
+        debug_message = f"🎨 DEBUGGING - Style Selection\n"
+        debug_message += f"{'='*40}\n\n"
+        debug_message += f"Selected Style: {style.upper()}\n"
+        debug_message += f"Drawing Style Variable: {self.drawing_style.get()}\n"
+        debug_message += f"Timestamp: {datetime.now().strftime('%H:%M:%S')}\n\n"
+        
+        # Add image status
+        if hasattr(self, 'current_image_path') and self.current_image_path:
+            debug_message += f"Image Status: ✅ Ready\n"
+            debug_message += f"Image Path: {os.path.basename(self.current_image_path)}\n"
+        else:
+            debug_message += f"Image Status: ❌ No image loaded\n"
+        
+        # Add button references
+        debug_message += f"\nButton References:\n"
+        portrait_count = len([attr for attr in dir(self) if 'portrait_btn' in attr])
+        caricature_count = len([attr for attr in dir(self) if 'caricature_btn' in attr])
+        debug_message += f"Portrait buttons: {portrait_count} (more granular triangle effect)\n"
+        debug_message += f"Caricature buttons: {caricature_count} (more granular triangle effect)\n"
+        debug_message += f"Grid resolution: 6 rows x 12 columns (no black line)\n"
+        
+        # Add processing info
+        if style == "portrait":
+            debug_message += f"\nNext Action: Face Drawing Conversion\n"
+        elif style == "caricature":
+            debug_message += f"\nNext Action: Caricature Processing\n"
+        
+        messagebox.showinfo("🐛 Debug - Style Selection", debug_message)
+        
+        # Check if we have an image to process
+        if not hasattr(self, 'current_image_path') or not self.current_image_path:
+            messagebox.showwarning("Warning", "Please take a photo first!")
+            return
+        
+        if style == "portrait":
+            self.convert_to_face_drawing()
+        elif style == "caricature":
+            # Convert to caricature using the proper caricature method
+            self.convert_to_caricature()
+
+    def start_drawing(self):
+        """Start drawing with current image and style settings"""
+        # Check if robot is connected
+        if not self.is_connected:
+            messagebox.showwarning("Warning", "Please connect to robot first!\nUse the Setup window to configure robot connection.")
+            return
+        
+        # Check if image is processed
+        if not hasattr(self, 'current_image_path') or not self.current_image_path:
+            messagebox.showwarning("Warning", "Please take a photo first!")
+            return
+        
+        # Apply style processing if needed
+        style = self.drawing_style.get()
+        if style == "portrait":
+            self.convert_to_face_drawing()
+        elif style == "caricature":
+            # For caricature, we could apply special processing here
+            self.auto_process_image()
+        else:
+            # Normal processing
+            self.auto_process_image()
+        
+        # Update progress
+        if hasattr(self, 'progress_label'):
+            self.progress_label.config(text="Starting drawing...")
+        
+        # Start the actual robot drawing
+        self.start_robot_drawing()
+
     def start_robot_drawing(self):
         """Start the robot drawing process"""
         if not self.is_connected:
@@ -2825,16 +3764,32 @@ class SimpleRobotGUI:
         # Update robot with current coordinate system before starting
         if hasattr(self.drawer, 'robot') and self.drawer.robot:
             self.drawer.robot.set_coordinate_system(self.use_center_origin.get())
-        # Show progress elements in status bar
-        self.progress_container.pack(side=tk.RIGHT, before=self.progress_indicator)
-        self.stop_btn.pack(pady=(10, 0))
+        
+        # Show progress elements in status bar (safely check if they exist)
+        if hasattr(self, 'progress_container'):
+            self.progress_container.pack(side=tk.RIGHT, before=self.progress_indicator)
+        if hasattr(self, 'stop_btn'):
+            self.stop_btn.pack(pady=(10, 0))
+            
         self.drawing_active = True
         self.status_text.set(f"Initializing robot with {coord_system} coordinates ({command_type})...")
-        self.draw_btn.config(state='disabled')
+        
+        # Disable drawing buttons safely
+        if hasattr(self, 'draw_btn'):
+            self.draw_btn.config(state='disabled')
+        if hasattr(self, 'start_drawing_btn'):
+            self.start_drawing_btn.config(state='disabled', text="Drawing...", bg='#FFA726')
+            
         self.progress_indicator.config(text="🤖 Initializing...")
+        
+        # Update progress in the new interface
+        if hasattr(self, 'progress_label'):
+            self.progress_label.config(text="🤖 Starting robots...", fg='blue')
+            
         # Setup progress tracking
         total_points = sum(len(path) for path in self.drawer.drawing_points)
-        self.bottom_progress_bar.config(maximum=total_points)
+        if hasattr(self, 'bottom_progress_bar'):
+            self.bottom_progress_bar.config(maximum=total_points)
         self.bottom_progress_bar.config(value=0)
         self.bottom_progress_label.config(text=f"0 / {total_points} points")
         thread = threading.Thread(target=self._draw_thread)
@@ -2869,7 +3824,7 @@ class SimpleRobotGUI:
             # Hide progress elements
             self.progress_container.pack_forget()
             self.stop_btn.pack_forget()
-            self.draw_btn.config(state='normal')
+            if hasattr(self, 'draw_btn'): self.draw_btn.config(state='normal')
             self.progress_indicator.config(text="⏹ Stopped")
     
     def _draw_thread(self):
@@ -2992,12 +3947,23 @@ class SimpleRobotGUI:
         """Handle successful drawing"""
         import time
         self.drawing_active = False
-        self.draw_btn.config(state='normal')
+        if hasattr(self, 'draw_btn'): 
+            self.draw_btn.config(state='normal')
+        if hasattr(self, 'start_drawing_btn'): 
+            self.start_drawing_btn.config(state='normal', text="START\nDRAWING", bg='#E91E63')
+        
         self.progress_indicator.config(text="🎉 Complete")
         self.status_text.set("Drawing completed successfully!")
-        # Hide progress elements
-        self.progress_container.pack_forget()
-        self.stop_btn.pack_forget()
+        
+        # Update progress in the new interface
+        if hasattr(self, 'progress_label'):
+            self.progress_label.config(text="🎉 Drawing complete!", fg='green')
+            
+        # Hide progress elements (safely check if they exist)
+        if hasattr(self, 'progress_container'):
+            self.progress_container.pack_forget()
+        if hasattr(self, 'stop_btn'):
+            self.stop_btn.pack_forget()
         elapsed = None
         if hasattr(self, '_draw_start_time'):
             elapsed = time.time() - self._draw_start_time
@@ -3012,26 +3978,46 @@ class SimpleRobotGUI:
     def _draw_failed(self):
         """Handle drawing failure"""
         self.drawing_active = False
-        self.draw_btn.config(state='normal')
+        if hasattr(self, 'draw_btn'): 
+            self.draw_btn.config(state='normal')
+        if hasattr(self, 'start_drawing_btn'): 
+            self.start_drawing_btn.config(state='normal', text="START\nDRAWING", bg='#E91E63')
+            
         self.progress_indicator.config(text="❌ Failed")
         self.status_text.set("Drawing failed")
         
-        # Hide progress elements
-        self.progress_container.pack_forget()
-        self.stop_btn.pack_forget()
+        # Update progress in the new interface
+        if hasattr(self, 'progress_label'):
+            self.progress_label.config(text="❌ Drawing failed", fg='red')
+        
+        # Hide progress elements (safely check if they exist)
+        if hasattr(self, 'progress_container'):
+            self.progress_container.pack_forget()
+        if hasattr(self, 'stop_btn'):
+            self.stop_btn.pack_forget()
         
         messagebox.showerror("Error", "Drawing failed")
     
     def _draw_error(self, error):
         """Handle drawing error"""
         self.drawing_active = False
-        self.draw_btn.config(state='normal')
+        if hasattr(self, 'draw_btn'): 
+            self.draw_btn.config(state='normal')
+        if hasattr(self, 'start_drawing_btn'): 
+            self.start_drawing_btn.config(state='normal', text="START\nDRAWING", bg='#E91E63')
+            
         self.progress_indicator.config(text="❌ Error")
         self.status_text.set("Drawing error")
         
-        # Hide progress elements
-        self.progress_container.pack_forget()
-        self.stop_btn.pack_forget()
+        # Update progress in the new interface
+        if hasattr(self, 'progress_label'):
+            self.progress_label.config(text="❌ Error occurred", fg='red')
+        
+        # Hide progress elements (safely check if they exist)
+        if hasattr(self, 'progress_container'):
+            self.progress_container.pack_forget()
+        if hasattr(self, 'stop_btn'):
+            self.stop_btn.pack_forget()
         
         messagebox.showerror("Error", f"Drawing error: {error}")
     
@@ -3219,7 +4205,7 @@ class SimpleRobotGUI:
             
             # Enable processing buttons
             if hasattr(self, 'draw_btn') and self.draw_btn:
-                self.draw_btn.config(state='normal')
+                if hasattr(self, 'draw_btn'): self.draw_btn.config(state='normal')
             if hasattr(self, 'face_drawing_btn') and self.face_drawing_btn:
                 self.face_drawing_btn.config(state='normal')
             
@@ -3289,15 +4275,18 @@ class SimpleRobotGUI:
         # Show temporary notification
         self._show_conversion_notification("Starting Face Drawing conversion...", "info")
         
-        # Disable the button during processing and change appearance dramatically
-        self.face_drawing_btn.config(
-            state='disabled', 
-            text="⏳ Converting\nFace Drawing...", 
-            bg='#9E9E9E', 
-            fg='white',
-            relief='sunken'
-        )
-        self.caricature_btn.config(state='disabled', bg='#BDBDBD')  # Make other button also visibly disabled
+        # Disable the button during processing and change appearance dramatically (only if it exists)
+        if hasattr(self, 'face_drawing_btn'):
+            self.face_drawing_btn.config(
+                state='disabled', 
+                text="⏳ Converting\nFace Drawing...", 
+                bg='#9E9E9E', 
+                fg='white',
+                relief='sunken'
+            )
+        
+        if hasattr(self, 'caricature_btn'):
+            self.caricature_btn.config(state='disabled', bg='#BDBDBD')  # Make other button also visibly disabled
         
         # Run conversion in background thread
         thread = threading.Thread(target=self._face_drawing_thread, args=(current_path,))
