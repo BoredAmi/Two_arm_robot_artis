@@ -167,7 +167,7 @@ class RobotDrawer:
         except:
             return True  # If there's an error checking, assume we should stop
     
-    def load_image(self, image_path, precision="high", enable_tsp=None, detection_method="threshold", logo_settings=None):
+    def load_image(self, image_path, precision="high", enable_tsp=None, detection_method="threshold", logo_settings=None, protect_logo=True):
         """
         Load and process image to extract drawing points.
         
@@ -177,6 +177,7 @@ class RobotDrawer:
             enable_tsp: Override TSP setting for this operation. If None, uses instance setting.
             detection_method: Edge detection method ("canny", "threshold", or "adaptive")
             logo_settings: Dictionary with logo settings {'enabled': bool, 'corner': str, 'size': int}
+            protect_logo: Whether to protect logo areas from frame filtering (True preserves frames)
         """
         print(f"Drawing area: {self.max_x}mm x {self.max_y}mm")
         
@@ -184,7 +185,7 @@ class RobotDrawer:
         self.detection_method = detection_method
         
         # Process the image using optimized edge following (without logo)
-        contour_data = self.processor.load_and_process_image(image_path, precision, enable_tsp, detection_method)
+        contour_data = self.processor.load_and_process_image(image_path, precision, enable_tsp, detection_method, protect_logo=protect_logo)
         if not contour_data:
             return False
         
