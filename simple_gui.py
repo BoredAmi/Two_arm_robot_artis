@@ -2870,7 +2870,7 @@ class SimpleRobotGUI:
             # Process automatically
             self.auto_process_image()
             
-            messagebox.showinfo("Template Created", f"{shape.title()} template loaded successfully!")
+            # Template created successfully - no popup needed
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to create template: {e}")
@@ -2940,7 +2940,7 @@ class SimpleRobotGUI:
                 
                 # Save the image
                 img.save(filename)
-                messagebox.showinfo("Success", f"Drawing saved as {filename}")
+                # Drawing saved successfully - no popup needed
                 
             except ImportError:
                 messagebox.showerror("Error", "PIL library required for saving drawings")
@@ -3555,7 +3555,7 @@ class SimpleRobotGUI:
         """Handle successful robot ready"""
         self.ready_btn.config(state='normal')
         self.status_text.set("Robot ready for manual positioning - place paper and start drawing!")
-        messagebox.showinfo("Success", "Robot is ready! Please manually position your paper in the workspace.")
+        # Robot ready - status shown in GUI, no popup needed
     
     def _ready_robot_failed(self):
         """Handle robot ready failure"""
@@ -3631,11 +3631,7 @@ class SimpleRobotGUI:
             self.auto_process_image()
             
             self.take_photo_btn.config(state='normal')
-            # Neutral popup after local camera capture
-            try:
-                messagebox.showinfo("Picture taken", "Picture taken")
-            except Exception:
-                pass
+            # Picture taken successfully - image loaded in GUI, no popup needed
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load robot image: {e}")
@@ -3999,35 +3995,7 @@ class SimpleRobotGUI:
         """Set drawing style and apply conversion if needed"""
         self.drawing_style.set(style)
         
-        # Debug popup to show selected style with detailed information
-        debug_message = f"🎨 DEBUGGING - Style Selection\n"
-        debug_message += f"{'='*40}\n\n"
-        debug_message += f"Selected Style: {style.upper()}\n"
-        debug_message += f"Drawing Style Variable: {self.drawing_style.get()}\n"
-        debug_message += f"Timestamp: {datetime.now().strftime('%H:%M:%S')}\n\n"
-        
-        # Add image status
-        if hasattr(self, 'current_image_path') and self.current_image_path:
-            debug_message += f"Image Status: ✅ Ready\n"
-            debug_message += f"Image Path: {os.path.basename(self.current_image_path)}\n"
-        else:
-            debug_message += f"Image Status: ❌ No image loaded\n"
-        
-        # Add button references
-        debug_message += f"\nButton References:\n"
-        portrait_count = len([attr for attr in dir(self) if 'portrait_btn' in attr])
-        caricature_count = len([attr for attr in dir(self) if 'caricature_btn' in attr])
-        debug_message += f"Portrait buttons: {portrait_count} (more granular triangle effect)\n"
-        debug_message += f"Caricature buttons: {caricature_count} (more granular triangle effect)\n"
-        debug_message += f"Grid resolution: 6 rows x 12 columns (no black line)\n"
-        
-        # Add processing info
-        if style == "portrait":
-            debug_message += f"\nNext Action: Face Drawing Conversion\n"
-        elif style == "caricature":
-            debug_message += f"\nNext Action: Caricature Processing\n"
-        
-        messagebox.showinfo("🐛 Debug - Style Selection", debug_message)
+        # Style selection debug removed - no popup needed
         
         # Check if we have an image to process
         if not hasattr(self, 'current_image_path') or not self.current_image_path:
@@ -4156,7 +4124,7 @@ class SimpleRobotGUI:
                         self.status_text.set("EMERGENCY STOP sent to robot")
                 else:
                     self.status_text.set("Drawing stopped (no robot connection)")
-                messagebox.showinfo("Stop", "Drawing process stopped and robot commands halted")
+                # Drawing stopped - status shown in GUI, no popup needed
             except Exception as e:
                 messagebox.showerror("Error", f"Could not stop robot: {e}")
                 self.status_text.set("Stop command failed")
@@ -4313,7 +4281,7 @@ class SimpleRobotGUI:
             msg = f"Drawing completed successfully!\n\nTime taken: {mins} min {secs} sec"
         else:
             msg = "Drawing completed successfully!"
-        messagebox.showinfo("Success", msg)
+        # Drawing completed - status shown in GUI, no popup needed
     
     def _draw_failed(self):
         """Handle drawing failure"""
@@ -4449,40 +4417,39 @@ class SimpleRobotGUI:
             pass
     
     def _show_conversion_notification(self, message, msg_type="info"):
-        """Show a temporary notification for conversion status"""
-        # Create a temporary notification in the original canvas area
-        try:
-            if hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
-                # Clear any existing notification
-                self.original_canvas.delete("notification")
-                
-                # Add notification text overlay
-                if msg_type == "info":
-                    bg_color = "#2196F3"
-                    text_color = "white"
-                elif msg_type == "success":
-                    bg_color = "#4CAF50" 
-                    text_color = "white"
-                else:  # error
+        """Show a temporary notification for conversion status - disabled for expo"""
+        # Success notifications disabled for cleaner expo experience
+        if msg_type == "success":
+            return  # No success notifications shown
+        
+        # Still show error notifications for debugging
+        if msg_type == "error":
+            # Create a temporary notification in the original canvas area
+            try:
+                if hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
+                    # Clear any existing notification
+                    self.original_canvas.delete("notification")
+                    
+                    # Add notification text overlay for errors only
                     bg_color = "#f44336"
                     text_color = "white"
-                
-                # Create notification rectangle and text
-                canvas_width = self.original_canvas.winfo_width()
-                canvas_height = self.original_canvas.winfo_height()
-                
-                if canvas_width > 1 and canvas_height > 1:  # Canvas is initialized
-                    rect_id = self.original_canvas.create_rectangle(
-                        10, 10, canvas_width - 10, 60, 
-                        fill=bg_color, outline="", tags="notification")
-                    text_id = self.original_canvas.create_text(
-                        canvas_width // 2, 35, text=message, 
-                        fill=text_color, font=('Arial', 11, 'bold'), tags="notification")
                     
-                    # Remove notification after 3 seconds
-                    self.root.after(3000, lambda: self.original_canvas.delete("notification"))
-        except Exception:
-            pass  # Fail silently if canvas notification doesn't work
+                    # Create notification rectangle and text
+                    canvas_width = self.original_canvas.winfo_width()
+                    canvas_height = self.original_canvas.winfo_height()
+                    
+                    if canvas_width > 1 and canvas_height > 1:  # Canvas is initialized
+                        rect_id = self.original_canvas.create_rectangle(
+                            10, 10, canvas_width - 10, 60, 
+                            fill=bg_color, outline="", tags="notification")
+                        text_id = self.original_canvas.create_text(
+                            canvas_width // 2, 35, text=message, 
+                            fill=text_color, font=('Arial', 11, 'bold'), tags="notification")
+                        
+                        # Remove notification after 3 seconds
+                        self.root.after(3000, lambda: self.original_canvas.delete("notification"))
+            except Exception:
+                pass  # Fail silently if canvas notification doesn't work
     
     def generate_from_text(self):
         """Generate image from text prompt using OpenAI's DALL-E"""
@@ -4699,7 +4666,7 @@ class SimpleRobotGUI:
             # Show success notification
             self._show_conversion_notification("✅ Face Drawing conversion completed!", "success")
             
-            messagebox.showinfo("Success", "Image converted to line art successfully!\nUsing out.png for robot drawing.")
+            # Line art conversion completed - image loaded in GUI, no popup needed
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load line art: {e}")
@@ -4858,7 +4825,7 @@ class SimpleRobotGUI:
             # Show success notification
             self._show_conversion_notification("✅ Caricature conversion completed!", "success")
             
-            messagebox.showinfo("Success", "Image converted to caricature successfully!\nUsing out.png for robot drawing.")
+            # Caricature conversion completed - image loaded in GUI, no popup needed
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load caricature: {e}")
