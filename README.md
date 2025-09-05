@@ -1,332 +1,507 @@
-# 🤖 Advanced Robot Drawing System
+# 🤖 Robot Drawing System v1.0
 
 <div align="center">
 
 ![Robot Drawing](https://img.shields.io/badge/Robot-Drawing-blue?style=for-the-badge&logo=robotframework)
 ![Python](https://img.shields.io/badge/Python-3.7+-green?style=for-the-badge&logo=python)
-![OpenCV](https://img.shields.io/badge/OpenCV-Latest-red?style=for-the-badge&logo=opencv)
-![AI Powered](https://img.shields.io/badge/AI-Powered-purple?style=for-the-badge&logo=openai)
-![Voice Control](https://img.shields.io/badge/Voice-Control-orange?style=for-the-badge&logo=microphone)
+![OpenCV](https://img.shields.io/badge/OpenCV-4.0+-red?style=for-the-badge&logo=opencv)
+![GUI](https://img.shields.io/badge/GUI-Tkinter-orange?style=for-the-badge)
+![ABB](https://img.shields.io/badge/ABB-YuMi-red?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge)
 
-**Professional AI-powered robotic drawing system with live camera preview, voice commands, and expo-ready interface**
+**Professional image-to-drawing conversion system for ABB robots with advanced computer vision**
 
-[🎪 Quick Demo](#-expo-demo-mode) • [🚀 Getting Started](#-getting-started) • [🎭 AI Features](#-ai-art-conversion) • [🔊 Voice Commands](#-voice-control)
+[🚀 Quick Start](#-quick-start) • [📖 Documentation](#-how-to-use) • [🔧 Installation](#-system-requirements) • [🎯 Features](#-features)
 
 </div>
 
 ---
 
-## ✨ Modern Features
+## ✨ Features
 
 <table>
 <tr>
 <td width="50%" align="center">
 
-### 🎪 **Expo-Ready Interface**
-![Expo Interface](https://via.placeholder.com/400x250/6a1b9a/white?text=Professional+Exhibition+Mode)
+### 🖥️ **Modern GUI Interface**
+![GUI Preview](https://via.placeholder.com/400x250/0078d4/white?text=Professional+GUI+Interface)
 
-✅ **Clean, popup-free experience**  
-✅ **Live camera preview with positioning**  
-✅ **Diagonal triangle style selection**  
-✅ **AI-powered art conversion**  
-✅ **Real-time progress tracking**  
-✅ **Professional demonstration mode**
+✅ **Real-time image processing preview**  
+✅ **Interactive drawing canvas**  
+✅ **Advanced parameter controls**  
+✅ **Live robot path visualization**  
+✅ **Progress tracking & emergency stop**  
+✅ **Template library & camera integration**
 
 </td>
 <td width="50%" align="center">
 
-### 🤖 **Dual-Robot Coordination**
-![Dual Robot](https://via.placeholder.com/400x250/0d47a1/white?text=Advanced+Dual-Arm+Control)
+### 💻 **Command Line Power**
+![CLI Preview](https://via.placeholder.com/400x250/2d3748/white?text=Professional+CLI+Interface)
 
-✅ **Synchronized dual-arm drawing**  
-✅ **Intelligent path distribution**  
-✅ **Real-time coordination**  
-✅ **Voice command integration**  
-✅ **Emergency stop system**  
-✅ **Professional TCP communication**
+✅ **Full automation support**  
+✅ **Batch processing ready**  
+✅ **Scriptable workflows**  
+✅ **Advanced configuration**  
+✅ **TSP path optimization**  
+✅ **Professional logging**
 
 </td>
 </tr>
 </table>
 
-## 🎪 Expo Demo Mode
+## 🎯 Core Capabilities
 
-Perfect for exhibitions and demonstrations with a completely streamlined experience:
+<div align="center">
+
+| 🎨 **Image Processing** | 🤖 **Robot Control** | 📊 **Visualization** | 🔧 **Advanced Features** |
+|:---:|:---:|:---:|:---:|
+| Advanced edge detection | TCP/IP communication | Real-time path preview | TSP optimization |
+| Smart contour extraction | Precise coordinate mapping | Interactive matplotlib plots | Line length limiting |
+| Adaptive simplification | Safety protocols | Multi-panel displays | Smoothing algorithms |
+| Multiple precision levels | ABB YuMi support | Progress monitoring | FTP camera integration |
+
+</div>
+
+## 🚀 Quick Start
+
+<details>
+<summary><b>🎯 Option 1: Smart Launcher (Recommended)</b></summary>
+
+```bash
+# One command to rule them all
+python launcher.py
+```
+
+**What you'll see:**
+```
+==================================================
+      ROBOT DRAWING SYSTEM
+==================================================
+
+Choose your interface:
+1. GUI Application (Recommended) ✨
+2. Command Line Interface 💻
+3. Exit 👋
+```
+
+</details>
+
+<details>
+<summary><b>⚡ Option 2: Direct Launch</b></summary>
+
+```bash
+# 🖥️ Modern GUI (Best for beginners)
+python simple_gui.py
+
+# 💻 Command Line (Best for pros)
+python cli.py
+```
+
+</details>
+
+---
+
+## 🔧 System Requirements
+
+<div align="center">
+
+| Component | Requirement | Install Command |
+|-----------|-------------|-----------------|
+| 🐍 **Python** | 3.7+ | [Download Python](https://python.org) |
+| 👁️ **OpenCV** | Latest | `pip install opencv-python` |
+| 🔢 **NumPy** | Latest | `pip install numpy` |
+| 🖼️ **Pillow** | For GUI | `pip install pillow` |
+| 📊 **Matplotlib** | For GUI | `pip install matplotlib` |
+
+</div>
+
+### � One-Line Installation
+```bash
+pip install opencv-python numpy pillow matplotlib
+```
+
+### 🔄 FTP Integration (Optional)
+For robot camera integration, the FTP downloader is included:
+```bash
+# Downloads images directly from ABB YuMi robot
+python robot_ftp_downloader.py
+```
+
+## 📖 How to Use
+
+### 🖥️ GUI Workflow (Visual & Intuitive)
 
 <div align="center">
 
 ```mermaid
 graph LR
-    A[📷 Live Camera] --> B[🎯 Position Yourself]
-    B --> C[📸 Capture Photo]
-    C --> D[🎭 Select Style]
-    D --> E[🤖 AI Processing]
-    E --> F[🎨 Robot Drawing]
+    A[🖼️ Load Image] --> B[⚙️ Configure Settings]
+    B --> C[🔄 Process Image]
+    C --> D[👁️ Preview Results]
+    D --> E[🔗 Connect Robot]
+    E --> F[🎨 Start Drawing]
 ```
 
 </div>
 
-### 🎯 **Demo Workflow**
-1. **📷 Take Picture** → Live HD camera preview with real-time positioning
-2. **🎭 Choose Style** → Diagonal triangle interface: Portrait vs Caricature
-3. **🔊 Voice Control** → Hands-free Polish commands ("połącz", "start", "karykatura")
-4. **🤖 Watch Magic** → Dual-robot coordinated drawing with progress tracking
+| Step | Action | Description |
+|:----:|--------|-------------|
+| **1** | 🚀 **Launch** | Run `python launcher.py` → Select **GUI (1)** |
+| **2** | 📁 **Load Image** | Load file or use drawing canvas/templates |
+| **3** | ⚙️ **Configure** | Choose quality level & TSP optimization |
+| **4** | 🔄 **Process** | System automatically processes image |
+| **5** | 👁️ **Preview** | Review 3-panel preview with robot paths |
+| **6** | 🔗 **Connect** | Connect to robot at `192.168.125.1:1025` |
+| **7** | 📷 **Camera** | Optional: Get picture from robot camera |
+| **8** | 🎨 **Draw** | Start drawing with progress monitoring |
 
-### ✨ **Exhibition Features**
-- **Zero Popups** → Clean, uninterrupted demo experience
-- **Live Preview** → 1280x720 HD camera with mirror effect for natural positioning  
-- **Instant Feedback** → Visual processing indicators and status updates
-- **Professional Interface** → Optimized for 1920x1080 displays
-
-## 🎭 AI Art Conversion
-
-<table align="center">
-<tr>
-<td width="50%" align="center">
-
-### 🎨 **Portrait Mode**
-![Portrait Mode](https://via.placeholder.com/300x200/4caf50/white?text=Realistic+Face+Drawing)
-
-**Professional face drawing conversion**
-- Realistic proportions and details
-- Optimized for human features
-- Clean line art generation
-- Perfect for portraits and selfies
-
-</td>
-<td width="50%" align="center">
-
-### 🎭 **Caricature Mode**  
-![Caricature Mode](https://via.placeholder.com/300x200/ff9800/white?text=Artistic+Caricature)
-
-**Stylized artistic interpretation**
-- Exaggerated features and expressions
-- Creative artistic style
-- Fun and engaging results
-- Great for entertainment and demos
-
-</td>
-</tr>
-</table>
-
-### 🧠 **AI Processing Pipeline**
-1. **Image Capture** → High-quality photo from live camera preview
-2. **AI Analysis** → Advanced computer vision and style transfer
-3. **Line Art Generation** → Optimized vector paths for robot drawing
-4. **Path Optimization** → Intelligent routing for dual-robot coordination
-
-## 📷 Live Camera System
+### 💻 CLI Workflow (Power Users)
 
 <div align="center">
 
-### 🎥 **Professional Camera Preview**
-![Camera System](https://via.placeholder.com/600x300/2196f3/white?text=HD+Live+Camera+Preview)
+```mermaid
+graph TD
+    A[💻 Launch CLI] --> B[📸 Enter Image Path]
+    B --> C[🎛️ Select Method & Precision]
+    C --> D[👀 Review Generated Paths]
+    D --> E[✅ Confirm Drawing]
+    E --> F[🤖 Robot Execution]
+```
 
 </div>
-
-| Feature | Specification | Benefit |
-|---------|---------------|---------|
-| 🎥 **Resolution** | 1280x720 HD | Crystal clear preview |
-| 🖥️ **Display** | 1400x1000 window | Large positioning area |
-| 🔄 **Frame Rate** | 30 FPS | Smooth real-time preview |
-| 🪞 **Mirror Effect** | Automatic | Natural selfie experience |
-| ⚡ **Startup** | DirectShow optimized | Faster camera initialization |
-
-### ✨ **Smart Features**
-- **Live Positioning** → See yourself in real-time before capture
-- **Professional Interface** → Dark theme with clear controls
-- **Instant Capture** → One-click photo taking
-- **Automatic Integration** → Seamless workflow to AI processing
-
-## 🔊 Voice Control
-
-<div align="center">
-
-### 🎤 **Polish Voice Commands**
-![Voice Commands](https://via.placeholder.com/500x150/9c27b0/white?text=Hands-Free+Voice+Control)
-
-</div>
-
-| Command | Action | Demo Usage |
-|---------|--------|-------------|
-| 🔗 **"połącz"** | Connect to robots | Initial setup |
-| 🚀 **"start"** | Begin drawing process | Start demonstration |
-| 🎭 **"karykatura"** | Switch to caricature mode | Style selection |
-| 🎨 **"portret"** | Switch to portrait mode | Style selection |
-
-### 🎯 **Voice System Features**
-- **Background Listening** → Always ready for commands
-- **Polish Language** → Native language support
-- **Noise Filtering** → Reliable recognition in noisy environments
-- **Visual Feedback** → Clear confirmation of recognized commands
-
-## 🤖 Dual-Robot Coordination
-
-<div align="center">
-
-### 🎛️ **Advanced Robotics**
-![Dual Robot Control](https://via.placeholder.com/600x200/ff5722/white?text=Synchronized+Dual-Arm+Drawing)
-
-</div>
-
-| Robot | IP Address | Port | Role |
-|-------|------------|------|------|
-| 🤖 **Primary** | `192.168.125.1` | `1025` | Main drawing coordination |
-| 🤖 **Secondary** | `192.168.125.1` | `1026` | Synchronized drawing partner |
-
-### ⚡ **Coordination Features**
-- **Intelligent Path Distribution** → Optimal work sharing between robots
-- **Real-time Synchronization** → Coordinated movement and timing
-- **Batch Processing** → Efficient command batching for smooth operation
-- **Emergency Stop** → Immediate halt of both robots if needed
-
-## 🚀 Getting Started
-
-### 📦 **Quick Installation**
 
 ```bash
-# Install required dependencies
-pip install opencv-python numpy pillow matplotlib vosk openai requests
-
-# Clone and run
-git clone <your-repo>
-cd moje_skrypty
-python simple_gui.py
+# Professional 5-step process
+python cli.py
+> Enter path: my_image.jpg
+> Quality: 2 (High)
+> TSP optimization: y
+> Preview: ✓ 5 contours, 234 points
+> Proceed? y
 ```
 
-### 🎮 **First Demo**
-
-1. **🚀 Launch** → Run `python simple_gui.py`
-2. **📷 Camera** → Click "Take Picture" for live preview
-3. **🎯 Position** → Center yourself in the large preview window
-4. **📸 Capture** → Click "Take Photo" when ready
-5. **🎭 Style** → Click diagonal triangle: left=Portrait, right=Caricature
-6. **🔊 Voice** → Say "połącz" to connect robots
-7. **🎨 Draw** → Say "start" or click to begin drawing
-
-### ⚙️ **Robot Setup**
-
-```bash
-# Network Configuration
-Robot IP: 192.168.125.1
-Primary Port: 1025
-Secondary Port: 1026
-Workspace: 290mm × 210mm
-Protocol: ASCII TCP
-```
-
-## 🏗️ System Architecture
+## 🏗️ Architecture
 
 <div align="center">
 
 ```mermaid
 graph TB
-    A[🎪 Expo GUI<br/>simple_gui.py] --> B[📷 Live Camera<br/>HD Preview System]
-    A --> C[🔊 Voice Commands<br/>Polish Recognition]
-    A --> D[🎭 AI Conversion<br/>convert_to_lineart.py]
+    A[🚀 launcher.py<br/>Smart Launcher] --> B[🖥️ simple_gui.py<br/>Modern GUI]
+    A --> C[💻 cli.py<br/>CLI Interface]
     
-    D --> E[🎨 Portrait AI<br/>Face Drawing]
-    D --> F[🎭 Caricature AI<br/>Artistic Style]
+    B --> D[🎯 robot_drawer.py<br/>Main Orchestrator]
+    C --> D
     
-    A --> G[🤖 Dual Robot Control<br/>robot_communication.py]
-    G --> H[🤖 Primary Robot<br/>192.168.125.1:1025]
-    G --> I[🤖 Secondary Robot<br/>192.168.125.1:1026]
+    D --> E[🤖 robot_communication.py<br/>TCP Robot Control]
+    D --> F[🖼️ image_processor.py<br/>OpenCV Operations]
+    D --> G[📐 coordinate_transformer.py<br/>Coordinate Conversion]
+    D --> H[📊 visualizer.py<br/>Matplotlib Plotting]
     
-    B --> J[📸 Photo Capture<br/>1280x720 HD]
-    C --> K[🎤 Vosk Engine<br/>Polish Language]
+    I[📡 robot_ftp_downloader.py<br/>Camera Integration] --> B
     
     style A fill:#e1f5fe
     style B fill:#f3e5f5
     style C fill:#e8f5e8
-    style D fill=#fff3e0
+    style D fill:#fff3e0
     style E fill:#ffebee
     style F fill:#f1f8e9
     style G fill:#e0f2f1
     style H fill:#fce4ec
     style I fill:#e8eaf6
-    style J fill:#f9fbe7
-    style K fill:#faf2cc
 ```
 
 </div>
 
-### 🗂️ **Project Structure**
+### 🔄 Processing Pipeline
 
-```
-📁 Advanced Robot Drawing System/
-├── 🎪 simple_gui.py              # Modern expo-ready interface
-├── 🎭 convert_to_lineart.py      # AI art conversion engine  
-├── 🔊 voice_commands.py          # Polish voice recognition
-├── 🤖 robot_communication.py     # Dual-robot TCP control
-├── 📷 robot_ftp_downloader.py    # Camera integration
-├── 🎯 robot_drawer.py            # Main drawing orchestrator
-├── 🖼️ image_processor.py         # OpenCV operations
-├── 📐 coordinate_transformer.py   # Robot coordinate mapping
-├── 📊 visualizer.py              # Real-time visualization
-├── 🎨 matplotlib_anim_helper.py  # Animation support
-├── 📖 README.md                  # This documentation
-└── 🧪 test_*.py                  # Testing utilities
-```
+<div align="center">
 
-## 🎨 Exhibition Setup
+| Stage | Component | Function | Technology |
+|:-----:|-----------|----------|------------|
+| **1** | 📥 **Image Loading** | File validation & loading | OpenCV + PIL |
+| **2** | 🔍 **Edge Detection** | Canny algorithm processing | Computer Vision |
+| **3** | 🎯 **Contour Extraction** | Smart path finding | Geometric Analysis |
+| **4** | ⚡ **Path Optimization** | TSP + Douglas-Peucker | Mathematical Optimization |
+| **5** | 📐 **Coordinate Transform** | Pixel → Robot coordinates | Mathematical Mapping |
+| **6** | 🎨 **Smoothing & Limiting** | Line length optimization | Advanced Algorithms |
+| **7** | 🤖 **Robot Communication** | TCP command execution | Network Protocol |
 
-### 🎪 **Perfect for Demonstrations**
+</div>
+
+### 🎨 Quality Levels & Features
 
 <table align="center">
 <tr>
-<td width="33%" align="center">
+<td align="center" width="25%">
 
-#### 🖥️ **Display Setup**
-![Display](https://via.placeholder.com/150x100/4caf50/white?text=1920x1080)
-- Optimized for 1920x1080
-- Large camera preview  
-- Clear style selection
-- Professional appearance
+#### 🔬 **Highest Quality**
+![Highest Quality](https://via.placeholder.com/200x100/4caf50/white?text=Ultra+Detail)
 
-</td>
-<td width="33%" align="center">
-
-#### 🎤 **Audio Setup**
-![Audio](https://via.placeholder.com/150x100/ff9800/white?text=Voice+Ready)
-- Microphone for voice commands
-- Polish language recognition
-- Background noise filtering
-- Clear audio feedback
+- 🎯 **Maximum detail preservation**
+- 📊 **Professional artwork quality**
+- ⏱️ **Longer processing time**
+- 🖼️ **Perfect for complex images**
 
 </td>
-<td width="33%" align="center">
+<td align="center" width="25%">
 
-#### 🤖 **Robot Setup**
-![Robots](https://via.placeholder.com/150x100/2196f3/white?text=Dual+Robots)
-- Two ABB robots configured
-- Network connectivity verified
-- Workspace area clear
-- Emergency stops accessible
+#### ⚡ **High Quality**
+![High Quality](https://via.placeholder.com/200x100/2196f3/white?text=Balanced+Mode)
+
+- 🎯 **Excellent detail balance**
+- ⚡ **Reasonable processing time**
+- 🎨 **Great for most images**
+- 🏃 **Recommended default**
+
+</td>
+<td align="center" width="25%">
+
+#### 🌟 **Medium Quality**
+![Medium Quality](https://via.placeholder.com/200x100/ff9800/white?text=Fast+Mode)
+
+- 🎯 **Good detail level**
+- ⚡ **Fast processing**
+- ✏️ **Perfect for sketches**
+- 🎨 **Simplified drawings**
+
+</td>
+<td align="center" width="25%">
+
+#### 💨 **Low Quality**
+![Low Quality](https://via.placeholder.com/200x100/9c27b0/white?text=Speed+Mode)
+
+- 🎯 **Basic outlines only**
+- ⚡ **Fastest processing**
+- ✏️ **Quick prototypes**
+- 🎨 **Simple line art**
 
 </td>
 </tr>
 </table>
 
-### ✨ **Demo Best Practices**
-
-- **🎯 Preparation** → Test all systems before audience arrives
-- **📷 Camera Lighting** → Ensure good lighting for camera preview
-- **🔊 Audio Check** → Verify voice command recognition
-- **🎪 Crowd Control** → Keep workspace area clear during operation
-- **🛑 Safety First** → Know emergency stop locations
-
-## 🔧 Technical Specifications
+### 🚀 Advanced Features
 
 <div align="center">
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| 🎪 **Interface** | Tkinter + Advanced Canvas | Expo-ready GUI |
-| 📷 **Camera** | OpenCV + DirectShow | Live HD preview |
-| 🔊 **Voice** | Vosk + Polish Model | Voice recognition |
-| 🎭 **AI** | OpenAI API + Custom Prompts | Art conversion |
-| 🤖 **Robots** | TCP/IP + Custom Protocol | Dual-arm control |
-| 🎨 **Processing** | NumPy + Advanced Algorithms | Image optimization |
+| Feature | Description | Benefit |
+|:-------:|-------------|---------|
+| 🧠 **TSP Optimization** | Traveling Salesman Problem solver | Shorter drawing paths, faster completion |
+| 📏 **Line Length Limiting** | Maximum segment length control | Smoother robot movement, better quality |
+| 🎨 **Interactive Canvas** | Built-in drawing tool | Create custom drawings without external software |
+| 📋 **Template Library** | Pre-made shapes (circle, star, heart) | Quick testing and demonstration |
+| 📷 **Camera Integration** | FTP download from robot camera | Direct image capture from robot workspace |
+| 🛑 **Emergency Stop** | Real-time process termination | Safety and control during operation |
+
+</div>
+
+### 🎛️ Precision Control
+
+<div align="center">
+
+| Level | Factor | Use Case | Processing Time | Detail Level |
+|:-----:|:------:|----------|:---------------:|:------------:|
+| 🔬 **Highest** | `0.0002` | Professional artwork | ⏱️⏱️⏱️⏱️ | ⭐⭐⭐⭐⭐ |
+| 🎯 **High** | `0.0008` | Detailed drawings (default) | ⏱️⏱️⏱️ | ⭐⭐⭐⭐ |
+| ⚖️ **Medium** | `0.002` | Balanced approach | ⏱️⏱️ | ⭐⭐⭐ |
+| ⚡ **Low** | `0.005` | Quick sketches | ⏱️ | ⭐⭐ |
+
+</div>
+
+## 🤖 Robot Configuration
+
+<div align="center">
+
+### 📡 **Network Settings**
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| 🌐 **IP Address** | `192.168.125.1` | ABB Robot IP |
+| 🔌 **Port** | `1025` | TCP Communication Port |
+| 📏 **Workspace** | `290mm × 210mm` | Drawing Area |
+| 📝 **Protocol** | `ASCII TCP` | Command Format |
+
+### 🎮 **Command Set**
+```bash
+MOVE,145.50,89.25    # 📍 Move to coordinates (mm)
+PEN_UP               # ✋ Lift pen from surface
+PEN_DOWN             # ✍️ Lower pen to surface  
+STOP                 # 🛑 End drawing sequence
+get_pic              # 📷 Capture image with robot camera
+```
+
+</div>
+
+---
+
+## 🎨 GUI Features Showcase
+
+<div align="center">
+
+### 🎛️ **Control Panel**
+![Control Panel](https://via.placeholder.com/600x120/e3f2fd/1976d2?text=Professional+Control+Interface)
+
+</div>
+
+| Section | Features | Benefits |
+|---------|----------|----------|
+| 📁 **Image Input** | File browser, drawing canvas, templates | Multiple input methods |
+| ⚙️ **Quality Control** | 4-level precision system | Optimized for any use case |
+| 🧠 **TSP Optimization** | Smart path planning toggle | Faster drawing completion |
+| 🚀 **Action Workflow** | Process → Connect → Draw | Guided step-by-step operation |
+| 📷 **Camera Integration** | Direct robot camera access | Real-time workspace capture |
+
+<div align="center">
+
+### 👁️ **Preview System**
+![Preview System](https://via.placeholder.com/600x200/f3e5f5/7b1fa2?text=Real-Time+Multi-Panel+Preview)
+
+</div>
+
+| Panel | Content | Purpose |
+|-------|---------|---------|
+| 🖼️ **Original Image** | Source image display | Visual reference and validation |
+| 🤖 **Robot Path Preview** | Interactive matplotlib visualization | Path optimization and planning |
+| 📊 **Progress Monitoring** | Real-time drawing progress | Live feedback and control |
+
+### ✨ **Professional Features**
+
+<table align="center">
+<tr>
+<td width="33%" align="center">
+
+#### 🔄 **Multi-Threading**
+![Threading](https://via.placeholder.com/150x100/4caf50/white?text=Non-Blocking)
+- Background processing
+- Responsive UI always
+- Real-time progress updates
+
+</td>
+<td width="33%" align="center">
+
+#### 🛡️ **Error Handling**  
+![Safety](https://via.placeholder.com/150x100/ff9800/white?text=Safe+Operations)
+- Comprehensive validation
+- User-friendly messages  
+- Graceful error recovery
+
+</td>
+<td width="33%" align="center">
+
+#### 🎯 **Smart Automation**
+![Auto-Features](https://via.placeholder.com/150x100/2196f3/white?text=Intelligent)
+- Automatic processing
+- Quality optimization
+- Emergency stop system
+
+</td>
+</tr>
+</table>
+
+## 🔧 Troubleshooting
+
+<details>
+<summary><b>🖥️ GUI Issues</b></summary>
+
+| Problem | Solution | Command |
+|---------|----------|---------|
+| ❌ "GUI dependencies missing" | Install required packages | `pip install pillow matplotlib` |
+| 🖼️ Image not displaying | Check file format support | Use JPG, PNG, BMP, TIFF |
+| 🐌 Slow processing | Reduce quality level | Try "Medium" or "Low" quality |
+| 💾 Memory issues | Use smaller images | Resize image < 2MB |
+| 🎨 Canvas not working | PIL dependency issue | `pip install --upgrade pillow` |
+| 📋 Templates not loading | Temporary directory access | Check user permissions |
+
+</details>
+
+<details>
+<summary><b>🤖 Robot Connection</b></summary>
+
+| Problem | Possible Cause | Solution |
+|---------|---------------|----------|
+| 🔴 Connection failed | Network issue | Check IP: `192.168.125.1` |
+| 📡 No response | Robot not ready | Verify port `1025` is open |
+| ⏱️ Timeout | Firewall blocking | Configure network settings |
+| 🔄 Commands ignored | Robot program issue | Restart robot controller |
+| 📷 Camera not working | FTP issue | Check `robot_ftp_downloader.py` settings |
+| 🛑 Emergency stop failed | Network interruption | Physical robot emergency stop |
+
+</details>
+
+<details>
+<summary><b>🖼️ Image Processing</b></summary>
+
+| Problem | Cause | Solution |
+|---------|-------|---------|
+| 🚫 No contours found | Low contrast image | Adjust image brightness/contrast |
+| 📊 Too many details | High quality + complex image | Use lower quality setting |
+| 🎯 Path looks wrong | Edge detection issue | Check original image quality |
+| ⚡ Processing slow | Large image file | Resize image or lower quality |
+| 🧠 TSP too slow | Complex path optimization | Disable TSP for large images |
+| 📏 Lines too long | Line limiting disabled | Enable line length limiting |
+
+</details>
+
+---
+
+## 🎯 Supported Formats
+
+<div align="center">
+
+| Format | Extension | Best For | Quality |
+|:------:|:---------:|----------|:-------:|
+| 📸 **JPEG** | `.jpg`, `.jpeg` | Photos, complex images | ⭐⭐⭐ |
+| 🖼️ **PNG** | `.png` | Graphics, transparency | ⭐⭐⭐⭐⭐ |
+| 🎨 **BMP** | `.bmp` | Simple graphics | ⭐⭐⭐⭐ |
+| 📄 **TIFF** | `.tiff` | High-quality scans | ⭐⭐⭐⭐⭐ |
+
+</div>
+
+---
+
+## 🚀 Development
+
+### 🔧 **Adding New Features**
+
+The modular architecture makes expansion easy:
+
+```mermaid
+graph LR
+    A[🎨 New Processing] --> B[image_processor.py]
+    C[🤖 Robot Protocols] --> D[robot_communication.py] 
+    E[🖥️ GUI Components] --> F[gui_app.py]
+    G[📊 Visualization] --> H[visualizer.py]
+    
+    style A fill:#e8f5e8
+    style C fill:#ffebee
+    style E fill:#f3e5f5
+    style G fill:#e1f5fe
+```
+
+### 🗂️ **Project Structure**
+
+```
+📁 robot-drawing-system/
+├── 🚀 launcher.py              # Smart application launcher
+├── 🖥️ simple_gui.py            # Modern GUI interface  
+├── 💻 cli.py                   # Command-line interface
+├── 🎯 robot_drawer.py          # Main orchestrator class
+├── 🤖 robot_communication.py   # TCP robot controller
+├── 🖼️ image_processor.py       # OpenCV operations
+├── 📐 coordinate_transformer.py # Coordinate conversion
+├── 📊 visualizer.py            # Matplotlib plotting
+├── 📡 robot_ftp_downloader.py  # Robot camera integration
+├── 📖 README.md               # This documentation
+├── 📚 *.md                    # Technical documentation
+└── 🧪 test_*.py               # Testing & comparison scripts
+```
+
+### 📚 **Version History**
+
+<div align="center">
+
+| Version | Release | Features | Status |
+|:-------:|:-------:|----------|:------:|
+| **v1.0** | 🆕 Latest | Professional GUI, CLI, TSP optimization, Camera integration | ✅ Current |
 
 </div>
 
@@ -334,27 +509,27 @@ graph TB
 
 <div align="center">
 
-## ⚠️ Safety & Demo Guidelines
+## ⚠️ Safety Notice
 
-**🚨 EXHIBITION SAFETY: Always ensure robot workspace is clear before demonstrations**
+**🚨 IMPORTANT: Always ensure the robot workspace is clear before starting any drawing operation.**
 
-- ✅ **Pre-Demo Check** → Verify all systems and safety measures
-- 🛑 **Emergency Access** → Keep emergency stops easily accessible  
-- 👥 **Audience Safety** → Maintain safe distance from robot workspace
-- 🎤 **Voice Commands** → Demonstrate voice control for audience engagement
-- 📷 **Camera Demo** → Show live positioning system to wow the crowd
+- The system sends movement commands **immediately** after clicking "Start Drawing"
+- Use the **Emergency Stop** button if needed during operation
+- Verify robot workspace is clear of obstacles
+- Ensure proper pen mounting and ink levels
+- Test with simple drawings before complex operations
 
 ---
 
-### 🌟 **Advanced AI-Powered Robot Drawing System**
+### 🌟 **Professional Robot Drawing System v1.0**
 
-![Built with Love](https://img.shields.io/badge/Built%20with-❤️-red?style=for-the-badge)
-![Exhibition Ready](https://img.shields.io/badge/Exhibition-Ready-green?style=for-the-badge)
-![AI Powered](https://img.shields.io/badge/AI-Powered-purple?style=for-the-badge&logo=openai)
-![Voice Control](https://img.shields.io/badge/Voice-Control-orange?style=for-the-badge&logo=microphone)
+![Robotics](https://img.shields.io/badge/Built%20with-❤️-red?style=for-the-badge)
+![OpenSource](https://img.shields.io/badge/Open%20Source-Yes-green?style=for-the-badge)
+![Python](https://img.shields.io/badge/Powered%20by-Python-blue?style=for-the-badge&logo=python)
+![ABB](https://img.shields.io/badge/Optimized%20for-ABB%20YuMi-red?style=for-the-badge)
 
-**Perfect for exhibitions, demonstrations, and professional robotic showcases**
+**⭐ Star this project if you found it helpful! ⭐**
 
-*Professional robotic drawing system with AI art conversion, live camera preview, and voice control*
+*Developed for advanced robotics applications with professional-grade computer vision and automation.*
 
 </div>
