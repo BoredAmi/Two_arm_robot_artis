@@ -59,28 +59,28 @@ Transform images into physical drawings using ABB YuMi industrial robots with AI
 │  (User Interface│    │  (Orchestrator) │    │ (TCP/IP Comm)  │
 │     Layer)      │    │                 │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
+         │                       │                      │
          │              ┌─────────────────┐             │
          │              │ Image Processor │             │
          │              │ (Edge Detection)│             │
          │              └─────────────────┘             │
-         │                       │                       │
+         │                       │                      │
          │              ┌─────────────────┐             │
          │              │  Coordinate     │             │
          │              │  Transformer    │             │
          │              │ (Path Smoothing)│             │
          │              └─────────────────┘             │
-         │                                               │
+         │                                              │
          │              ┌─────────────────┐             │
          └──────────────│   Visualizer    │             │
                         │ (Preview/Plot)  │             │
                         └─────────────────┘             │
                                                         │
-┌─────────────────┐    ┌─────────────────┐             │
-│ Voice Commands  │    │  Convert to     │             │
-│ (VOSK Polish)   │    │  Line Art       │             │
-│                 │    │ (OpenAI API)    │             │
-└─────────────────┘    └─────────────────┘             │
+┌─────────────────┐    ┌─────────────────┐              │
+│ Voice Commands  │    │  Convert to     │              │
+│ (VOSK Polish)   │    │  Line Art       │              │
+│                 │    │ (OpenAI API)    │              │
+└─────────────────┘    └─────────────────┘              │
                                                         │
                         ┌─────────────────┐             │
                         │ ABB YuMi Robot  │◄────────────┘
