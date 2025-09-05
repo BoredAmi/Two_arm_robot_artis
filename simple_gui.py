@@ -601,13 +601,92 @@ class SimpleRobotGUI:
         # Store reference for updates
         self.triangle_overlay = overlay_canvas
         
+        # Track disabled state for triangle overlay
+        self.triangle_buttons_disabled = False
+        
         # Bind to canvas events but allow clicks to pass through to buttons underneath
-        overlay_canvas.bind('<Configure>', lambda e: self.draw_triangle_buttons(overlay_canvas))
+        overlay_canvas.bind('<Configure>', lambda e: self.draw_triangle_buttons_smart(overlay_canvas))
         overlay_canvas.bind('<Button-1>', self.handle_triangle_click)
         
         # Initial draw
-        self.root.after(100, lambda: self.draw_triangle_buttons(overlay_canvas))
+        self.root.after(100, lambda: self.draw_triangle_buttons_smart(overlay_canvas))
     
+    def draw_triangle_buttons_smart(self, canvas):
+        """Draw triangle buttons based on current disabled state"""
+        if self.triangle_buttons_disabled:
+            self.draw_triangle_buttons_disabled(canvas)
+        else:
+            self.draw_triangle_buttons(canvas)
+
+    def draw_triangle_buttons_disabled(self, canvas):
+        """Draw grayed-out disabled triangle buttons to match other disabled buttons"""
+        if not canvas.winfo_exists():
+            return
+            
+        canvas.delete("all")  # Clear canvas
+        
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
+        
+        if width <= 1 or height <= 1:
+            return
+        
+        # Draw upper-left triangle (PORTRAIT) - grayed out
+        portrait_triangle = [
+            0, 0,           # Top-left
+            width, 0,       # Top-right
+            0, height       # Bottom-left
+        ]
+        canvas.create_polygon(
+            portrait_triangle,
+            fill='#BDBDBD',     # Gray background (disabled)
+            outline='#9E9E9E',  # Darker gray border (disabled)
+            width=3,
+            tags="portrait_triangle_disabled"
+        )
+        
+        # Draw lower-right triangle (CARICATURE) - grayed out  
+        caricature_triangle = [
+            width, 0,       # Top-right
+            width, height,  # Bottom-right
+            0, height       # Bottom-left
+        ]
+        canvas.create_polygon(
+            caricature_triangle,
+            fill='#BDBDBD',     # Gray background (disabled)
+            outline='#9E9E9E',  # Darker gray border (disabled)
+            width=3,
+            tags="caricature_triangle_disabled"
+        )
+        
+        # Add grayed-out text labels on the triangles
+        canvas.create_text(
+            width * 0.25, height * 0.25,  # Upper-left quadrant
+            text="👤 PORTRAIT\nFace Drawing",
+            fill='#757575',  # Gray text (disabled)
+            font=('Arial', 14, 'bold'),
+            justify=tk.CENTER,
+            tags="portrait_text_disabled"
+        )
+        
+        canvas.create_text(
+            width * 0.75, height * 0.75,  # Lower-right quadrant  
+            text="😄 CARICATURE\nFun Cartoon",
+            fill='#757575',  # Gray text (disabled)
+            font=('Arial', 14, 'bold'),
+            justify=tk.CENTER,
+            tags="caricature_text_disabled"
+        )
+        
+        # Draw grayed-out diagonal separator line
+        canvas.create_line(
+            width, 0,           # Top-right
+            0, height,          # Bottom-left
+            fill='#9E9E9E',     # Gray separator (disabled)
+            width=4,
+            tags="separator_line_disabled"
+        )
+
     def draw_triangle_buttons(self, canvas):
         """Draw two triangle button shapes that visually cover the staircase"""
         if not canvas.winfo_exists():
@@ -3234,15 +3313,213 @@ class SimpleRobotGUI:
                 pass
     
     def get_picture_from_robot(self):
-        """Capture picture from local camera (GUI hook)."""
-        self.status_text.set("Capturing image from camera...")
+        """Show camera preview overlay for user to position themselves before taking picture"""
+        self.status_text.set("Opening camera preview...")
+        self.show_camera_preview()
+    
+    def show_camera_preview(self):
+        """Show live camera preview with capture controls"""
+        # Create camera preview window - massive for full visibility
+        self.camera_window = tk.Toplevel(self.root)
+        self.camera_window.title("📷 Camera Preview - Position Yourself")
+        self.camera_window.geometry("1400x1000")  # Much larger window
+        self.camera_window.configure(bg='#2C2C2C')
+        self.camera_window.resizable(False, False)
+        
+        # Make it modal and on top
+        self.camera_window.transient(self.root)
+        self.camera_window.grab_set()
+        self.camera_window.attributes('-topmost', True)
+        
+        # Title label
+        title_frame = tk.Frame(self.camera_window, bg='#2C2C2C')
+        title_frame.pack(fill=tk.X, pady=10)
+        
+        title_label = tk.Label(
+            title_frame,
+            text="📷 CAMERA PREVIEW",
+            font=('Arial', 20, 'bold'),
+            fg='white',
+            bg='#2C2C2C'
+        )
+        title_label.pack()
+        
+        subtitle_label = tk.Label(
+            title_frame,
+            text="Position yourself in the frame and click 'Take Photo' when ready",
+            font=('Arial', 14),
+            fg='#CCCCCC',
+            bg='#2C2C2C'
+        )
+        subtitle_label.pack(pady=(5, 0))
+        
+        # Camera display frame - expandable to fill window  
+        camera_frame = tk.Frame(self.camera_window, bg='#1E1E1E', relief='sunken', bd=3)
+        camera_frame.pack(pady=20, padx=20, expand=True, fill='both')
+        
+        # Camera preview label - let it expand to full image size
+        self.camera_label = tk.Label(
+            camera_frame,
+            text="📹 Initializing camera...",
+            font=('Arial', 16),
+            fg='white',
+            bg='#1E1E1E'
+            # Removed width/height constraints to let image fill naturally
+        )
+        self.camera_label.pack(padx=20, pady=20, expand=True, fill='both')
+        
+        # Control buttons frame
+        controls_frame = tk.Frame(self.camera_window, bg='#2C2C2C')
+        controls_frame.pack(fill=tk.X, pady=(0, 20))
+        
+        # Take Photo button
+        self.capture_btn = tk.Button(
+            controls_frame,
+            text="📸 TAKE PHOTO",
+            font=('Arial', 18, 'bold'),
+            bg='#4CAF50',
+            fg='white',
+            relief='raised',
+            bd=4,
+            cursor='hand2',
+            command=self.capture_photo_from_preview
+        )
+        self.capture_btn.pack(side=tk.LEFT, padx=(30, 15), pady=15)
+        
+        # Cancel button
+        cancel_btn = tk.Button(
+            controls_frame,
+            text="❌ CANCEL",
+            font=('Arial', 16, 'bold'),
+            bg='#F44336',
+            fg='white',
+            relief='raised',
+            bd=4,
+            cursor='hand2',
+            command=self.close_camera_preview
+        )
+        cancel_btn.pack(side=tk.RIGHT, padx=(15, 30), pady=15)
+        
+        # Status label
+        self.camera_status = tk.Label(
+            self.camera_window,
+            text="🔄 Starting camera...",
+            font=('Arial', 12),
+            fg='#CCCCCC',
+            bg='#2C2C2C'
+        )
+        self.camera_status.pack(pady=(0, 15))
+        
+        # Initialize camera immediately and faster
+        self.root.after(50, self.init_camera)  # Start camera faster
+        
+        # Handle window close
+        self.camera_window.protocol("WM_DELETE_WINDOW", self.close_camera_preview)
+    
+    def init_camera(self):
+        """Initialize camera with faster settings and higher resolution"""
         try:
-            self.take_photo_btn.config(state='disabled')
+            # Fast camera initialization with optimized settings for Windows
+            self.camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # Use DirectShow for faster init on Windows
+            
+            if not self.camera.isOpened():
+                raise Exception("Could not open camera")
+            
+            # Set camera properties for speed and quality
+            self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)   # Higher resolution to match display
+            self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)   # Higher resolution 16:9 ratio
+            self.camera.set(cv2.CAP_PROP_FPS, 30)            # 30 FPS for smooth preview
+            self.camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)      # Reduce buffer for less delay
+            
+            # Test camera with a quick frame read
+            ret, frame = self.camera.read()
+            if not ret:
+                raise Exception("Could not read from camera")
+            
+            self.camera_status.config(text="✅ Camera ready - Position yourself and click 'Take Photo'", fg='#4CAF50')
+            self.capture_btn.config(state='normal')
+            
+            # Start video preview immediately
+            self.update_camera_preview()
+            
+        except Exception as e:
+            self.camera_status.config(text=f"❌ Camera error: {str(e)}", fg='#F44336')
+            self.camera_label.config(text="📹 Camera not available\n\nPlease check:\n• Camera permissions\n• Camera not used by other apps\n• Camera drivers installed")
+            self.capture_btn.config(state='disabled')
+    
+    def update_camera_preview(self):
+        """Update the camera preview continuously with larger display"""
+        if hasattr(self, 'camera') and self.camera.isOpened() and hasattr(self, 'camera_window') and self.camera_window.winfo_exists():
+            ret, frame = self.camera.read()
+            
+            if ret:
+                # Flip frame horizontally for mirror effect (natural selfie view)
+                frame = cv2.flip(frame, 1)
+                
+                # Convert from BGR to RGB
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                
+                # Resize frame to fit the massive display area for perfect visibility
+                display_width = 1280   # Massive width for excellent visibility
+                display_height = 720   # Large height maintaining 16:9 aspect ratio
+                frame_resized = cv2.resize(frame_rgb, (display_width, display_height))
+                
+                # Convert to PIL Image and then to PhotoImage
+                from PIL import Image, ImageTk
+                pil_image = Image.fromarray(frame_resized)
+                photo = ImageTk.PhotoImage(pil_image)
+                
+                # Update label with large preview
+                self.camera_label.config(image=photo, text="")
+                self.camera_label.image = photo  # Keep a reference
+                
+            # Schedule next update at 30 FPS for smooth preview
+            self.camera_window.after(33, self.update_camera_preview)
+        else:
+            # Camera lost or window closed
+            print("Camera preview stopped - camera or window not available")
+    
+    def capture_photo_from_preview(self):
+        """Capture photo from camera preview"""
+        if hasattr(self, 'camera') and self.camera.isOpened():
+            ret, frame = self.camera.read()
+            
+            if ret:
+                # Flip frame horizontally (mirror effect)
+                frame = cv2.flip(frame, 1)
+                
+                # Save the captured image
+                cv2.imwrite('image.png', frame)
+                
+                # Close camera and preview window
+                self.close_camera_preview()
+                
+                # Load the captured image into the GUI
+                self._load_robot_image(os.path.abspath('image.png'))
+                
+                self.status_text.set("Photo captured successfully!")
+            else:
+                messagebox.showerror("Error", "Failed to capture image from camera")
+        else:
+            messagebox.showerror("Error", "Camera not available")
+    
+    def close_camera_preview(self):
+        """Close camera preview and cleanup"""
+        if hasattr(self, 'camera'):
+            self.camera.release()
+            delattr(self, 'camera')
+        
+        if hasattr(self, 'camera_window'):
+            self.camera_window.destroy()
+            delattr(self, 'camera_window')
+        
+        # Re-enable the take photo button
+        try:
+            self.take_photo_btn.config(state='normal')
         except Exception:
             pass
-        thread = threading.Thread(target=self._get_picture_thread)
-        thread.daemon = True
-        thread.start()
+        
+        self.status_text.set("Camera preview closed")
     
     def ready_robot_without_camera(self):
         """Ready robot without camera initialization"""
@@ -3666,6 +3943,58 @@ class SimpleRobotGUI:
         except Exception as e:
             print(f"Preview error: {e}")
     
+    def disable_all_buttons(self):
+        """Disable all buttons during processing to show conversion is happening"""
+        # Main action buttons
+        if hasattr(self, 'take_photo_btn'):
+            self.take_photo_btn.config(state='disabled')
+        if hasattr(self, 'start_drawing_btn'):
+            self.start_drawing_btn.config(state='disabled')
+        
+        # All portrait buttons (10 buttons in diagonal)
+        for i in range(1, 11):
+            btn_name = f'portrait_btn{i}'
+            if hasattr(self, btn_name):
+                getattr(self, btn_name).config(state='disabled')
+        
+        # All caricature buttons (9 buttons in diagonal)
+        for i in range(1, 10):
+            btn_name = f'caricature_btn{i}'
+            if hasattr(self, btn_name):
+                getattr(self, btn_name).config(state='disabled')
+        
+        # Disable triangle overlay to prevent clicks and show disabled appearance
+        if hasattr(self, 'triangle_overlay'):
+            self.triangle_buttons_disabled = True
+            self.triangle_overlay.unbind('<Button-1>')
+            self.draw_triangle_buttons_disabled(self.triangle_overlay)
+    
+    def enable_all_buttons(self):
+        """Re-enable all buttons after processing is complete"""
+        # Main action buttons
+        if hasattr(self, 'take_photo_btn'):
+            self.take_photo_btn.config(state='normal')
+        if hasattr(self, 'start_drawing_btn'):
+            self.start_drawing_btn.config(state='normal')
+        
+        # All portrait buttons (10 buttons in diagonal)
+        for i in range(1, 11):
+            btn_name = f'portrait_btn{i}'
+            if hasattr(self, btn_name):
+                getattr(self, btn_name).config(state='normal')
+        
+        # All caricature buttons (9 buttons in diagonal)
+        for i in range(1, 10):
+            btn_name = f'caricature_btn{i}'
+            if hasattr(self, btn_name):
+                getattr(self, btn_name).config(state='normal')
+        
+        # Re-enable triangle overlay by rebinding click events
+        if hasattr(self, 'triangle_overlay'):
+            self.triangle_buttons_disabled = False
+            self.triangle_overlay.bind('<Button-1>', self.handle_triangle_click)
+            self.draw_triangle_buttons_smart(self.triangle_overlay)
+
     def set_style_and_convert(self, style):
         """Set drawing style and apply conversion if needed"""
         self.drawing_style.set(style)
@@ -3705,11 +4034,22 @@ class SimpleRobotGUI:
             messagebox.showwarning("Warning", "Please take a photo first!")
             return
         
-        if style == "portrait":
-            self.convert_to_face_drawing()
-        elif style == "caricature":
-            # Convert to caricature using the proper caricature method
-            self.convert_to_caricature()
+        # Disable all buttons to show processing is happening
+        self.disable_all_buttons()
+        
+        try:
+            if style == "portrait":
+                self.convert_to_face_drawing()
+            elif style == "caricature":
+                # Convert to caricature using the proper caricature method
+                self.convert_to_caricature()
+        except Exception as e:
+            # If there's an immediate error (not in thread), re-enable buttons
+            self.enable_all_buttons()
+            # Restore triangle overlay
+            if hasattr(self, 'triangle_overlay'):
+                self.draw_triangle_buttons_smart(self.triangle_overlay)
+            raise e
 
     def start_drawing(self):
         """Start drawing with current image and style settings"""
@@ -4338,15 +4678,23 @@ class SimpleRobotGUI:
             self.auto_process_image()
             
             # Re-enable buttons and restore appearance
-            self.face_drawing_btn.config(
-                state='normal', 
-                text="👤 Face\nDrawing", 
-                bg='#E91E63', 
-                fg='white',
-                relief='flat'
-            )
-            self.caricature_btn.config(state='normal', bg='#FF9800')
-            self.progress_indicator.config(text="✅ Line Art Ready")
+            if hasattr(self, 'face_drawing_btn'):
+                self.face_drawing_btn.config(
+                    state='normal', 
+                    text="👤 Face\nDrawing", 
+                    bg='#E91E63', 
+                    fg='white',
+                    relief='flat'
+                )
+            if hasattr(self, 'caricature_btn'):
+                self.caricature_btn.config(state='normal', bg='#FF9800')
+            if hasattr(self, 'progress_indicator'):
+                self.progress_indicator.config(text="✅ Line Art Ready")
+            
+            # Re-enable all buttons and restore triangle overlay
+            self.enable_all_buttons()
+            if hasattr(self, 'triangle_overlay'):
+                self.draw_triangle_buttons_smart(self.triangle_overlay)
             
             # Show success notification
             self._show_conversion_notification("✅ Face Drawing conversion completed!", "success")
@@ -4360,15 +4708,24 @@ class SimpleRobotGUI:
     def _face_drawing_failed(self):
         """Handle face drawing conversion failure"""
         self._stop_conversion_feedback()
-        self.face_drawing_btn.config(
-            state='normal', 
-            text="👤 Face\nDrawing", 
-            bg='#E91E63', 
-            fg='white',
-            relief='flat'
-        )
-        self.caricature_btn.config(state='normal', bg='#FF9800')
-        self.progress_indicator.config(text="❌ Failed")
+        if hasattr(self, 'face_drawing_btn'):
+            self.face_drawing_btn.config(
+                state='normal', 
+                text="👤 Face\nDrawing", 
+                bg='#E91E63', 
+                fg='white',
+                relief='flat'
+            )
+        if hasattr(self, 'caricature_btn'):
+            self.caricature_btn.config(state='normal', bg='#FF9800')
+        if hasattr(self, 'progress_indicator'):
+            self.progress_indicator.config(text="❌ Failed")
+        
+        # Re-enable all buttons and restore triangle overlay
+        self.enable_all_buttons()
+        if hasattr(self, 'triangle_overlay'):
+            self.draw_triangle_buttons_smart(self.triangle_overlay)
+            
         self.status_text.set("Line art conversion failed")
         self._show_conversion_notification("❌ Face Drawing conversion failed!", "error")
         messagebox.showerror("Error", "Failed to generate line art. Check if out.png was created.")
@@ -4376,15 +4733,24 @@ class SimpleRobotGUI:
     def _face_drawing_error(self, error):
         """Handle face drawing conversion error"""
         self._stop_conversion_feedback()
-        self.face_drawing_btn.config(
-            state='normal', 
-            text="👤 Face\nDrawing", 
-            bg='#E91E63', 
-            fg='white',
-            relief='flat'
-        )
-        self.caricature_btn.config(state='normal', bg='#FF9800')
-        self.progress_indicator.config(text="❌ Error")
+        if hasattr(self, 'face_drawing_btn'):
+            self.face_drawing_btn.config(
+                state='normal', 
+                text="👤 Face\nDrawing", 
+                bg='#E91E63', 
+                fg='white',
+                relief='flat'
+            )
+        if hasattr(self, 'caricature_btn'):
+            self.caricature_btn.config(state='normal', bg='#FF9800')
+        if hasattr(self, 'progress_indicator'):
+            self.progress_indicator.config(text="❌ Error")
+        
+        # Re-enable all buttons and restore triangle overlay
+        self.enable_all_buttons()
+        if hasattr(self, 'triangle_overlay'):
+            self.draw_triangle_buttons_smart(self.triangle_overlay)
+            
         self.status_text.set("Line art conversion error")
         self._show_conversion_notification("❌ Face Drawing conversion error!", "error")
         messagebox.showerror("Error", f"Line art conversion error: {error}")
@@ -4471,15 +4837,23 @@ class SimpleRobotGUI:
             self.auto_process_image()
             
             # Re-enable buttons and restore appearance
-            self.caricature_btn.config(
-                state='normal', 
-                text="🎭 Caricature", 
-                bg='#FF9800', 
-                fg='white',
-                relief='flat'
-            )
-            self.face_drawing_btn.config(state='normal', bg='#E91E63')
-            self.progress_indicator.config(text="✅ Caricature Ready")
+            if hasattr(self, 'caricature_btn'):
+                self.caricature_btn.config(
+                    state='normal', 
+                    text="🎭 Caricature", 
+                    bg='#FF9800', 
+                    fg='white',
+                    relief='flat'
+                )
+            if hasattr(self, 'face_drawing_btn'):
+                self.face_drawing_btn.config(state='normal', bg='#E91E63')
+            if hasattr(self, 'progress_indicator'):
+                self.progress_indicator.config(text="✅ Caricature Ready")
+            
+            # Re-enable all buttons and restore triangle overlay
+            self.enable_all_buttons()
+            if hasattr(self, 'triangle_overlay'):
+                self.draw_triangle_buttons_smart(self.triangle_overlay)
             
             # Show success notification
             self._show_conversion_notification("✅ Caricature conversion completed!", "success")
@@ -4493,15 +4867,24 @@ class SimpleRobotGUI:
     def _caricature_failed(self):
         """Handle caricature conversion failure"""
         self._stop_conversion_feedback()
-        self.caricature_btn.config(
-            state='normal', 
-            text="🎭 Caricature", 
-            bg='#FF9800', 
-            fg='white',
-            relief='flat'
-        )
-        self.face_drawing_btn.config(state='normal', bg='#E91E63')
-        self.progress_indicator.config(text="❌ Failed")
+        if hasattr(self, 'caricature_btn'):
+            self.caricature_btn.config(
+                state='normal', 
+                text="🎭 Caricature", 
+                bg='#FF9800', 
+                fg='white',
+                relief='flat'
+            )
+        if hasattr(self, 'face_drawing_btn'):
+            self.face_drawing_btn.config(state='normal', bg='#E91E63')
+        if hasattr(self, 'progress_indicator'):
+            self.progress_indicator.config(text="❌ Failed")
+        
+        # Re-enable all buttons and restore triangle overlay
+        self.enable_all_buttons()
+        if hasattr(self, 'triangle_overlay'):
+            self.draw_triangle_buttons_smart(self.triangle_overlay)
+            
         self.status_text.set("Caricature conversion failed")
         self._show_conversion_notification("❌ Caricature conversion failed!", "error")
         messagebox.showerror("Error", "Failed to generate caricature. Check if out.png was created.")
@@ -4509,15 +4892,24 @@ class SimpleRobotGUI:
     def _caricature_error(self, error):
         """Handle caricature conversion error"""
         self._stop_conversion_feedback()
-        self.caricature_btn.config(
-            state='normal', 
-            text="🎭 Caricature", 
-            bg='#FF9800', 
-            fg='white',
-            relief='flat'
-        )
-        self.face_drawing_btn.config(state='normal', bg='#E91E63')
-        self.progress_indicator.config(text="❌ Error")
+        if hasattr(self, 'caricature_btn'):
+            self.caricature_btn.config(
+                state='normal', 
+                text="🎭 Caricature", 
+                bg='#FF9800', 
+                fg='white',
+                relief='flat'
+            )
+        if hasattr(self, 'face_drawing_btn'):
+            self.face_drawing_btn.config(state='normal', bg='#E91E63')
+        if hasattr(self, 'progress_indicator'):
+            self.progress_indicator.config(text="❌ Error")
+        
+        # Re-enable all buttons and restore triangle overlay
+        self.enable_all_buttons()
+        if hasattr(self, 'triangle_overlay'):
+            self.draw_triangle_buttons_smart(self.triangle_overlay)
+            
         self.status_text.set("Caricature conversion error")
         self._show_conversion_notification("❌ Caricature conversion error!", "error")
         messagebox.showerror("Error", f"Caricature conversion error: {error}")
