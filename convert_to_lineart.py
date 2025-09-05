@@ -376,7 +376,7 @@ def convert_to_lineart(face_image_path, prompt_type="minimalist"):
                 model="gpt-image-1", 
                 image=image_file,
                 prompt=prompt,
-                quality="high",  
+                quality="low",  
                 size="1536x1024"
             )
 
