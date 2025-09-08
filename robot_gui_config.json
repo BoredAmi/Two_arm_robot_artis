@@ -18,5 +18,5 @@
   "brush_size": 20,
   "dual_arm_mode": true,
   "text_prompt": "",
-  "forbidden_buffer": 40
+  "forbidden_buffer": 50
 }
