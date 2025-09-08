@@ -353,7 +353,6 @@ def convert_to_lineart(face_image_path, prompt_type="minimalist"):
             prompt = PROMPTS[prompt_type]
         else:
             prompt = PROMPTS["minimalist"]  # Default fallback
-        # Convert image to PNG if needed (OpenAI API works better with PNG)
         
         # Open and convert image to ensure it's in a compatible format
         with Image.open(face_image_path) as img:
@@ -380,7 +379,7 @@ def convert_to_lineart(face_image_path, prompt_type="minimalist"):
                 size="1536x1024"
             )
 
-        # Handle response based on format (URL or base64)
+        # Handle response based on format 
         if hasattr(result.data[0], 'url') and result.data[0].url:
             # Download from URL
             image_url = result.data[0].url
