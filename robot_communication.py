@@ -25,7 +25,14 @@ import math
 class RobotController:
     def send_wait(self, target='right'):
         """Send wait command to robot (pause execution until next command)"""
-        return self._send_command("WAIT\n", target=target)
+        print(f"[{target}] Sending WAIT command to robot...")
+        # Use longer timeout for WAIT commands as they may involve movement to base position
+        result = self._send_command("WAIT\n", target=target, timeout=10.0)
+        if result:
+            print(f"[{target}] Robot acknowledged WAIT command")
+        else:
+            print(f"[{target}] Robot failed to acknowledge WAIT command")
+        return result
     def draw_paths_dual(self, right_actions, left_actions, move_delay=0.02, use_batching=None, batch_size=8, progress_callback=None):
         """
         Asynchronous dual-robot drawing: both robots draw contours in parallel, synchronizing after each contour (or wait action).
@@ -52,6 +59,12 @@ class RobotController:
 
         barrier = threading.Barrier(2)
         results = {'right': True, 'left': True}
+        
+        # Shared state to track when robots are in WAIT position
+        wait_states = {'right': False, 'left': False}
+        # Track which robots sent WAIT commands in current cycle
+        sent_wait_commands = {'right': False, 'left': False}
+        wait_lock = threading.Lock()
 
         # Prepare progress tracking for dual-arm: combined total points and steps
         total_batches = max(len(right_actions), len(left_actions)) if (right_actions or left_actions) else 0
@@ -77,104 +90,158 @@ class RobotController:
                     print(f"[{target}] Drawing stopped at action {idx + 1}/{len(actions)}")
                     results[target] = False
                     break
+                
+                # Check if robot is still connected
+                if target == 'right' and not self.socket:
+                    print(f"[{target}] Robot disconnected, stopping execution")
+                    results[target] = False
+                    break
+                elif target == 'left' and not self.socket2:
+                    print(f"[{target}] Robot disconnected, stopping execution") 
+                    results[target] = False
+                    break
                     
                 if not results['right'] if target == 'right' else not results['left']:
                     break
                 ok = True
                 if action == 'wait':
-                    print(f"[{target}] Waiting...")
+                    print(f"[{target}] Sending wait command and waiting for acknowledgment...")
+                    # Mark that this robot sent a WAIT command
+                    with wait_lock:
+                        sent_wait_commands[target] = True
                     ok = self.send_wait(target=target)
+                    if ok:
+                        # Mark this robot as being in WAIT position
+                        with wait_lock:
+                            wait_states[target] = True
+                        print(f"[{target}] Wait command acknowledged, robot now in WAIT position...")
+                    else:
+                        print(f"[{target}] Wait command failed! Breaking barrier to stop other robot...")
+                        # Break the barrier to signal failure to the other robot
+                        try:
+                            barrier.abort()
+                        except Exception:
+                            pass
+                        results[target] = False
+                        break
                 elif not action:
                     ok = True
                 else:
                     try:
-                        # Ensure PEN_UP acknowledged before moving
-                        if not self.send_pen_up(target=target):
-                            print(f"[{target}] Failed to send PEN_UP")
-                            ok = False
+                        # Check if the other robot sent a WAIT command in this cycle
+                        other_target = 'left' if target == 'right' else 'right'
+                        with wait_lock:
+                            other_sent_wait = sent_wait_commands[other_target]
+                            other_is_waiting = wait_states[other_target]
+                        
+                        # Only wait for other robot's WAIT position if it actually sent a WAIT command
+                        if other_sent_wait and not other_is_waiting:
+                            print(f"[{target}] Waiting for {other_target} robot to reach WAIT position...")
+                            # Poll until other robot is in WAIT position or timeout
+                            wait_timeout = 30.0  # 30 second timeout
+                            start_time = time.time()
+                            while not other_is_waiting and (time.time() - start_time) < wait_timeout:
+                                time.sleep(0.1)
+                                with wait_lock:
+                                    other_is_waiting = wait_states[other_target]
+                            
+                            if not other_is_waiting:
+                                print(f"[{target}] Timeout waiting for {other_target} robot to reach WAIT position")
+                                ok = False
+                            else:
+                                print(f"[{target}] {other_target} robot is now in WAIT position, proceeding with movement...")
+                        elif other_sent_wait:
+                            print(f"[{target}] {other_target} robot already in WAIT position, proceeding with movement...")
                         else:
+                            print(f"[{target}] {other_target} robot didn't send WAIT command, proceeding with movement...")
+                        
+                        if ok:
+                            # Pen should already be up from previous contour
                             time.sleep(0.02)
 
-                            if actual_batching:
-                                contour = action
-                                start_x, start_y = contour[0]
+                        if actual_batching:
+                            # Wait for peer retreat to complete BEFORE processing contour details
+                            try:
+                                self._wait_for_peer_retreat(target)
+                            except Exception:
+                                pass
+                                
+                            contour = action
+                            start_x, start_y = contour[0]
 
-                                # Move to contour start
-                                # Wait for peer retreat to complete (time-based)
+                            # Move to contour start
+                            # If geometry-based collision avoidance is enabled, poll until safe
+                            try:
+                                start_pt = (start_x, start_y)
+                                waited = 0.0
+                                while self._conflicts_with_peer(target, start_pt) and waited < float(self.collision_wait_timeout):
+                                    time.sleep(float(self.collision_check_interval))
+                                    waited += float(self.collision_check_interval)
+                            except Exception:
+                                pass
+                            # Use two-step transition to start (offset then real start)
+                            if not self._transition_to_start(start_x, start_y, target=target):
+                                print(f"[{target}] Failed to transition to start of contour")
+                                ok = False
+                            else:
+                                # Pen down to draw
+                                if not self.send_pen_down(target=target):
+                                    print(f"[{target}] Failed to send PEN_DOWN")
+                                    ok = False
+                                else:
+                                    time.sleep(0.02)
+                                    
+                                    # Explicitly move to first point with pen down
+                                    start_x, start_y = contour[0]
+                                    if not self.send_move(start_x, start_y, target=target):
+                                        print(f"[{target}] Failed to send explicit move to first point")
+                                        ok = False
+                                    else:
+                                        if len(contour) > 1:
+                                            # send batches for remaining points; if successful, account for all contour points (including start)
+                                            if not self.send_batch_moves(contour[1:], batch_size=batch_size, target=target):
+                                                print(f"[{target}] Failed to send batch moves")
+                                                ok = False
+                                            else:
+                                                # Increment shared points_sent by full contour length
+                                                if progress_callback:
+                                                    with points_lock:
+                                                        points_sent['value'] += len(contour)
+                                                        cur = points_sent['value']
+                                                    try:
+                                                        progress_callback(idx + 1, total_batches, cur, total_points)
+                                                    except Exception:
+                                                        pass
+                                    # Lift pen after contour
+                                    if not self.send_pen_up(target=target):
+                                        print(f"[{target}] Failed to send PEN_UP (after contour)")
+                                        ok = False
+                                    else:
+                                        # Notify robot between contours so RAPID can perform a retreat/back-off
+                                        # Determine next contour start from the actions list if available
+                                        next_start = None
+                                        try:
+                                            if idx + 1 < len(actions):
+                                                nxt = actions[idx + 1]
+                                                if nxt and nxt != 'wait':
+                                                    if isinstance(nxt, (list, tuple)) and len(nxt) > 0:
+                                                        next_start = nxt[0]
+                                        except Exception:
+                                            next_start = None
+                                        self.send_between_command(target=target, next_start=next_start)
+                                    time.sleep(0.02)
+
+                        else:
+                                # Wait for peer retreat to complete BEFORE processing contour details
                                 try:
                                     self._wait_for_peer_retreat(target)
                                 except Exception:
                                     pass
-                                # If geometry-based collision avoidance is enabled, poll until safe
-                                try:
-                                    start_pt = (start_x, start_y)
-                                    waited = 0.0
-                                    while self._conflicts_with_peer(target, start_pt) and waited < float(self.collision_wait_timeout):
-                                        time.sleep(float(self.collision_check_interval))
-                                        waited += float(self.collision_check_interval)
-                                except Exception:
-                                    pass
-                                # Use two-step transition to start (offset then real start)
-                                if not self._transition_to_start(start_x, start_y, target=target):
-                                    print(f"[{target}] Failed to transition to start of contour")
-                                    ok = False
-                                else:
-                                    # Pen down to draw
-                                        if not self.send_pen_down(target=target):
-                                            print(f"[{target}] Failed to send PEN_DOWN")
-                                            ok = False
-                                        else:
-                                            time.sleep(0.02)
-                                            
-                                            # Explicitly move to first point with pen down
-                                            start_x, start_y = contour[0]
-                                            if not self.send_move(start_x, start_y, target=target):
-                                                print(f"[{target}] Failed to send explicit move to first point")
-                                                ok = False
-                                            else:
-                                                if len(contour) > 1:
-                                                    # send batches for remaining points; if successful, account for all contour points (including start)
-                                                    if not self.send_batch_moves(contour[1:], batch_size=batch_size, target=target):
-                                                        print(f"[{target}] Failed to send batch moves")
-                                                        ok = False
-                                                    else:
-                                                        # Increment shared points_sent by full contour length
-                                                        if progress_callback:
-                                                            with points_lock:
-                                                                points_sent['value'] += len(contour)
-                                                                cur = points_sent['value']
-                                                            try:
-                                                                progress_callback(idx + 1, total_batches, cur, total_points)
-                                                            except Exception:
-                                                                pass
-                                            # Lift pen after contour
-                                            if not self.send_pen_up(target=target):
-                                                print(f"[{target}] Failed to send PEN_UP (after contour)")
-                                                ok = False
-                                            else:
-                                                # Notify robot between contours so RAPID can perform a retreat/back-off
-                                                # Determine next contour start from the actions list if available
-                                                next_start = None
-                                                try:
-                                                    if idx + 1 < len(actions):
-                                                        nxt = actions[idx + 1]
-                                                        if nxt and nxt != 'wait':
-                                                            if isinstance(nxt, (list, tuple)) and len(nxt) > 0:
-                                                                next_start = nxt[0]
-                                                except Exception:
-                                                    next_start = None
-                                                self.send_between_command(target=target, next_start=next_start)
-                                            time.sleep(0.02)
-
-                            else:
+                                    
                                 contour = action
                                 start_x, start_y = contour[0]
 
                                 # Transition to start with side-specific X offset
-                                try:
-                                    self._wait_for_peer_retreat(target)
-                                except Exception:
-                                    pass
                                 try:
                                     start_pt = (start_x, start_y)
                                     waited = 0.0
@@ -265,10 +332,36 @@ class RobotController:
                         results['right'] = False
                     else:
                         results['left'] = False
+                    print(f"[{target}] Action failed, breaking execution")
                     break
+                
+                # Only reach barrier if action was successful
                 try:
+                    print(f"[{target}] Reaching synchronization barrier...")
                     barrier.wait()
+                    print(f"[{target}] Barrier passed, proceeding to next action...")
+                    
+                    # Clear wait states and wait command flags after both robots have synchronized
+                    # (Only one robot needs to do this since they're synchronized)
+                    if target == 'right':
+                        with wait_lock:
+                            wait_states['right'] = False
+                            wait_states['left'] = False
+                            sent_wait_commands['right'] = False
+                            sent_wait_commands['left'] = False
+                        print("Wait states and command flags cleared after synchronization")
+                    
+                    # Add small staggered delay to prevent simultaneous movement and collision
+                    if target == 'left':
+                        time.sleep(0.1)  # Left robot waits slightly longer to avoid collision
+                        
                 except threading.BrokenBarrierError:
+                    print(f"[{target}] Barrier broken (other robot failed), stopping execution")
+                    results[target] = False
+                    break
+                except Exception as e:
+                    print(f"[{target}] Barrier error: {e}, stopping execution")
+                    results[target] = False
                     break
             # Only send final stop if not already in emergency stop
             if not self.should_stop():
@@ -286,7 +379,18 @@ class RobotController:
         t_right.join()
         t_left.join()
 
-        if not results['right'] or not results['left']:
+        # Check for disconnection or other errors
+        if not self.socket and not self.socket2:
+            print("Error: Both robots disconnected (likely collision detection).")
+            print("Please check robot positions and restart connections.")
+            return False
+        elif not self.socket:
+            print("Error: Right robot disconnected.")
+            return False
+        elif not self.socket2:
+            print("Error: Left robot disconnected.")
+            return False
+        elif not results['right'] or not results['left']:
             print("Error in dual-robot drawing step.")
             return False
         print("Dual-robot drawing with async contour sync completed!")
@@ -309,15 +413,15 @@ class RobotController:
     DEFAULT_TIMEOUT = 5.0
     DEFAULT_PORT_L = 1026
     # Default transition offset in X (mm) applied before moving to contour start
-    DEFAULT_TRANSITION_OFFSET_X = 50
+    DEFAULT_TRANSITION_OFFSET_X = 80  # Increased from 50mm to 80mm for better collision avoidance
 
     # Command response settings
     RESPONSE_TIMEOUT = 20.0
     START_COMMAND_TIMEOUT = 90.0  # Extended timeout for START command (robot initialization)
     MAX_RETRIES = 3
     # Default pause after robot reports RETREAT/OK to allow physical retreat (seconds)
-    DEFAULT_POST_RETREAT_DELAY = 0.05
-    
+    DEFAULT_POST_RETREAT_DELAY = 0.3  # Reduced from 0.7 to 0.2 seconds
+
     def __init__(self, ip=DEFAULT_IP, port=DEFAULT_PORT, port_l=DEFAULT_PORT_L):
         """
         Initialize robot controller.
@@ -479,30 +583,23 @@ class RobotController:
         """Perform a horizontal U-shaped transition to safely move between contours.
         
         The horizontal U-shape pattern:
-        1. RETREAT already moved back horizontally (±50mm in X)
-        2. Move to next contour's Y coordinate while staying back (horizontal leg of U)  
+        1. RETREAT already moved back horizontally (±80mm in X from previous contour end)
+        2. Move to next contour's Y coordinate while keeping the current retreat X position
         3. Move forward to the actual start position (completing the U)
         
         This avoids drawing lines since PEN_UP/PEN_DOWN handle vertical movement.
-        For `target=='right'` the offset is -transition_offset_x, for `target=='left'` it's +transition_offset_x.
+        The robot maintains its retreat X position during the Y-bridge for cleaner movement.
         Returns True on success, False on failure.
         """
-        # Determine side bias: right -> negative offset, left -> positive offset
-        try:
-            off = float(self.transition_offset_x)
-        except Exception:
-            off = float(self.DEFAULT_TRANSITION_OFFSET_X)
-
-        if target == 'right':
-            x_off = -abs(off)
-        else:
-            x_off = abs(off)
-
-        # Step 2 of horizontal U: Move to next contour's Y coordinate while staying back
-        # This creates the horizontal "bridge" of the U-shape
-        back_position_x = start_x + x_off
-        if not self.send_move(back_position_x, start_y, target=target):
-            print(f"[{target}] Failed to move to back position at Y-level ({back_position_x:.1f}, {start_y:.1f})")
+        # We don't need to calculate a new offset - we stay at current retreat position
+        # Robot is already at the correct retreat X position from the RETREAT command
+        
+        # Step 2 of horizontal U: Move to next contour's Y coordinate while keeping current X
+        # This creates the horizontal "bridge" of the U-shape using the retreat position
+        # We use a minimal X adjustment (just 1mm) to ensure we get the current position
+        current_retreat_x = start_x + (-80 if target == 'right' else 80)
+        if not self.send_move(current_retreat_x, start_y, target=target):
+            print(f"[{target}] Failed to move to Y-level at retreat position ({current_retreat_x:.1f}, {start_y:.1f})")
             return False
         time.sleep(0.02)
             
@@ -663,13 +760,10 @@ class RobotController:
 
         By default this sends "RETREAT\n". The robot RAPID/task should implement
         handling for this command (e.g. local back-off or move-to-edge).
-
-        If `next_start` is provided as a tuple (x, y) this helper will, after
-        receiving the robot ACK for the between-command, issue a MOVE to the
-        intermediate point formed by (next_start_x +/- transition_offset_x, next_start_y).
-
-        This puts the robot at the correct Y of the next contour while keeping
-        the X offset (back-off) in the side-respected direction.
+        
+        This method now only handles the RETREAT command. The transition to the next
+        contour start position is handled separately by _transition_to_start to avoid
+        redundant movements.
         """
         command = cmd if cmd is not None else "RETREAT\n"
         ok = self._send_command(command, wait_response=wait_response, timeout=timeout, target=target)
@@ -682,58 +776,10 @@ class RobotController:
         except Exception:
             pass
 
-        # If the robot acknowledged and we were given a next contour start,
-        # move to the intermediate offset point (x +/- offset, y) using a safer two-step route.
-        if ok and next_start is not None:
-            try:
-                nx, ny = next_start
-                try:
-                    off = float(self.transition_offset_x)
-                except Exception:
-                    off = float(self.DEFAULT_TRANSITION_OFFSET_X)
+        # Removed automatic intermediate positioning - this is now handled by _transition_to_start
+        # to avoid redundant movements
 
-                if target == 'right':
-                    x_off = -abs(off)
-                else:
-                    x_off = abs(off)
-
-                interm_x = nx + x_off
-                interm_y = ny
-
-                # Clamp intermediate target to workspace bounds
-                interm_x, interm_y = self._clamp_to_bounds(interm_x, interm_y)
-
-                # Attempt to use current known position for safer axis-separated routing
-                cur = None
-                try:
-                    cur = self.current_position.get(target)
-                except Exception:
-                    cur = None
-
-                if cur is None:
-                    # No known current position - fallback to direct intermediate move
-                    if not self.send_move(interm_x, interm_y, wait_response=True, target=target):
-                        print(f"[{target}] Failed to move to intermediate post-retreat point ({interm_x:.1f}, {interm_y:.1f})")
-                        return False
-                else:
-                    cur_x, cur_y = cur
-                    # First move in Y to next contour Y while keeping current X (reduces diagonal sweeps)
-                    step1_x, step1_y = self._clamp_to_bounds(cur_x, interm_y)
-                    if not self.send_move(step1_x, step1_y, wait_response=True, target=target):
-                        print(f"[{target}] Failed safety step to ({step1_x:.1f}, {step1_y:.1f})")
-                        return False
-                    # Then move in X to the intermediate offset X at correct Y
-                    step2_x, step2_y = interm_x, interm_y
-                    if not self.send_move(step2_x, step2_y, wait_response=True, target=target):
-                        print(f"[{target}] Failed to move to intermediate post-retreat point ({step2_x:.1f}, {step2_y:.1f})")
-                        return False
-            except Exception as e:
-                print(f"Error handling next_start in send_between_command: {e}")
-                return False
-
-    # (timestamp already set on ACK above)
-
-        # After OK and any intermediate moves, give robot a moment to physically retreat
+        # After OK, give robot a moment to physically retreat
         try:
             if ok and getattr(self, 'post_retreat_delay', 0):
                 time.sleep(float(self.post_retreat_delay))
@@ -837,13 +883,27 @@ class RobotController:
         try:
             print(f"Sending: {cmd.strip()} to {target}")
 
-            # Send to primary if requested
+            # Check if sockets are still connected before sending
             if primary_sock:
-                primary_sock.sendall(cmd.encode())
+                try:
+                    primary_sock.sendall(cmd.encode())
+                except (ConnectionResetError, ConnectionAbortedError, OSError) as e:
+                    print(f"Primary socket disconnected: {e}")
+                    # Mark socket as disconnected
+                    if target == 'right' or target == 'both':
+                        self.socket = None
+                    return False
 
             # Send to secondary if requested
             if secondary_sock:
-                secondary_sock.sendall(cmd.encode())
+                try:
+                    secondary_sock.sendall(cmd.encode())
+                except (ConnectionResetError, ConnectionAbortedError, OSError) as e:
+                    print(f"Secondary socket disconnected: {e}")
+                    # Mark socket as disconnected  
+                    if target == 'left' or target == 'both':
+                        self.socket2 = None
+                    return False
 
             # Only wait for response(s) from socket(s)
             if wait_response and primary_sock:
@@ -948,8 +1008,7 @@ class RobotController:
         print(f"Starting to draw using {mode_text} mode...")
         
         try:
-            # Start with pen up
-            self.send_pen_up()
+            # Pen should already be up from initialization
             time.sleep(0.02)
             
             if actual_batching:
@@ -1038,8 +1097,7 @@ class RobotController:
         """Ultra-fast drawing with maximum performance optimizations"""
         print("Using ultra-fast mode with path optimization and large batches")
         
-        # Ensure pen starts in up position
-        self.send_pen_up()
+        # Pen should already be up from previous operations
         time.sleep(0.02)
         
         # Calculate total points for overall progress tracking
