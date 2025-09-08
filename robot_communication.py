@@ -316,7 +316,7 @@ class RobotController:
     START_COMMAND_TIMEOUT = 90.0  # Extended timeout for START command (robot initialization)
     MAX_RETRIES = 3
     # Default pause after robot reports RETREAT/OK to allow physical retreat (seconds)
-    DEFAULT_POST_RETREAT_DELAY = 0.7
+    DEFAULT_POST_RETREAT_DELAY = 0.05
     
     def __init__(self, ip=DEFAULT_IP, port=DEFAULT_PORT, port_l=DEFAULT_PORT_L):
         """
