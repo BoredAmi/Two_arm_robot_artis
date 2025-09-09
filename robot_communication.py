@@ -23,6 +23,10 @@ import math
 
 
 class RobotController:
+    def __init__(self):
+        self.socket = None
+        self.socket2 = None
+        self.is_connected = False
     def send_wait(self, target='right'):
         """Send wait command to robot (pause execution until next command)"""
         print(f"[{target}] Sending WAIT command to robot...")
@@ -629,9 +633,12 @@ class RobotController:
             self.socket2.connect((self.ip, self.port_l))
             print(f"Connected to ABB robot at {self.ip}:{self.port_l}")
 
+            # Mark as connected
+            self.is_connected = True
             return True
         except Exception as e:
             print(f"Connection failed: {e}")
+            self.is_connected = False
             self.socket = None
             if hasattr(self, 'socket2') and self.socket2:
                 self.socket2.close()
@@ -974,14 +981,45 @@ class RobotController:
             print(f"Command failed: {e}")
             return False
     
+    def _send_command_safe(self, socket, command):
+        """Send a command safely with timeout, ignoring response errors"""
+        try:
+            socket.send((command + '\r\n').encode())
+            socket.settimeout(2.0)  # Short timeout for disconnect commands
+            socket.recv(1024)  # Try to receive response but don't fail if timeout
+        except Exception:
+            pass  # Ignore any errors during safe command sending
+    
     def disconnect(self):
-        """Close both connections"""
+        """Close both connections gracefully by sending STOP commands first"""
+        # Send STOP commands before disconnecting to prevent robot retry errors
+        try:
+            if self.socket:
+                print("Sending STOP command to robot (port 1025)...")
+                self._send_command_safe(self.socket, "STOP")
+        except Exception as e:
+            print(f"Warning: Could not send STOP to port 1025: {e}")
+        
+        try:
+            if hasattr(self, 'socket2') and self.socket2:
+                print("Sending STOP command to robot (port 1026)...")
+                self._send_command_safe(self.socket2, "STOP")
+        except Exception as e:
+            print(f"Warning: Could not send STOP to port 1026: {e}")
+        
+        # Small delay to ensure STOP commands are processed
+        time.sleep(0.1)
+        
+        # Now close the connections
         if self.socket:
             self.socket.close()
             print("Disconnected from ABB robot (port 1025)")
         if hasattr(self, 'socket2') and self.socket2:
             self.socket2.close()
             print("Disconnected from ABB robot (port 1026)")
+        
+        # Mark as disconnected
+        self.is_connected = False
     
     def draw_paths(self, drawing_points, move_delay=0.02, use_batching=None, batch_size=8, progress_callback=None):
         """
