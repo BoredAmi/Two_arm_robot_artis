@@ -371,9 +371,9 @@ class SimpleRobotGUI:
         
         # Tile 1: Take Picture (Top Left) - Full button
         self.take_photo_btn = tk.Button(grid_frame, 
-                                      text="1. TAKE PICTURE\n\n📷\n\nClick to capture photo",
+                                      text="1. TAKE PICTURE\n\n📷",
                                       command=self.get_picture_from_robot,
-                                      font=('Arial', 18, 'bold'), bg=self.COLORS['take_photo'], fg='white',
+                                      font=('Arial', 22, 'bold'), bg=self.COLORS['take_photo'], fg='white',
                                       relief=tk.RAISED, bd=3, cursor='hand2')
         self.take_photo_btn.grid(row=0, column=0, sticky='nsew', padx=5, pady=5)
         
@@ -386,7 +386,7 @@ class SimpleRobotGUI:
         header_frame.pack(fill=tk.X)
         header_frame.pack_propagate(False)  # Maintain fixed height
         
-        tk.Label(header_frame, text="2. SEE YOUR PHOTO", font=('Arial', 18, 'bold'), 
+        tk.Label(header_frame, text="2. SEE YOUR PHOTO", font=('Arial', 22, 'bold'), 
                 bg=self.COLORS['photo_preview'], fg='white').pack(pady=5)
         
         # Fixed size image preview container
@@ -577,9 +577,9 @@ class SimpleRobotGUI:
         
         # Tile 4: Start Drawing (Bottom Right) - Single column, equal size
         self.start_drawing_btn = tk.Button(grid_frame, 
-                                         text="4. START DRAWING\n\n🤖\n\nBegin robot art!",
+                                         text="4. START DRAWING\n\n🤖",
                                          command=self.start_drawing,
-                                         font=('Arial', 16, 'bold'), bg=self.COLORS['start_drawing'], fg='white',
+                                         font=('Arial', 22, 'bold'), bg=self.COLORS['start_drawing'], fg='white',
                                          relief=tk.RAISED, bd=3, cursor='hand2')
         self.start_drawing_btn.grid(row=1, column=1, sticky='nsew', padx=5, pady=5)  # column=1 not 2!
         
@@ -665,18 +665,18 @@ class SimpleRobotGUI:
         # Add grayed-out text labels on the triangles
         canvas.create_text(
             width * 0.25, height * 0.25,  # Upper-left quadrant
-            text="👤 PORTRAIT\nFace Drawing",
+            text="👤 PORTRAIT",
             fill='#757575',  # Gray text (disabled)
-            font=('Arial', 14, 'bold'),
+            font=('Arial', 22, 'bold'),
             justify=tk.CENTER,
             tags="portrait_text_disabled"
         )
         
         canvas.create_text(
             width * 0.75, height * 0.75,  # Lower-right quadrant  
-            text="😄 CARICATURE\nFun Cartoon",
+            text="😄 CARICATURE",
             fill='#757575',  # Gray text (disabled)
-            font=('Arial', 14, 'bold'),
+            font=('Arial', 22, 'bold'),
             justify=tk.CENTER,
             tags="caricature_text_disabled"
         )
@@ -734,18 +734,18 @@ class SimpleRobotGUI:
         # Add text labels on the triangles
         canvas.create_text(
             width * 0.25, height * 0.25,  # Upper-left quadrant
-            text="👤 PORTRAIT\nFace Drawing",
+            text="👤 PORTRAIT",
             fill='white',
-            font=('Arial', 14, 'bold'),
+            font=('Arial', 22, 'bold'),
             justify=tk.CENTER,
             tags="portrait_text"
         )
         
         canvas.create_text(
             width * 0.75, height * 0.75,  # Lower-right quadrant  
-            text="😄 CARICATURE\nFun Cartoon",
+            text="😄 CARICATURE",
             fill='white',
-            font=('Arial', 14, 'bold'),
+            font=('Arial', 22, 'bold'),
             justify=tk.CENTER,
             tags="caricature_text"
         )
