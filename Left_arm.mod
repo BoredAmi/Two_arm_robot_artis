@@ -290,8 +290,9 @@ MODULE Module1
 
     PROC setup_corner()
         current_wobject:=const_kartka;
+        current_z:=z_up;
         base_position:=  [[10.57,13.92,93.28],[0.747182,-0.00110485,-0.664604,0.00436478],[-1,0,2,4],[-167.54,9E+09,9E+09,9E+09,9E+09,9E+09]];
-        MoveJ Offs(base_position,290,0,0),fast_speed,fine,tool1\WObj:=current_wobject;
+        MoveJ Offs(base_position,290,0,-10),fast_speed,fine,tool1\WObj:=current_wobject;
         target_position:=offs(base_position,290,0,0);
         SendResponse("OK");
     ENDPROC

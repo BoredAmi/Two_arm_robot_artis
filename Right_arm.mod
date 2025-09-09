@@ -293,8 +293,9 @@ MODULE DrawingModule
     
     PROC setup_corner()
         current_wobject:=const_kartka;
+        current_z:=z_up;
         base_position:=  [[20.53,14.09,95.81],[0.0236703,-0.671026,0.0261252,-0.740595],[1,0,-2,4],[159.113,9E+09,9E+09,9E+09,9E+09,9E+09]];
-        MoveJ Offs(base_position,0,0,0),fast_speed,fine,tool1\WObj:=current_wobject;
+        MoveJ Offs(base_position,0,0,-10),fast_speed,fine,tool1\WObj:=current_wobject;
         SendResponse("OK");
     ENDPROC
 ENDMODULE
