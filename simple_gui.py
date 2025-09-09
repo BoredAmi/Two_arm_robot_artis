@@ -76,12 +76,15 @@ class SimpleRobotGUI:
         'section_bg': 'white',
         'header_bg': '#2196F3',
         'header_text': 'white',
-        'button_connect': '#FF9800',
+
+        'take_photo': '#1B4965',
+        'portrait': '#BEE9E8',
+        'start_drawing': '#62B6CB',
+        'caricature': '#CAE9FF',
+        'photo_preview': '#5FA8D3',
+
         'button_draw': '#4CAF50',
         'button_stop': '#f44336',
-        'button_templates': '#607D8B',
-        'button_canvas': '#9C27B0',
-        'status_bg': '#e0e0e0'
     }
     
     def __init__(self):
@@ -370,21 +373,21 @@ class SimpleRobotGUI:
         self.take_photo_btn = tk.Button(grid_frame, 
                                       text="1. TAKE PICTURE\n\n📷\n\nClick to capture photo",
                                       command=self.get_picture_from_robot,
-                                      font=('Arial', 18, 'bold'), bg='#2196F3', fg='white',
+                                      font=('Arial', 18, 'bold'), bg=self.COLORS['take_photo'], fg='white',
                                       relief=tk.RAISED, bd=3, cursor='hand2')
         self.take_photo_btn.grid(row=0, column=0, sticky='nsew', padx=5, pady=5)
         
         # Tile 2: See Photo (Top Right) - Single column, equal size
-        self.preview_frame = tk.Frame(grid_frame, bg='#4CAF50', relief=tk.RAISED, bd=3)
+        self.preview_frame = tk.Frame(grid_frame, bg=self.COLORS['photo_preview'], relief=tk.RAISED, bd=3)
         self.preview_frame.grid(row=0, column=1, sticky='nsew', padx=5, pady=5)  # NO COLUMNSPAN!
         
         # Fixed height header
-        header_frame = tk.Frame(self.preview_frame, bg='#4CAF50', height=40)
+        header_frame = tk.Frame(self.preview_frame, bg=self.COLORS['photo_preview'], height=40)
         header_frame.pack(fill=tk.X)
         header_frame.pack_propagate(False)  # Maintain fixed height
         
         tk.Label(header_frame, text="2. SEE YOUR PHOTO", font=('Arial', 18, 'bold'), 
-                bg='#4CAF50', fg='white').pack(pady=5)
+                bg=self.COLORS['photo_preview'], fg='white').pack(pady=5)
         
         # Fixed size image preview container
         preview_container = tk.Frame(self.preview_frame, bg='lightgray', height=160)
@@ -415,7 +418,7 @@ class SimpleRobotGUI:
         # Row 0 - Full width Portrait
         self.portrait_btn1 = tk.Button(
             self.style_frame, text="👤 PORTRAIT", font=("Arial", 15, "bold"),
-            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['portrait'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("portrait")
         )
         self.portrait_btn1.grid(row=0, column=0, columnspan=20, sticky="nsew", padx=1, pady=1)
@@ -423,7 +426,7 @@ class SimpleRobotGUI:
         # Row 1 - 18/20 width Portrait
         self.portrait_btn2 = tk.Button(
             self.style_frame, text="Face Drawing", font=("Arial", 13, "bold"),
-            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['portrait'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("portrait")
         )
         self.portrait_btn2.grid(row=1, column=0, columnspan=18, sticky="nsew", padx=1, pady=1)
@@ -431,7 +434,7 @@ class SimpleRobotGUI:
         # Row 2 - 16/20 width Portrait
         self.portrait_btn3 = tk.Button(
             self.style_frame, text="Style", font=("Arial", 12, "bold"),
-            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['portrait'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("portrait")
         )
         self.portrait_btn3.grid(row=2, column=0, columnspan=16, sticky="nsew", padx=1, pady=1)
@@ -439,7 +442,7 @@ class SimpleRobotGUI:
         # Row 3 - 14/20 width Portrait
         self.portrait_btn4 = tk.Button(
             self.style_frame, text="Natural", font=("Arial", 11, "bold"),
-            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['portrait'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("portrait")
         )
         self.portrait_btn4.grid(row=3, column=0, columnspan=14, sticky="nsew", padx=1, pady=1)
@@ -447,7 +450,7 @@ class SimpleRobotGUI:
         # Row 4 - 12/20 width Portrait
         self.portrait_btn5 = tk.Button(
             self.style_frame, text="Realistic", font=("Arial", 10, "bold"),
-            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['portrait'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("portrait")
         )
         self.portrait_btn5.grid(row=4, column=0, columnspan=12, sticky="nsew", padx=1, pady=1)
@@ -455,7 +458,7 @@ class SimpleRobotGUI:
         # Row 5 - 10/20 width Portrait
         self.portrait_btn6 = tk.Button(
             self.style_frame, text="Art", font=("Arial", 9, "bold"),
-            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['portrait'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("portrait")
         )
         self.portrait_btn6.grid(row=5, column=0, columnspan=10, sticky="nsew", padx=1, pady=1)
@@ -463,7 +466,7 @@ class SimpleRobotGUI:
         # Row 6 - 8/20 width Portrait
         self.portrait_btn7 = tk.Button(
             self.style_frame, text="Pro", font=("Arial", 8, "bold"),
-            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['portrait'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("portrait")
         )
         self.portrait_btn7.grid(row=6, column=0, columnspan=8, sticky="nsew", padx=1, pady=1)
@@ -471,7 +474,7 @@ class SimpleRobotGUI:
         # Row 7 - 6/20 width Portrait
         self.portrait_btn8 = tk.Button(
             self.style_frame, text="✓", font=("Arial", 8, "bold"),
-            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['portrait'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("portrait")
         )
         self.portrait_btn8.grid(row=7, column=0, columnspan=6, sticky="nsew", padx=1, pady=1)
@@ -479,7 +482,7 @@ class SimpleRobotGUI:
         # Row 8 - 4/20 width Portrait
         self.portrait_btn9 = tk.Button(
             self.style_frame, text="◆", font=("Arial", 7, "bold"),
-            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['portrait'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("portrait")
         )
         self.portrait_btn9.grid(row=8, column=0, columnspan=4, sticky="nsew", padx=1, pady=1)
@@ -487,7 +490,7 @@ class SimpleRobotGUI:
         # Row 9 - 2/20 width Portrait
         self.portrait_btn10 = tk.Button(
             self.style_frame, text="•", font=("Arial", 7, "bold"),
-            bg="#FF9800", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['portrait'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("portrait")
         )
         self.portrait_btn10.grid(row=9, column=0, columnspan=2, sticky="nsew", padx=1, pady=1)
@@ -496,7 +499,7 @@ class SimpleRobotGUI:
         # Row 1 - 2/20 width Caricature (right side)
         self.caricature_btn1 = tk.Button(
             self.style_frame, text="😄", font=("Arial", 13, "bold"),
-            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['caricature'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("caricature")
         )
         self.caricature_btn1.grid(row=1, column=18, columnspan=2, sticky="nsew", padx=1, pady=1)
@@ -504,7 +507,7 @@ class SimpleRobotGUI:
         # Row 2 - 4/20 width Caricature
         self.caricature_btn2 = tk.Button(
             self.style_frame, text="Fun", font=("Arial", 12, "bold"),
-            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['caricature'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("caricature")
         )
         self.caricature_btn2.grid(row=2, column=16, columnspan=4, sticky="nsew", padx=1, pady=1)
@@ -512,7 +515,7 @@ class SimpleRobotGUI:
         # Row 3 - 6/20 width Caricature
         self.caricature_btn3 = tk.Button(
             self.style_frame, text="Cartoon", font=("Arial", 11, "bold"),
-            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['caricature'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("caricature")
         )
         self.caricature_btn3.grid(row=3, column=14, columnspan=6, sticky="nsew", padx=1, pady=1)
@@ -520,7 +523,7 @@ class SimpleRobotGUI:
         # Row 4 - 8/20 width Caricature
         self.caricature_btn4 = tk.Button(
             self.style_frame, text="Funny", font=("Arial", 10, "bold"),
-            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['caricature'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("caricature")
         )
         self.caricature_btn4.grid(row=4, column=12, columnspan=8, sticky="nsew", padx=1, pady=1)
@@ -528,7 +531,7 @@ class SimpleRobotGUI:
         # Row 5 - 10/20 width Caricature
         self.caricature_btn5 = tk.Button(
             self.style_frame, text="Exaggerated", font=("Arial", 9, "bold"),
-            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['caricature'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("caricature")
         )
         self.caricature_btn5.grid(row=5, column=10, columnspan=10, sticky="nsew", padx=1, pady=1)
@@ -536,7 +539,7 @@ class SimpleRobotGUI:
         # Row 6 - 12/20 width Caricature
         self.caricature_btn6 = tk.Button(
             self.style_frame, text="Stylized", font=("Arial", 8, "bold"),
-            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['caricature'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("caricature")
         )
         self.caricature_btn6.grid(row=6, column=8, columnspan=12, sticky="nsew", padx=1, pady=1)
@@ -544,7 +547,7 @@ class SimpleRobotGUI:
         # Row 7 - 14/20 width Caricature
         self.caricature_btn7 = tk.Button(
             self.style_frame, text="Comedy", font=("Arial", 8, "bold"),
-            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['caricature'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("caricature")
         )
         self.caricature_btn7.grid(row=7, column=6, columnspan=14, sticky="nsew", padx=1, pady=1)
@@ -552,7 +555,7 @@ class SimpleRobotGUI:
         # Row 8 - 16/20 width Caricature
         self.caricature_btn8 = tk.Button(
             self.style_frame, text="Express", font=("Arial", 7, "bold"),
-            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['caricature'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("caricature")
         )
         self.caricature_btn8.grid(row=8, column=4, columnspan=16, sticky="nsew", padx=1, pady=1)
@@ -560,7 +563,7 @@ class SimpleRobotGUI:
         # Row 9 - 18/20 width Caricature (almost full)
         self.caricature_btn9 = tk.Button(
             self.style_frame, text="🎭 SELECT CARICATURE", font=("Arial", 7, "bold"),
-            bg="#9C27B0", fg="white", relief="flat", bd=0, cursor='hand2',
+            bg=self.COLORS['caricature'], fg="white", relief="flat", bd=0, cursor='hand2',
             command=lambda: self.set_style_and_convert("caricature")
         )
         self.caricature_btn9.grid(row=9, column=2, columnspan=18, sticky="nsew", padx=1, pady=1)
@@ -576,7 +579,7 @@ class SimpleRobotGUI:
         self.start_drawing_btn = tk.Button(grid_frame, 
                                          text="4. START DRAWING\n\n🤖\n\nBegin robot art!",
                                          command=self.start_drawing,
-                                         font=('Arial', 16, 'bold'), bg='#E91E63', fg='white',
+                                         font=('Arial', 16, 'bold'), bg=self.COLORS['start_drawing'], fg='white',
                                          relief=tk.RAISED, bd=3, cursor='hand2')
         self.start_drawing_btn.grid(row=1, column=1, sticky='nsew', padx=5, pady=5)  # column=1 not 2!
         
@@ -708,7 +711,7 @@ class SimpleRobotGUI:
         ]
         canvas.create_polygon(
             portrait_triangle,
-            fill='#FF9800',     # Orange background
+            fill=self.COLORS['portrait'],     # Orange background
             outline='#E65100',  # Darker orange border
             width=3,
             tags="portrait_triangle"
@@ -722,7 +725,7 @@ class SimpleRobotGUI:
         ]
         canvas.create_polygon(
             caricature_triangle,
-            fill='#9C27B0',     # Purple background
+            fill=self.COLORS['caricature'],     # Purple background
             outline='#6A1B9A',  # Darker purple border
             width=3,
             tags="caricature_triangle"
@@ -843,7 +846,7 @@ class SimpleRobotGUI:
         # Take Photo button (main action)
         self.take_photo_btn = tk.Button(buttons_frame, text="📷 TAKE PHOTO", 
             command=self.get_picture_from_robot,
-            bg='#2196F3', fg='white', font=('Arial', 16, 'bold'), relief='flat', 
+            bg=self.COLORS['take_photo'], fg='white', font=('Arial', 16, 'bold'), relief='flat', 
             padx=40, pady=20, cursor='hand2', width=20)
         self.take_photo_btn.pack(pady=(0, 15))
 
@@ -879,7 +882,7 @@ class SimpleRobotGUI:
         connection_frame.pack(fill=tk.X, pady=(15, 10))
         
         tk.Label(connection_frame, text="Robot Connection:", font=('Arial', 11, 'bold'), 
-                bg='white', fg='#2196F3').pack(anchor='w', pady=(0, 8))
+                bg='white', fg=self.COLORS['take_photo']).pack(anchor='w', pady=(0, 8))
         
         # IP Address row
         ip_row = tk.Frame(connection_frame, bg='white')
@@ -936,7 +939,7 @@ class SimpleRobotGUI:
         # Browse button
         browse_btn = tk.Button(self.file_section, text="Browse Images", 
                 command=self.browse_image,
-                bg='#4CAF50', fg='white', font=self.BUTTON_FONT,
+                bg=self.COLORS['photo_preview'], fg='white', font=self.BUTTON_FONT,
                 relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
         browse_btn.pack(side=tk.RIGHT, padx=(10, 0))
         
@@ -950,7 +953,7 @@ class SimpleRobotGUI:
         
         draw_btn = tk.Button(draw_controls, text="🎨 Open Drawing Canvas", 
                 command=self.open_drawing_window,
-                bg='#9C27B0', fg='white', font=self.BUTTON_FONT,
+                bg=self.COLORS['caricature'], fg='white', font=self.BUTTON_FONT,
                 relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
         draw_btn.pack(side=tk.LEFT, padx=(0, 10))
         
@@ -1220,7 +1223,7 @@ class SimpleRobotGUI:
         # Connect button (prominent)
         self.connect_btn = tk.Button(status_frame, text="🔗 CONNECT ROBOT", 
             command=self.toggle_connection,
-            bg='#FF9800', fg='white', font=('Arial', 16, 'bold'),
+            bg=self.COLORS['portrait'], fg='white', font=('Arial', 16, 'bold'),
             relief='flat', padx=40, pady=20, cursor='hand2', width=20)
         self.connect_btn.pack()
         
@@ -1263,7 +1266,7 @@ class SimpleRobotGUI:
         # Normal drawing (default)
         self.normal_btn = tk.Button(effects_buttons, text="📄 Normal\nDrawing", 
             command=lambda: self.set_drawing_mode('normal'),
-            bg='#4CAF50', fg='white', font=('Arial', 12, 'bold'),
+            bg=self.COLORS['photo_preview'], fg='white', font=('Arial', 12, 'bold'),
             relief='flat', padx=20, pady=15, cursor='hand2', width=12,
             state='disabled')
         self.normal_btn.pack(side=tk.LEFT, padx=(0, 15))
@@ -1271,7 +1274,7 @@ class SimpleRobotGUI:
         # Portrait mode
         self.face_drawing_btn = tk.Button(effects_buttons, text="👤 Portrait\nMode", 
             command=self.convert_to_face_drawing,
-            bg='#E91E63', fg='white', font=('Arial', 12, 'bold'),
+            bg=self.COLORS['start_drawing'], fg='white', font=('Arial', 12, 'bold'),
             relief='flat', padx=20, pady=15, cursor='hand2', width=12,
             state='disabled')
         self.face_drawing_btn.pack(side=tk.LEFT, padx=(0, 15))
@@ -1279,7 +1282,7 @@ class SimpleRobotGUI:
         # Caricature mode  
         self.caricature_btn = tk.Button(effects_buttons, text="🎭 Caricature\nMode", 
             command=self.convert_to_caricature,
-            bg='#FF9800', fg='white', font=('Arial', 12, 'bold'),
+            bg=self.COLORS['portrait'], fg='white', font=('Arial', 12, 'bold'),
             relief='flat', padx=20, pady=15, cursor='hand2', width=12,
             state='disabled')
         self.caricature_btn.pack(side=tk.LEFT)
@@ -1290,7 +1293,7 @@ class SimpleRobotGUI:
 
         self.draw_btn = tk.Button(start_frame, text="🎨 START DRAWING", 
             command=self.start_robot_drawing,
-            bg='#4CAF50', fg='white', font=('Arial', 18, 'bold'),
+            bg=self.COLORS['photo_preview'], fg='white', font=('Arial', 18, 'bold'),
             relief='flat', padx=50, pady=25, cursor='hand2', width=25,
             state='disabled')
         self.draw_btn.pack()
@@ -1580,7 +1583,7 @@ class SimpleRobotGUI:
             self._current_anim = FuncAnimation(ax.figure, update, frames=len(steps), interval=1200, repeat=False)
             canvas.draw_idle()
 
-        anim_btn = tk.Button(self.detail_window, text="Animate Dual-Arm Paths", command=start_animation, bg="#2196F3", fg="white", font=("Arial", 10, "bold"))
+        anim_btn = tk.Button(self.detail_window, text="Animate Dual-Arm Paths", command=start_animation, bg=self.COLORS['take_photo'], fg="white", font=("Arial", 10, "bold"))
 
         anim_btn.pack(side=tk.TOP, pady=8)
 
@@ -1620,7 +1623,7 @@ class SimpleRobotGUI:
                 ax.text(0, 0, 'No point data to animate!', ha='center', va='center', color='red', fontsize=14)
             canvas.draw_idle()
 
-        anim_point_btn = tk.Button(self.detail_window, text="Animate Point by Point (fast)", command=start_point_animation, bg="#4CAF50", fg="white", font=("Arial", 10, "bold"))
+        anim_point_btn = tk.Button(self.detail_window, text="Animate Point by Point (fast)", command=start_point_animation, bg=self.COLORS['photo_preview'], fg="white", font=("Arial", 10, "bold"))
         anim_point_btn.pack(side=tk.TOP, pady=4)
 
     def _detail_scroll_zoom(self, event, ax, canvas):
@@ -2180,12 +2183,12 @@ class SimpleRobotGUI:
         clear_btn.pack(side=tk.LEFT, padx=(0, 10))
         
         save_btn = tk.Button(controls_frame, text="💾 Save Drawing", command=self.save_drawing,
-                            bg='#4CAF50', fg='white', font=('Arial', 10, 'bold'),
+                            bg=self.COLORS['photo_preview'], fg='white', font=('Arial', 10, 'bold'),
                             relief='flat', padx=15, pady=5)
         save_btn.pack(side=tk.LEFT, padx=(0, 10))
         
         use_btn = tk.Button(controls_frame, text="✅ Use Drawing", command=self.use_drawing,
-                           bg='#2196F3', fg='white', font=('Arial', 10, 'bold'),
+                           bg=self.COLORS['take_photo'], fg='white', font=('Arial', 10, 'bold'),
                            relief='flat', padx=15, pady=5)
         use_btn.pack(side=tk.LEFT)
         
@@ -2268,7 +2271,7 @@ class SimpleRobotGUI:
         # Browse button
         browse_btn = tk.Button(file_section, text="📁 Browse Images", 
                 command=self.browse_image,
-                bg='#4CAF50', fg='white', font=('Arial', 11, 'bold'),
+                bg=self.COLORS['photo_preview'], fg='white', font=('Arial', 11, 'bold'),
                 relief='flat', padx=20, pady=10, cursor='hand2')
         browse_btn.pack(pady=(0, 5))
         
@@ -2283,7 +2286,7 @@ class SimpleRobotGUI:
         
         draw_btn = tk.Button(draw_controls, text="🎨 Open Drawing Canvas", 
                 command=self.open_drawing_window,
-                bg='#9C27B0', fg='white', font=('Arial', 11, 'bold'),
+                bg=self.COLORS['caricature'], fg='white', font=('Arial', 11, 'bold'),
                 relief='flat', padx=20, pady=10, cursor='hand2')
         draw_btn.pack(side=tk.LEFT, padx=(0, 10))
         
@@ -2479,7 +2482,7 @@ class SimpleRobotGUI:
         
         self.connect_btn = tk.Button(button_frame, text="Connect to Robot", 
                                    command=self.toggle_connection,
-                                   font=('Arial', 12, 'bold'), bg='#4CAF50', fg='white',
+                                   font=('Arial', 12, 'bold'), bg=self.COLORS['photo_preview'], fg='white',
                                    width=20, height=2, relief=tk.RAISED, bd=2)
         self.connect_btn.pack(pady=5)
         
@@ -3149,7 +3152,7 @@ class SimpleRobotGUI:
             # Disconnect
             self.drawer.disconnect()
             self.is_connected = False
-            self.connect_btn.config(text="Connect", bg='#FF9800')
+            self.connect_btn.config(text="Connect", bg=self.COLORS['portrait'])
             self.conn_status_label.config(text="⚫ Not Connected", fg='#f44336')
             self.status_text.set("Disconnected from robot")
     
@@ -3185,7 +3188,7 @@ class SimpleRobotGUI:
         """Handle successful connection"""
         self.is_connected = True
         self.connect_btn.config(text="Disconnect", bg='#f44336', state='normal')
-        self.conn_status_label.config(text="🟢 Connected", fg='#4CAF50')
+        self.conn_status_label.config(text="🟢 Connected", fg=self.COLORS['photo_preview'])
         
         # Update robot status in the new tile interface
         if hasattr(self, 'robot_status'):
@@ -3271,13 +3274,13 @@ class SimpleRobotGUI:
         if hasattr(self, 'conn_status_label'):
             # Update connection status
             if self.is_connected:
-                self.conn_status_label.config(text="🟢 Robot Connected", fg='#4CAF50')
+                self.conn_status_label.config(text="🟢 Robot Connected", fg=self.COLORS['photo_preview'])
                 if hasattr(self, 'connect_btn'):
                     self.connect_btn.config(text="🔗 Disconnect", bg='#f44336')
             else:
                 self.conn_status_label.config(text="⚫ Robot Not Connected", fg='#f44336')
                 if hasattr(self, 'connect_btn'):
-                    self.connect_btn.config(text="🔗 Connect Robot", bg='#FF9800')
+                    self.connect_btn.config(text="🔗 Connect Robot", bg=self.COLORS['portrait'])
         
         # Keep compatibility with old dual_info_label if it exists
         if hasattr(self, 'dual_info_label'):
@@ -3383,7 +3386,7 @@ class SimpleRobotGUI:
             controls_frame,
             text="📸 TAKE PHOTO",
             font=('Arial', 18, 'bold'),
-            bg='#4CAF50',
+            bg=self.COLORS['photo_preview'],
             fg='white',
             relief='raised',
             bd=4,
@@ -3442,7 +3445,7 @@ class SimpleRobotGUI:
             if not ret:
                 raise Exception("Could not read from camera")
             
-            self.camera_status.config(text="✅ Camera ready - Position yourself and click 'Take Photo'", fg='#4CAF50')
+            self.camera_status.config(text="✅ Camera ready - Position yourself and click 'Take Photo'", fg=self.COLORS['photo_preview'])
             self.capture_btn.config(state='normal')
             
             # Start video preview immediately
@@ -4289,7 +4292,7 @@ class SimpleRobotGUI:
         if hasattr(self, 'draw_btn'): 
             self.draw_btn.config(state='normal')
         if hasattr(self, 'start_drawing_btn'): 
-            self.start_drawing_btn.config(state='normal', text="START\nDRAWING", bg='#E91E63')
+            self.start_drawing_btn.config(state='normal', text="START\nDRAWING", bg=self.COLORS['start_drawing'])
         
         self.progress_indicator.config(text="🎉 Complete")
         self.status_text.set("Drawing completed successfully!")
@@ -4333,7 +4336,7 @@ class SimpleRobotGUI:
         if hasattr(self, 'draw_btn'): 
             self.draw_btn.config(state='normal')
         if hasattr(self, 'start_drawing_btn'): 
-            self.start_drawing_btn.config(state='normal', text="START\nDRAWING", bg='#E91E63')
+            self.start_drawing_btn.config(state='normal', text="START\nDRAWING", bg=self.COLORS['start_drawing'])
             
         self.progress_indicator.config(text="❌ Failed")
         self.status_text.set("Drawing failed")
@@ -4356,7 +4359,7 @@ class SimpleRobotGUI:
         if hasattr(self, 'draw_btn'): 
             self.draw_btn.config(state='normal')
         if hasattr(self, 'start_drawing_btn'): 
-            self.start_drawing_btn.config(state='normal', text="START\nDRAWING", bg='#E91E63')
+            self.start_drawing_btn.config(state='normal', text="START\nDRAWING", bg=self.COLORS['start_drawing'])
             
         self.progress_indicator.config(text="❌ Error")
         self.status_text.set("Drawing error")
@@ -4414,7 +4417,7 @@ class SimpleRobotGUI:
                     # Create semi-transparent overlay
                     self.conversion_overlay = self.original_canvas.create_rectangle(
                         0, 0, canvas_width, canvas_height, 
-                        fill='#2196F3', stipple='gray50', tags="conversion_overlay")
+                        fill=self.COLORS['take_photo'], stipple='gray50', tags="conversion_overlay")
                     
                     # Create large centered text
                     self.conversion_text = self.original_canvas.create_text(
@@ -4693,12 +4696,12 @@ class SimpleRobotGUI:
                 self.face_drawing_btn.config(
                     state='normal', 
                     text="👤 Face\nDrawing", 
-                    bg='#E91E63', 
+                    bg=self.COLORS['start_drawing'], 
                     fg='white',
                     relief='flat'
                 )
             if hasattr(self, 'caricature_btn'):
-                self.caricature_btn.config(state='normal', bg='#FF9800')
+                self.caricature_btn.config(state='normal', bg=self.COLORS['portrait'])
             if hasattr(self, 'progress_indicator'):
                 self.progress_indicator.config(text="✅ Line Art Ready")
             
@@ -4723,12 +4726,12 @@ class SimpleRobotGUI:
             self.face_drawing_btn.config(
                 state='normal', 
                 text="👤 Face\nDrawing", 
-                bg='#E91E63', 
+                bg=self.COLORS['start_drawing'], 
                 fg='white',
                 relief='flat'
             )
         if hasattr(self, 'caricature_btn'):
-            self.caricature_btn.config(state='normal', bg='#FF9800')
+            self.caricature_btn.config(state='normal', bg=self.COLORS['portrait'])
         if hasattr(self, 'progress_indicator'):
             self.progress_indicator.config(text="❌ Failed")
         
@@ -4748,12 +4751,12 @@ class SimpleRobotGUI:
             self.face_drawing_btn.config(
                 state='normal', 
                 text="👤 Face\nDrawing", 
-                bg='#E91E63', 
+                bg=self.COLORS['start_drawing'], 
                 fg='white',
                 relief='flat'
             )
         if hasattr(self, 'caricature_btn'):
-            self.caricature_btn.config(state='normal', bg='#FF9800')
+            self.caricature_btn.config(state='normal', bg=self.COLORS['portrait'])
         if hasattr(self, 'progress_indicator'):
             self.progress_indicator.config(text="❌ Error")
         
@@ -4852,12 +4855,12 @@ class SimpleRobotGUI:
                 self.caricature_btn.config(
                     state='normal', 
                     text="🎭 Caricature", 
-                    bg='#FF9800', 
+                    bg=self.COLORS['portrait'], 
                     fg='white',
                     relief='flat'
                 )
             if hasattr(self, 'face_drawing_btn'):
-                self.face_drawing_btn.config(state='normal', bg='#E91E63')
+                self.face_drawing_btn.config(state='normal', bg=self.COLORS['start_drawing'])
             if hasattr(self, 'progress_indicator'):
                 self.progress_indicator.config(text="✅ Caricature Ready")
             
@@ -4882,12 +4885,12 @@ class SimpleRobotGUI:
             self.caricature_btn.config(
                 state='normal', 
                 text="🎭 Caricature", 
-                bg='#FF9800', 
+                bg=self.COLORS['portrait'], 
                 fg='white',
                 relief='flat'
             )
         if hasattr(self, 'face_drawing_btn'):
-            self.face_drawing_btn.config(state='normal', bg='#E91E63')
+            self.face_drawing_btn.config(state='normal', bg=self.COLORS['start_drawing'])
         if hasattr(self, 'progress_indicator'):
             self.progress_indicator.config(text="❌ Failed")
         
@@ -4907,12 +4910,12 @@ class SimpleRobotGUI:
             self.caricature_btn.config(
                 state='normal', 
                 text="🎭 Caricature", 
-                bg='#FF9800', 
+                bg=self.COLORS['portrait'], 
                 fg='white',
                 relief='flat'
             )
         if hasattr(self, 'face_drawing_btn'):
-            self.face_drawing_btn.config(state='normal', bg='#E91E63')
+            self.face_drawing_btn.config(state='normal', bg=self.COLORS['start_drawing'])
         if hasattr(self, 'progress_indicator'):
             self.progress_indicator.config(text="❌ Error")
         
