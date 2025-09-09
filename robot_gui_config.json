@@ -16,7 +16,7 @@
   "use_batch_mode": true,
   "drawing_mode": "load",
   "brush_size": 20,
-  "dual_arm_mode": false,
+  "dual_arm_mode": true,
   "text_prompt": "",
   "forbidden_buffer": 50
 }
