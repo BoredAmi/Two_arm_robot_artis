@@ -393,7 +393,7 @@ class RobotController:
         elif not results['right'] or not results['left']:
             print("Error in dual-robot drawing step.")
             return False
-        print("Dual-robot drawing with async contour sync completed!")
+        print("🤖 Dual-robot drawing with async contour sync completed!")
         return True
     """
     TCP/IP communication controller for ABB robots.
@@ -1087,7 +1087,7 @@ class RobotController:
         # Send stop command when done (only if not already in emergency stop)
         if not self.should_stop():
             self.send_stop()
-        print("Individual move drawing completed!")
+        print("🤖 Individual move drawing completed!")
         return True
 
 
@@ -1154,13 +1154,10 @@ class RobotController:
                 for i in range(0, len(remaining_points), batch_size_to_use):
                     batch = remaining_points[i:i + batch_size_to_use]
                     
-                    # Safety: do not send to left if batch contains forbidden points
-                    if self._contains_left_forbidden(batch):
-                        print(f"Refusing ultra-fast batch for contour {contour_idx + 1}: contains left-forbidden points")
-                        return False
-                    # Send this batch
+                    # Send this batch (always to right arm in single-arm mode)
+                    target = 'right'  # Single-arm mode always uses right arm
                     if len(batch) > 1:
-                        if not self.send_batch_moves_ultra_fast(batch, len(batch), target='right' if self.socket else 'right'):
+                        if not self.send_batch_moves_ultra_fast(batch, len(batch), target=target):
                             print(f"Failed to send batch moves for contour {contour_idx + 1}")
                             return False
                     else:
@@ -1191,7 +1188,7 @@ class RobotController:
         # Send stop command when done (only if not already in emergency stop)
         if not self.should_stop():
             self.send_stop()
-        print("Ultra-fast drawing with path optimization completed!")
+        print("🤖 Ultra-fast drawing with path optimization completed!")
         return True
 
     def send_batch_moves_ultra_fast(self, points, batch_size, target='right'):

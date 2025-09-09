@@ -1200,11 +1200,11 @@ class SimpleRobotGUI:
         # Forbidden buffer radius (for dual-arm forbidden zones)
         buffer_frame = tk.Frame(parent, bg='white')
         buffer_frame.pack(fill=tk.X, pady=(8, 0))
-        tk.Label(buffer_frame, text="Forbidden buffer (mm):", font=('Arial', 10, 'bold'), bg='white').pack(side=tk.LEFT)
+        tk.Label(buffer_frame, text="Dual-arm forbidden buffer (mm):", font=('Arial', 10, 'bold'), bg='white').pack(side=tk.LEFT)
         self.forbidden_buffer_var = tk.IntVar(value=40)
         buffer_spin = tk.Spinbox(buffer_frame, from_=0, to=200, width=5, textvariable=self.forbidden_buffer_var, font=('Arial', 9), command=lambda: self._on_forbidden_buffer_change())
         buffer_spin.pack(side=tk.LEFT, padx=(8, 5))
-        tk.Label(buffer_frame, text="mm", font=('Arial', 9), bg='white').pack(side=tk.LEFT)
+        tk.Label(buffer_frame, text="mm (only used in dual-arm mode)", font=('Arial', 9), bg='white', fg='#666').pack(side=tk.LEFT)
     
     def create_connection_section(self, parent):
         """Create minimal connection section - just status and connect"""
@@ -1419,6 +1419,12 @@ class SimpleRobotGUI:
 
         # --- Animation Button ---
         def start_animation():
+            # Check if dual-arm mode is enabled - only run dual-arm animation in dual-arm mode
+            if not self.dual_arm_mode.get():
+                import tkinter.messagebox as mb
+                mb.showinfo("Single-Arm Mode", "Dual-arm animation is only available in dual-arm mode.\n\nPlease enable 'Dual-arm drawing mode' in the Advanced Setup to see arm assignment animations.\n\nFor single-arm mode, use the 'Animate Point by Point' button below.")
+                return
+                
             # Build dual-assignment steps using master_slave_assign_contours
             from coordinate_transformer import master_slave_assign_contours
             from matplotlib.animation import FuncAnimation
@@ -1574,7 +1580,7 @@ class SimpleRobotGUI:
             self._current_anim = FuncAnimation(ax.figure, update, frames=len(steps), interval=1200, repeat=False)
             canvas.draw_idle()
 
-        anim_btn = tk.Button(self.detail_window, text="Animate Paths", command=start_animation, bg="#2196F3", fg="white", font=("Arial", 10, "bold"))
+        anim_btn = tk.Button(self.detail_window, text="Animate Dual-Arm Paths", command=start_animation, bg="#2196F3", fg="white", font=("Arial", 10, "bold"))
 
         anim_btn.pack(side=tk.TOP, pady=8)
 
@@ -1605,7 +1611,7 @@ class SimpleRobotGUI:
                 
                 self._current_anim = animate_points(
                     ax, self.drawer.drawing_points, colors=colors, arm_roles=arm_roles, interval=1,
-                    on_frame=lambda f: canvas.draw_idle(), show_left_forbidden=True, invert_y=False)
+                    on_frame=lambda f: canvas.draw_idle(), show_left_forbidden=self.dual_arm_mode.get(), invert_y=False)
                 canvas.draw_idle()
             else:
                 import tkinter.messagebox as mb
@@ -3782,7 +3788,14 @@ class SimpleRobotGUI:
 
         Stores the result in `self.forbidden_steps` as a list of dicts with keys:
         remaining, master_role, master, slave, forbidden
+        
+        Only runs in dual-arm mode. In single-arm mode, forbidden zones are not needed.
         """
+        # Only run forbidden zone calculations in dual-arm mode
+        if not self.dual_arm_mode.get():
+            self.forbidden_steps = []
+            return
+            
         try:
             from coordinate_transformer import master_slave_assign_contours
         except Exception:
@@ -4069,6 +4082,15 @@ class SimpleRobotGUI:
         # Start drawing immediately without confirmation
         import time
         self._draw_start_time = time.time()
+        
+        # Print start message to terminal
+        print(f"🚀 Starting robot drawing...")
+        print(f"📊 Total points to draw: {total_points}")
+        drawing_mode = "dual-arm" if self.dual_arm_mode.get() else "single-arm"
+        coord_system = "center" if self.use_center_origin.get() else "corner"
+        print(f"🤖 Mode: {drawing_mode}, Coordinates: {coord_system}")
+        print(f"⏰ Start time: {time.strftime('%H:%M:%S', time.localtime(self._draw_start_time))}")
+        
         # Update robot with current coordinate system before starting
         if hasattr(self.drawer, 'robot') and self.drawer.robot:
             self.drawer.robot.set_coordinate_system(self.use_center_origin.get())
@@ -4105,8 +4127,17 @@ class SimpleRobotGUI:
         thread.start()
     
     def emergency_stop(self):
-        """Emergency stop the drawing process"""
+        """ stop the drawing process"""
         if self.drawing_active:
+            # Print  stop message to terminal with timing if available
+            if hasattr(self, '_draw_start_time'):
+                elapsed = time.time() - self._draw_start_time
+                mins = int(elapsed // 60)
+                secs = int(elapsed % 60)
+                print(f"🛑  STOP triggered after {mins} min {secs} sec ({elapsed:.1f} seconds)")
+            else:
+                print(f"🛑  STOP triggered")
+
             self.drawing_active = False
             try:
                 # Send emergency stop to robot
@@ -4278,13 +4309,26 @@ class SimpleRobotGUI:
         if elapsed is not None:
             mins = int(elapsed // 60)
             secs = int(elapsed % 60)
+            # Print drawing time to terminal
+            print(f"🎉 Drawing completed successfully!")
+            print(f"⏱️  Total drawing time: {mins} min {secs} sec ({elapsed:.1f} seconds)")
             msg = f"Drawing completed successfully!\n\nTime taken: {mins} min {secs} sec"
         else:
+            print(f"🎉 Drawing completed successfully!")
             msg = "Drawing completed successfully!"
         # Drawing completed - status shown in GUI, no popup needed
     
     def _draw_failed(self):
         """Handle drawing failure"""
+        # Print failure message to terminal with timing if available
+        if hasattr(self, '_draw_start_time'):
+            elapsed = time.time() - self._draw_start_time
+            mins = int(elapsed // 60)
+            secs = int(elapsed % 60)
+            print(f"❌ Drawing failed after {mins} min {secs} sec ({elapsed:.1f} seconds)")
+        else:
+            print(f"❌ Drawing failed")
+            
         self.drawing_active = False
         if hasattr(self, 'draw_btn'): 
             self.draw_btn.config(state='normal')
