@@ -35,6 +35,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
+import math
 
 from voice_commands import VoiceCommandListener
 
@@ -282,6 +283,9 @@ class SimpleRobotGUI:
 
         # Update connection display with initial values
         self.root.after(100, self._update_connection_display)
+
+        # Try to load custom gear image on startup
+        self.load_custom_gear_image()
 
     def _load_config(self):
         try:
@@ -916,12 +920,12 @@ class SimpleRobotGUI:
                         font=('Arial', 12), bg=self.COLORS['background'], fg=self.COLORS['start_drawing'])
         self.progress_label.pack(side=tk.RIGHT)
         
-        # Settings button
-        self.settings_btn = self.make_touch_button(status_frame, text="⚙️ Settings", 
+        # Add settings button instead of test button
+        settings_btn = tk.Button(status_frame, text="⚙️ Settings", 
             command=self.open_setup_window,
-            font=('Arial', 10), bg=self.COLORS['photo_preview'], fg='white',
-            width=15, height=1)
-        self.settings_btn.pack(side=tk.RIGHT, padx=(10, 0))
+            bg=self.COLORS['photo_preview'], fg='white', font=('Arial', 8), relief='flat', 
+            padx=5, pady=2, cursor='hand2')
+        settings_btn.pack(side=tk.RIGHT, padx=(5, 0))
     
     def create_step_section(self, parent, title, content_func):
         """
@@ -1778,6 +1782,12 @@ class SimpleRobotGUI:
                                     font=('Arial', 9), bg=self.COLORS['background'], anchor='w', fg=self.COLORS['take_photo'])
         self.status_label.pack(side=tk.LEFT, padx=10, expand=True, fill=tk.X)
 
+        # Progress indicator label for conversion status
+        self.progress_indicator = tk.Label(status_frame, text="",
+                                          font=('Arial', 9, 'bold'), bg=self.COLORS['background'],
+                                          fg=self.COLORS['start_drawing'])
+        self.progress_indicator.pack(side=tk.RIGHT, padx=(0, 10))
+
         # Progress bar container (initially hidden)
         self.progress_container = tk.Frame(status_frame, bg=self.COLORS['background'])
 
@@ -1807,11 +1817,6 @@ class SimpleRobotGUI:
             fg=self.COLORS['take_photo']
         )
         self.bottom_progress_label.pack(side=tk.LEFT, padx=(5, 10))
-
-        # Progress indicator (for non-progress states)
-        self.progress_indicator = tk.Label(status_frame, text="",
-                                          font=('Arial', 9), bg=self.COLORS['background'], fg=self.COLORS['photo_preview'])
-        self.progress_indicator.pack(side=tk.RIGHT, padx=10)
 
     def _on_voice_command(self, cmd):
         """Internal callback from voice listener (worker thread).
@@ -2767,6 +2772,14 @@ class SimpleRobotGUI:
                                 font=('Arial', 10), command=lambda: self._on_forbidden_buffer_change())
         buffer_spin.pack(side=tk.LEFT, padx=(0, 5))
         tk.Label(buffer_frame, text="mm", font=('Arial', 10), bg='white').pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Custom Gear Settings Section
+        gear_section = tk.LabelFrame(main_frame, text="Custom Gear Animation", font=('Arial', 11, 'bold'),
+                                    bg='white', padx=15, pady=10)
+        gear_section.pack(fill=tk.X, pady=(15, 0))
+        
+        tk.Label(gear_section, text="The app uses 'gear.png' from the current directory as the spinning gear\nduring image conversions. This file must be present for the animation to work.", 
+                font=('Arial', 9), bg='white', fg='#666').pack(anchor='w', pady=(5, 0))
         
         tk.Label(buffer_section, text="Creates safety zones around robot positions in dual-arm mode", 
                 font=('Arial', 9), bg='white', fg='#666').pack(anchor='w', pady=(5, 0))
@@ -4543,42 +4556,220 @@ class SimpleRobotGUI:
         # Stop overlay animation
         self._stop_conversion_overlay()
     
+    def _create_gear_polygon(self, canvas, center_x, center_y, gear_size, rotation_angle=0):
+        """Create a gear from custom image (always available)"""
+        try:
+            # Rotate the image
+            rotated_image = self._rotate_image(self.custom_gear_image, rotation_angle)
+
+            # Calculate image position and size - fix the redundant min() call
+            image_size = gear_size * 2  # Scale appropriately
+            x1 = center_x - image_size // 2
+            y1 = center_y - image_size // 2
+            x2 = center_x + image_size // 2
+            y2 = center_y + image_size // 2
+
+            # Store reference to prevent garbage collection
+            self.current_gear_image = rotated_image
+
+            # Create image on canvas
+            gear_id = canvas.create_image(center_x, center_y, image=rotated_image, tags="conversion_overlay")
+
+            print(f"DEBUG: Gear created at ({center_x}, {center_y}) with size {image_size}")
+            return gear_id
+        except Exception as e:
+            print(f"Failed to use custom gear image: {e}")
+            # This should never happen since gear.png is always present
+            return None
+    
+    def _rotate_image(self, image, angle):
+        """Rotate a PIL image by the given angle"""
+        try:
+            from PIL import Image, ImageTk
+            # Convert angle to degrees if needed
+            angle_deg = math.degrees(angle) if angle != 0 else 0
+
+            # Rotate the image
+            rotated = image.rotate(-angle_deg, expand=True)  # Negative for clockwise rotation
+
+            # Convert back to PhotoImage for Tkinter and keep reference
+            photo_image = ImageTk.PhotoImage(rotated)
+
+            # Store reference to prevent garbage collection
+            if not hasattr(self, 'gear_image_refs'):
+                self.gear_image_refs = []
+            self.gear_image_refs.append(photo_image)
+
+            # Keep only the last few references to avoid memory buildup
+            if len(self.gear_image_refs) > 10:
+                self.gear_image_refs.pop(0)
+
+            print(f"DEBUG: Image rotated by {angle_deg}°")
+            return photo_image
+        except ImportError:
+            print("PIL not available for image rotation")
+            return image
+        except Exception as e:
+            print(f"Image rotation failed: {e}")
+            return image
+    
+    def load_custom_gear_image(self, image_path=None):
+        """Load gear.png from current directory (always present)"""
+        try:
+            from PIL import Image, ImageTk
+            import os
+            
+            gear_path = os.path.join(os.getcwd(), "gear.png")
+            # Load and resize the image
+            image = Image.open(gear_path)
+            
+            # Resize to a reasonable size (will be scaled later)
+            image = image.resize((100, 100), Image.Resampling.LANCZOS)
+            
+            # Store the PIL image for rotation
+            self.custom_gear_image = image
+            
+            # Create PhotoImage for immediate use
+            self.custom_gear_photo = ImageTk.PhotoImage(image)
+            
+            print(f"Custom gear loaded from: {gear_path}")
+            return True
+            
+        except ImportError:
+            print("PIL not available. Install with: pip install pillow")
+            return False
+        except Exception as e:
+            print(f"Failed to load gear.png: {e}")
+            return False
+    
+
     def _start_conversion_overlay(self, conversion_type):
         """Add animated overlay to image preview during conversion"""
+        print(f"DEBUG: _start_conversion_overlay called with {conversion_type}")
         try:
-            if hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
+            # Create overlay canvas on top of preview_label if it exists
+            if hasattr(self, 'preview_label') and self.preview_label.winfo_exists():
+                # Get preview_label position and size
+                preview_x = self.preview_label.winfo_x()
+                preview_y = self.preview_label.winfo_y()
+                preview_width = self.preview_label.winfo_width()
+                preview_height = self.preview_label.winfo_height()
+
+                if preview_width > 100 and preview_height > 100:  # Preview is properly sized
+                    # Get absolute position of preview_label
+                    preview_abs_x = self.preview_label.winfo_rootx() - self.root.winfo_rootx()
+                    preview_abs_y = self.preview_label.winfo_rooty() - self.root.winfo_rooty()
+
+                    # Create overlay canvas positioned over the preview_label
+                    self.overlay_canvas = tk.Canvas(
+                        self.root,  # Use root as parent for absolute positioning
+                        width=preview_width,
+                        height=preview_height,
+                        highlightthickness=0,
+                        bg='white'  # White background
+                    )
+
+                    # Position overlay canvas exactly over preview_label using absolute coordinates
+                    self.overlay_canvas.place(
+                        x=preview_abs_x,
+                        y=preview_abs_y,
+                        width=preview_width,
+                        height=preview_height
+                    )
+                    
+                    print(f"DEBUG: preview_label exists - size: {preview_width}x{preview_height}, pos: {preview_x},{preview_y}, abs: {preview_abs_x},{preview_abs_y}")
+                    
+                    # Create semi-transparent overlay with white background
+                    self.conversion_overlay = self.overlay_canvas.create_rectangle(
+                        0, 0, preview_width, preview_height,
+                        fill='white', tags="conversion_overlay")
+
+                    # Create large centered text with black color for contrast
+                    self.conversion_text = self.overlay_canvas.create_text(
+                        preview_width // 2, preview_height // 2 + 30,
+                        text=f"Converting to\n{conversion_type}...",
+                        fill='black', font=('Arial', 16, 'bold'),
+                        tags="conversion_overlay", justify='center')
+
+                    # Create spinning gear animation - responsive sizing
+                    gear_size = min(preview_width, preview_height) // 8  # Scale with canvas size
+                    gear_center_x = preview_width // 2
+                    gear_center_y = preview_height // 2 - 30
+
+                    # Create gear as a single polygon with integrated teeth - one color design
+                    self.gear_id = self._create_gear_polygon(self.overlay_canvas, gear_center_x, gear_center_y, gear_size, 0)
+                    
+                    # No gear center hole needed - using custom image
+
+                    # Start animations
+                    self.conversion_dots = 0
+                    self.gear_angle = 0
+                    print(f"DEBUG: Starting gear animation for {conversion_type}")
+                    self._animate_conversion_text(conversion_type)
+                    self._animate_spinning_gear()
+
+                    # Bring overlay to front
+                    try:
+                        self.overlay_canvas.lift()
+                        print(f"DEBUG: Overlay canvas lifted")
+                    except Exception as e:
+                        print(f"DEBUG: Could not lift overlay canvas: {e}")
+
+                    # Bind resize event to update overlay position and size
+                    self.root.bind('<Configure>', self._update_overlay_position)
+            elif hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
                 canvas_width = self.original_canvas.winfo_width()
                 canvas_height = self.original_canvas.winfo_height()
-                
+
                 if canvas_width > 100 and canvas_height > 100:  # Canvas is properly sized
-                    # Create semi-transparent overlay
+                    # Create semi-transparent overlay with white background
                     self.conversion_overlay = self.original_canvas.create_rectangle(
-                        0, 0, canvas_width, canvas_height, 
-                        fill=self.COLORS['take_photo'], stipple='gray50', tags="conversion_overlay")
-                    
-                    # Create large centered text
+                        0, 0, canvas_width, canvas_height,
+                        fill='white', tags="conversion_overlay")
+
+                    # Create large centered text with black color for contrast
                     self.conversion_text = self.original_canvas.create_text(
-                        canvas_width // 2, canvas_height // 2, 
-                        text=f"🔄 Converting to\n{conversion_type}...", 
-                        fill='white', font=('Arial', 16, 'bold'), 
+                        canvas_width // 2, canvas_height // 2 + 30,
+                        text=f"Converting to\n{conversion_type}...",
+                        fill='black', font=('Arial', 16, 'bold'),
                         tags="conversion_overlay", justify='center')
+
+                    # Create spinning gear animation - larger and more visible
+                    gear_size = 40  # Increased size
+                    gear_center_x = canvas_width // 2
+                    gear_center_y = canvas_height // 2 - 30
+
+                    # Create gear as a single polygon with integrated teeth - one color design
+                    self.gear_id = self._create_gear_polygon(self.original_canvas, gear_center_x, gear_center_y, gear_size, 0)
                     
-                    # Start text animation
+                    # No gear center hole needed - using custom image
+
+                    # Start animations
                     self.conversion_dots = 0
+                    self.gear_angle = 0
                     self._animate_conversion_text(conversion_type)
-        except Exception:
+                    self._animate_spinning_gear()
+        except Exception as e:
+            print(f"Error creating conversion overlay: {e}")
             pass
     
     def _animate_conversion_text(self, conversion_type):
         """Animate the conversion overlay text"""
         try:
-            if hasattr(self, 'conversion_text') and self.original_canvas.winfo_exists():
+            # Determine which canvas to use for animation
+            active_canvas = None
+            if hasattr(self, 'overlay_canvas') and self.overlay_canvas.winfo_exists():
+                active_canvas = self.overlay_canvas
+            elif hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
+                active_canvas = self.original_canvas
+            
+            if hasattr(self, 'conversion_text') and active_canvas:
                 # Cycle through different dot patterns
                 dots = "." * (self.conversion_dots % 4)
                 self.conversion_dots += 1
                 
                 # Update text with animated dots
-                self.original_canvas.itemconfig(
+                active_canvas.itemconfig(
                     self.conversion_text, 
                     text=f"🔄 Converting to\n{conversion_type}{dots}")
                 
@@ -4587,16 +4778,131 @@ class SimpleRobotGUI:
         except Exception:
             pass
     
+    def _animate_spinning_gear(self):
+        """Animate the spinning gear during conversion"""
+        try:
+            # Determine which canvas to use for animation
+            active_canvas = None
+            if hasattr(self, 'overlay_canvas') and self.overlay_canvas.winfo_exists():
+                active_canvas = self.overlay_canvas
+            elif hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
+                active_canvas = self.original_canvas
+
+            if active_canvas and hasattr(self, 'gear_id'):
+                canvas_width = active_canvas.winfo_width()
+                canvas_height = active_canvas.winfo_height()
+                gear_center_x = canvas_width // 2
+                gear_center_y = canvas_height // 2 - 30
+                gear_size = min(canvas_width, canvas_height) // 8  # Responsive sizing
+
+                # Update gear angle for rotation (slower for better visibility)
+                self.gear_angle = (self.gear_angle + 2) % 360  # Slower rotation
+
+                # Rotate the entire gear polygon by recreating it at the new angle
+                if hasattr(self, 'gear_id'):
+                    # Delete the old gear
+                    active_canvas.delete(self.gear_id)
+                    print(f"DEBUG: Deleted old gear, creating new one at angle {self.gear_angle}")
+                    # Create new gear at rotated position
+                    self.gear_id = self._create_gear_polygon(active_canvas, gear_center_x, gear_center_y, gear_size, self.gear_angle)
+
+                # Continue animation if still converting (check both overlay and original canvas)
+                should_continue = False
+                if hasattr(self, 'conversion_overlay') and self.conversion_overlay:
+                    should_continue = True
+                elif hasattr(self, 'original_canvas') and hasattr(self, 'conversion_text'):
+                    should_continue = True
+
+                if should_continue:
+                    print(f"DEBUG: Continuing animation, next frame in 80ms")
+                    self.root.after(80, self._animate_spinning_gear)  # Slower animation
+                else:
+                    print(f"DEBUG: Stopping animation - no conversion overlay found")
+        except Exception as e:
+            print(f"Animation error: {e}")
+            # Silently handle animation errors
+            pass
+    
+    def _update_overlay_position(self, event=None):
+        """Update overlay position and size when window is resized"""
+        try:
+            if hasattr(self, 'overlay_canvas') and self.overlay_canvas.winfo_exists():
+                if hasattr(self, 'preview_label') and self.preview_label.winfo_exists():
+                    # Get updated preview_label position and size
+                    preview_abs_x = self.preview_label.winfo_rootx() - self.root.winfo_rootx()
+                    preview_abs_y = self.preview_label.winfo_rooty() - self.root.winfo_rooty()
+                    preview_width = self.preview_label.winfo_width()
+                    preview_height = self.preview_label.winfo_height()
+
+                    # Update overlay canvas position and size
+                    self.overlay_canvas.place(
+                        x=preview_abs_x,
+                        y=preview_abs_y,
+                        width=preview_width,
+                        height=preview_height
+                    )
+
+                    # Update overlay rectangle size
+                    if hasattr(self, 'conversion_overlay'):
+                        self.overlay_canvas.coords(self.conversion_overlay, 0, 0, preview_width, preview_height)
+
+                    # Update text position
+                    if hasattr(self, 'conversion_text'):
+                        self.overlay_canvas.coords(self.conversion_text, preview_width // 2, preview_height // 2 + 30)
+
+                    # Update gear size and position if it exists
+                    if hasattr(self, 'gear_id'):
+                        self._update_gear_size_and_position(preview_width, preview_height)
+
+                    # Bring overlay to front
+                    try:
+                        self.overlay_canvas.lift()
+                    except Exception as e:
+                        print(f"Error lifting overlay canvas: {e}")
+
+        except Exception as e:
+            print(f"Error updating overlay position: {e}")
+            pass
+    
+    def _update_gear_size_and_position(self, canvas_width, canvas_height):
+        """Update gear size and position to fit current canvas dimensions"""
+        try:
+            # Calculate new gear size based on canvas dimensions
+            gear_size = min(canvas_width, canvas_height) // 8
+            gear_center_x = canvas_width // 2
+            gear_center_y = canvas_height // 2 - 30
+
+            # Recreate the gear polygon at new size and position
+            if hasattr(self, 'gear_id'):
+                self.overlay_canvas.delete(self.gear_id)
+                current_angle = getattr(self, 'gear_angle', 0)
+                self.gear_id = self._create_gear_polygon(self.overlay_canvas, gear_center_x, gear_center_y, gear_size, current_angle)
+
+        except Exception as e:
+            print(f"Error updating gear size and position: {e}")
+            pass
+    
     def _stop_conversion_overlay(self):
-        """Remove conversion overlay and stop animations"""
         try:
             # Cancel animation
             if hasattr(self, 'conversion_animation_id'):
                 self.root.after_cancel(self.conversion_animation_id)
                 
-            # Remove overlay elements
+            # Remove overlay elements from both possible canvases
+            if hasattr(self, 'overlay_canvas') and self.overlay_canvas.winfo_exists():
+                self.overlay_canvas.delete("conversion_overlay")
+                # Destroy the overlay canvas itself
+                self.overlay_canvas.destroy()
+                delattr(self, 'overlay_canvas')
+                
             if hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
                 self.original_canvas.delete("conversion_overlay")
+                
+            # Clean up gear animation variables
+            if hasattr(self, 'gear_id'):
+                delattr(self, 'gear_id')
+            if hasattr(self, 'gear_angle'):
+                delattr(self, 'gear_angle')
         except Exception:
             pass
     
