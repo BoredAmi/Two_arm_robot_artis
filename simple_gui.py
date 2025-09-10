@@ -28,6 +28,7 @@ import time
 import subprocess
 import os
 from datetime import datetime
+import webbrowser
 from PIL import Image, ImageTk
 import cv2
 import numpy as np
@@ -367,6 +368,30 @@ class SimpleRobotGUI:
                     font=('Arial', 14), 
                     bg=self.COLORS['background'], fg=self.COLORS['start_drawing'])
         subtitle_label.pack(pady=(0, 15))
+        # Attempt to load company logo and place at top-right corner
+        try:
+            logo_path = os.path.join(os.path.dirname(__file__), 'logo_inlader.jpg')
+            if os.path.exists(logo_path):
+                img = Image.open(logo_path)
+                # Resize to a small corner icon while preserving aspect ratio
+                max_size = (150, 150)
+                try:
+                    img.thumbnail(max_size, Image.LANCZOS)
+                except Exception:
+                    img.thumbnail(max_size)
+                self.logo_image = ImageTk.PhotoImage(img)
+                self.logo_label = tk.Label(main_frame, image=self.logo_image, bg=self.COLORS['background'], cursor='hand2')
+                # Make logo clickable and open company site
+                try:
+                    self.logo_label.bind('<Button-1>', lambda e: webbrowser.open_new_tab('https://inlader.pl'))
+                except Exception:
+                    pass
+                # Place in top-right using absolute placement relative to main_frame
+                # small negative x to provide padding from right edge
+                self.logo_label.place(relx=1.0, x=-10, y=10, anchor='ne')
+        except Exception:
+            # If logo can't be loaded, ignore silently
+            pass
         
         # Create TRUE 2x2 grid layout 
         grid_frame = tk.Frame(main_frame, bg=self.COLORS['background'])
@@ -1656,37 +1681,48 @@ class SimpleRobotGUI:
     
     def create_status_bar(self, parent):
         """Create simple status bar with integrated progress bar"""
-        status_frame = tk.Frame(parent, bg='#e0e0e0', height=30)
+        # Use white background for the overall UI and keep accents from the palette
+        status_frame = tk.Frame(parent, bg=self.COLORS['background'], height=30)
         status_frame.pack(fill=tk.X, side=tk.BOTTOM)
         status_frame.pack_propagate(False)
-        
-        self.status_label = tk.Label(status_frame, textvariable=self.status_text, 
-                                    font=('Arial', 9), bg='#e0e0e0', anchor='w')
+
+        self.status_label = tk.Label(status_frame, textvariable=self.status_text,
+                                    font=('Arial', 9), bg=self.COLORS['background'], anchor='w', fg=self.COLORS['take_photo'])
         self.status_label.pack(side=tk.LEFT, padx=10, expand=True, fill=tk.X)
-        
+
         # Progress bar container (initially hidden)
-        self.progress_container = tk.Frame(status_frame, bg='#e0e0e0')
-        
-        # Minimalistic progress bar
+        self.progress_container = tk.Frame(status_frame, bg=self.COLORS['background'])
+
+        # Create a ttk style for the progress bar using palette colors
+        style = ttk.Style()
+        try:
+            style.theme_use('default')
+        except Exception:
+            pass
+        style.configure('Palette.Horizontal.TProgressbar', troughcolor=self.COLORS['section_bg'], background=self.COLORS['start_drawing'], thickness=10)
+
+        # Minimalistic progress bar (styled)
         self.bottom_progress_bar = ttk.Progressbar(
-            self.progress_container, 
-            mode='determinate', 
+            self.progress_container,
+            style='Palette.Horizontal.TProgressbar',
+            mode='determinate',
             length=200
         )
         self.bottom_progress_bar.pack(side=tk.LEFT, padx=(5, 5))
-        
+
         # Progress text
         self.bottom_progress_label = tk.Label(
-            self.progress_container, 
-            text="", 
-            font=('Arial', 8), 
-            bg='#e0e0e0'
+            self.progress_container,
+            text="",
+            font=('Arial', 8),
+            bg=self.COLORS['background'],
+            fg=self.COLORS['take_photo']
         )
         self.bottom_progress_label.pack(side=tk.LEFT, padx=(5, 10))
-        
+
         # Progress indicator (for non-progress states)
-        self.progress_indicator = tk.Label(status_frame, text="", 
-                                          font=('Arial', 9), bg='#e0e0e0')
+        self.progress_indicator = tk.Label(status_frame, text="",
+                                          font=('Arial', 9), bg=self.COLORS['background'], fg=self.COLORS['photo_preview'])
         self.progress_indicator.pack(side=tk.RIGHT, padx=10)
 
     def _on_voice_command(self, cmd):
@@ -4128,7 +4164,7 @@ class SimpleRobotGUI:
         
         # Update progress in the new interface
         if hasattr(self, 'progress_label'):
-            self.progress_label.config(text="🤖 Starting robots...", fg='blue')
+            self.progress_label.config(text="🤖 Starting robots...", fg=self.COLORS['photo_preview'])
             
         # Setup progress tracking
         total_points = sum(len(path) for path in self.drawer.drawing_points)
@@ -4310,7 +4346,7 @@ class SimpleRobotGUI:
         
         # Update progress in the new interface
         if hasattr(self, 'progress_label'):
-            self.progress_label.config(text="🎉 Drawing complete!", fg='green')
+            self.progress_label.config(text="🎉 Drawing complete!", fg=self.COLORS['start_drawing'])
             
         # Hide progress elements (safely check if they exist)
         if hasattr(self, 'progress_container'):
@@ -4354,7 +4390,7 @@ class SimpleRobotGUI:
         
         # Update progress in the new interface
         if hasattr(self, 'progress_label'):
-            self.progress_label.config(text="❌ Drawing failed", fg='red')
+            self.progress_label.config(text="❌ Drawing failed", fg=self.COLORS['take_photo'])
         
         # Hide progress elements (safely check if they exist)
         if hasattr(self, 'progress_container'):
@@ -4377,7 +4413,7 @@ class SimpleRobotGUI:
         
         # Update progress in the new interface
         if hasattr(self, 'progress_label'):
-            self.progress_label.config(text="❌ Error occurred", fg='red')
+            self.progress_label.config(text="❌ Error occurred", fg=self.COLORS['take_photo'])
         
         # Hide progress elements (safely check if they exist)
         if hasattr(self, 'progress_container'):
