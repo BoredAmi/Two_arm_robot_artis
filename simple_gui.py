@@ -97,6 +97,63 @@ class SimpleRobotGUI:
         'button_stop': '#1B4965',   # use deep navy for stop to match palette
     }
     
+    def make_touch_button(self, parent, text, bg, command, font=None, triangle_type=None, **kwargs):
+        """Create a touch-friendly button with visual feedback on press/release"""
+        if font is None:
+            font = self.BUTTON_FONT
+        
+        # Create darker pressed color by reducing brightness
+        def darken_color(color):
+            # Simple darkening for touch feedback
+            if color.startswith('#') and len(color) == 7:
+                r = int(color[1:3], 16)
+                g = int(color[3:5], 16)
+                b = int(color[5:7], 16)
+                # Darken by 20%
+                r = max(0, int(r * 0.8))
+                g = max(0, int(g * 0.8))
+                b = max(0, int(b * 0.8))
+                return f"#{r:02x}{g:02x}{b:02x}"
+            return color
+        
+        pressed_bg = darken_color(bg)
+        
+        # Set defaults for common parameters if not provided
+        if 'fg' not in kwargs:
+            kwargs['fg'] = 'white'
+        if 'relief' not in kwargs:
+            kwargs['relief'] = tk.RAISED
+        if 'bd' not in kwargs:
+            kwargs['bd'] = 3
+        if 'cursor' not in kwargs:
+            kwargs['cursor'] = 'hand2'
+        
+        # Create button with touch feedback
+        btn = tk.Button(parent, text=text, command=command, font=font, bg=bg, **kwargs)
+        
+        def on_press(event):
+            btn.config(bg=pressed_bg)
+            # Also blink the corresponding triangle if specified
+            if triangle_type and hasattr(self, 'triangle_overlay') and self.triangle_overlay.winfo_exists():
+                if triangle_type == "portrait":
+                    self.triangle_overlay.itemconfig("portrait_triangle", fill=darken_color(self.COLORS['portrait']))
+                elif triangle_type == "caricature":
+                    self.triangle_overlay.itemconfig("caricature_triangle", fill=darken_color(self.COLORS['caricature']))
+        
+        def on_release(event):
+            btn.config(bg=bg)
+            # Restore triangle color if specified
+            if triangle_type and hasattr(self, 'triangle_overlay') and self.triangle_overlay.winfo_exists():
+                if triangle_type == "portrait":
+                    self.triangle_overlay.itemconfig("portrait_triangle", fill=self.COLORS['portrait'])
+                elif triangle_type == "caricature":
+                    self.triangle_overlay.itemconfig("caricature_triangle", fill=self.COLORS['caricature'])
+        
+        btn.bind('<ButtonPress-1>', on_press)
+        btn.bind('<ButtonRelease-1>', on_release)
+        
+        return btn
+    
     def __init__(self):
         """Initialize the GUI application."""
         import json
@@ -351,6 +408,10 @@ class SimpleRobotGUI:
         
         # Forbidden buffer (for dual-arm mode)
         self.forbidden_buffer_var = tk.IntVar(value=40)
+        
+        # Triangle press state flags
+        self.portrait_triangle_pressed = False
+        self.caricature_triangle_pressed = False
     
     def create_simple_interface(self):
         """Create a 2x2 grid layout with tile buttons for expo."""
@@ -404,7 +465,7 @@ class SimpleRobotGUI:
         grid_frame.grid_columnconfigure(1, weight=1, minsize=400)  # Equal column widths
         
         # Tile 1: Take Picture (Top Left) - Full button
-        self.take_photo_btn = tk.Button(grid_frame, 
+        self.take_photo_btn = self.make_touch_button(grid_frame, 
                                       text="1. TAKE PICTURE\n\n📷",
                                       command=self.get_picture_from_robot,
                                       font=self.BUTTON_FONT, bg=self.COLORS['take_photo'], fg='white',
@@ -451,155 +512,155 @@ class SimpleRobotGUI:
         
         # Create ultra-granular diagonal triangle effect - Portrait (orange) upper left triangle
         # Row 0 - Full width Portrait
-        self.portrait_btn1 = tk.Button(
+        self.portrait_btn1 = self.make_touch_button(
             self.style_frame, text="👤 PORTRAIT", font=("Arial", 15, "bold"),
             bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait")
+            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
         )
         self.portrait_btn1.grid(row=0, column=0, columnspan=20, sticky="nsew", padx=1, pady=1)
         
         # Row 1 - 18/20 width Portrait
-        self.portrait_btn2 = tk.Button(
+        self.portrait_btn2 = self.make_touch_button(
             self.style_frame, text="Face Drawing", font=("Arial", 13, "bold"),
             bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait")
+            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
         )
         self.portrait_btn2.grid(row=1, column=0, columnspan=18, sticky="nsew", padx=1, pady=1)
         
         # Row 2 - 16/20 width Portrait
-        self.portrait_btn3 = tk.Button(
+        self.portrait_btn3 = self.make_touch_button(
             self.style_frame, text="Style", font=("Arial", 12, "bold"),
             bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait")
+            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
         )
         self.portrait_btn3.grid(row=2, column=0, columnspan=16, sticky="nsew", padx=1, pady=1)
         
         # Row 3 - 14/20 width Portrait
-        self.portrait_btn4 = tk.Button(
+        self.portrait_btn4 = self.make_touch_button(
             self.style_frame, text="Natural", font=("Arial", 11, "bold"),
             bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait")
+            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
         )
         self.portrait_btn4.grid(row=3, column=0, columnspan=14, sticky="nsew", padx=1, pady=1)
         
         # Row 4 - 12/20 width Portrait
-        self.portrait_btn5 = tk.Button(
+        self.portrait_btn5 = self.make_touch_button(
             self.style_frame, text="Realistic", font=("Arial", 10, "bold"),
             bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait")
+            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
         )
         self.portrait_btn5.grid(row=4, column=0, columnspan=12, sticky="nsew", padx=1, pady=1)
         
         # Row 5 - 10/20 width Portrait
-        self.portrait_btn6 = tk.Button(
+        self.portrait_btn6 = self.make_touch_button(
             self.style_frame, text="Art", font=("Arial", 9, "bold"),
             bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait")
+            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
         )
         self.portrait_btn6.grid(row=5, column=0, columnspan=10, sticky="nsew", padx=1, pady=1)
         
         # Row 6 - 8/20 width Portrait
-        self.portrait_btn7 = tk.Button(
+        self.portrait_btn7 = self.make_touch_button(
             self.style_frame, text="Pro", font=("Arial", 8, "bold"),
             bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait")
+            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
         )
         self.portrait_btn7.grid(row=6, column=0, columnspan=8, sticky="nsew", padx=1, pady=1)
         
         # Row 7 - 6/20 width Portrait
-        self.portrait_btn8 = tk.Button(
+        self.portrait_btn8 = self.make_touch_button(
             self.style_frame, text="✓", font=("Arial", 8, "bold"),
             bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait")
+            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
         )
         self.portrait_btn8.grid(row=7, column=0, columnspan=6, sticky="nsew", padx=1, pady=1)
         
         # Row 8 - 4/20 width Portrait
-        self.portrait_btn9 = tk.Button(
+        self.portrait_btn9 = self.make_touch_button(
             self.style_frame, text="◆", font=("Arial", 7, "bold"),
             bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait")
+            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
         )
         self.portrait_btn9.grid(row=8, column=0, columnspan=4, sticky="nsew", padx=1, pady=1)
         
         # Row 9 - 2/20 width Portrait
-        self.portrait_btn10 = tk.Button(
+        self.portrait_btn10 = self.make_touch_button(
             self.style_frame, text="•", font=("Arial", 7, "bold"),
             bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait")
+            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
         )
         self.portrait_btn10.grid(row=9, column=0, columnspan=2, sticky="nsew", padx=1, pady=1)
         
         # Caricature (purple) lower right triangle - creating smooth stairs
         # Row 1 - 2/20 width Caricature (right side)
-        self.caricature_btn1 = tk.Button(
+        self.caricature_btn1 = self.make_touch_button(
             self.style_frame, text="😄", font=("Arial", 13, "bold"),
             bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature")
+            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
         )
         self.caricature_btn1.grid(row=1, column=18, columnspan=2, sticky="nsew", padx=1, pady=1)
         
         # Row 2 - 4/20 width Caricature
-        self.caricature_btn2 = tk.Button(
+        self.caricature_btn2 = self.make_touch_button(
             self.style_frame, text="Fun", font=("Arial", 12, "bold"),
             bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature")
+            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
         )
         self.caricature_btn2.grid(row=2, column=16, columnspan=4, sticky="nsew", padx=1, pady=1)
         
         # Row 3 - 6/20 width Caricature
-        self.caricature_btn3 = tk.Button(
+        self.caricature_btn3 = self.make_touch_button(
             self.style_frame, text="Cartoon", font=("Arial", 11, "bold"),
             bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature")
+            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
         )
         self.caricature_btn3.grid(row=3, column=14, columnspan=6, sticky="nsew", padx=1, pady=1)
         
         # Row 4 - 8/20 width Caricature
-        self.caricature_btn4 = tk.Button(
+        self.caricature_btn4 = self.make_touch_button(
             self.style_frame, text="Funny", font=("Arial", 10, "bold"),
             bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature")
+            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
         )
         self.caricature_btn4.grid(row=4, column=12, columnspan=8, sticky="nsew", padx=1, pady=1)
         
         # Row 5 - 10/20 width Caricature
-        self.caricature_btn5 = tk.Button(
+        self.caricature_btn5 = self.make_touch_button(
             self.style_frame, text="Exaggerated", font=("Arial", 9, "bold"),
             bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature")
+            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
         )
         self.caricature_btn5.grid(row=5, column=10, columnspan=10, sticky="nsew", padx=1, pady=1)
         
         # Row 6 - 12/20 width Caricature
-        self.caricature_btn6 = tk.Button(
+        self.caricature_btn6 = self.make_touch_button(
             self.style_frame, text="Stylized", font=("Arial", 8, "bold"),
             bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature")
+            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
         )
         self.caricature_btn6.grid(row=6, column=8, columnspan=12, sticky="nsew", padx=1, pady=1)
         
         # Row 7 - 14/20 width Caricature
-        self.caricature_btn7 = tk.Button(
+        self.caricature_btn7 = self.make_touch_button(
             self.style_frame, text="Comedy", font=("Arial", 8, "bold"),
             bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature")
+            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
         )
         self.caricature_btn7.grid(row=7, column=6, columnspan=14, sticky="nsew", padx=1, pady=1)
         
         # Row 8 - 16/20 width Caricature
-        self.caricature_btn8 = tk.Button(
+        self.caricature_btn8 = self.make_touch_button(
             self.style_frame, text="Express", font=("Arial", 7, "bold"),
             bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature")
+            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
         )
         self.caricature_btn8.grid(row=8, column=4, columnspan=16, sticky="nsew", padx=1, pady=1)
         
         # Row 9 - 18/20 width Caricature (almost full)
-        self.caricature_btn9 = tk.Button(
+        self.caricature_btn9 = self.make_touch_button(
             self.style_frame, text="🎭 SELECT CARICATURE", font=("Arial", 7, "bold"),
             bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature")
+            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
         )
         self.caricature_btn9.grid(row=9, column=2, columnspan=18, sticky="nsew", padx=1, pady=1)
         
@@ -657,7 +718,7 @@ class SimpleRobotGUI:
             self.draw_triangle_buttons(canvas)
 
     def draw_triangle_buttons_disabled(self, canvas):
-        """Draw grayed-out disabled triangle buttons to match other disabled buttons"""
+        """Draw disabled triangle buttons that keep original colors but gray out text"""
         if not canvas.winfo_exists():
             return
             
@@ -669,7 +730,11 @@ class SimpleRobotGUI:
         if width <= 1 or height <= 1:
             return
         
-        # Draw upper-left triangle (PORTRAIT) - grayed out
+        # Check if triangles are currently pressed using flags
+        portrait_pressed = self.portrait_triangle_pressed
+        caricature_pressed = self.caricature_triangle_pressed
+        
+        # Draw upper-left triangle (PORTRAIT) - keep original orange color but slightly dimmed
         portrait_triangle = [
             0, 0,           # Top-left
             width, 0,       # Top-right
@@ -677,13 +742,13 @@ class SimpleRobotGUI:
         ]
         canvas.create_polygon(
             portrait_triangle,
-            fill='#BDBDBD',     # Gray background (disabled)
-            outline='#9E9E9E',  # Darker gray border (disabled)
-            width=3,
-            tags="portrait_triangle_disabled"
+            fill="white" if portrait_pressed else self.COLORS['portrait'],     # Keep original orange color
+            outline='black',
+            width=2,
+            tags="portrait_triangle"
         )
         
-        # Draw lower-right triangle (CARICATURE) - grayed out  
+        # Draw lower-right triangle (CARICATURE) - keep original purple color but slightly dimmed  
         caricature_triangle = [
             width, 0,       # Top-right
             width, height,  # Bottom-right
@@ -691,17 +756,17 @@ class SimpleRobotGUI:
         ]
         canvas.create_polygon(
             caricature_triangle,
-            fill='#BDBDBD',     # Gray background (disabled)
-            outline='#9E9E9E',  # Darker gray border (disabled)
-            width=3,
-            tags="caricature_triangle_disabled"
+            fill="white" if caricature_pressed else self.COLORS['caricature'],     # Keep original purple color
+            outline='black',
+            width=2,
+            tags="caricature_triangle"
         )
         
         # Add grayed-out text labels on the triangles
         canvas.create_text(
             width * 0.25, height * 0.25,  # Upper-left quadrant
             text="👤 PORTRAIT",
-            fill='black',
+            fill='gray',  # Gray text instead of black
             font=self.BUTTON_FONT,
             justify=tk.CENTER,
             tags="portrait_text_disabled"
@@ -710,7 +775,7 @@ class SimpleRobotGUI:
         canvas.create_text(
             width * 0.75, height * 0.75,  # Lower-right quadrant  
             text="😄 CARICATURE",
-            fill='black',
+            fill='gray',  # Gray text instead of black
             font=self.BUTTON_FONT,
             justify=tk.CENTER,
             tags="caricature_text_disabled"
@@ -738,6 +803,10 @@ class SimpleRobotGUI:
         if width <= 1 or height <= 1:
             return
         
+        # Check if triangles are currently pressed using flags
+        portrait_pressed = self.portrait_triangle_pressed
+        caricature_pressed = self.caricature_triangle_pressed
+        
         # Draw upper-left triangle (PORTRAIT) - orange
         portrait_triangle = [
             0, 0,           # Top-left
@@ -746,9 +815,9 @@ class SimpleRobotGUI:
         ]
         canvas.create_polygon(
             portrait_triangle,
-            fill=self.COLORS['portrait'],     
-            outline="",
-            width=0,
+            fill="white" if portrait_pressed else self.COLORS['portrait'],     
+            outline='black',
+            width=2,
             tags="portrait_triangle"
         )
         
@@ -760,13 +829,11 @@ class SimpleRobotGUI:
         ]
         canvas.create_polygon(
             caricature_triangle,
-            fill=self.COLORS['caricature'],
-            outline="",  
-            width=0,  
+            fill="white" if caricature_pressed else self.COLORS['caricature'],   
+            outline='black',
+            width=2,
             tags="caricature_triangle"
-        )
-        
-        # Add text labels on the triangles
+        )        # Add text labels on the triangles
         canvas.create_text(
             width * 0.25, height * 0.25,  # Upper-left quadrant
             text="👤 PORTRAIT",
@@ -799,19 +866,39 @@ class SimpleRobotGUI:
         canvas = event.widget
         width = canvas.winfo_width()
         height = canvas.winfo_height()
-        
+
         x, y = event.x, event.y
-        
+
         # Determine which triangle was clicked based on position relative to diagonal
         # Diagonal line equation: y = height - (height/width) * x
         diagonal_y_at_x = height - (height/width) * x
-        
+
         if y < diagonal_y_at_x:
             # Clicked in upper triangle (Portrait area)
+            # Set press flag and redraw
+            self.portrait_triangle_pressed = True
+            self.draw_triangle_buttons_smart(canvas)
+            # Schedule flag reset and redraw after a short delay to simulate button press
+            canvas.after(150, lambda: self._reset_portrait_triangle(canvas))
             self.set_style_and_convert("portrait")
         else:
-            # Clicked in lower triangle (Caricature area)  
+            # Clicked in lower triangle (Caricature area)
+            # Set press flag and redraw
+            self.caricature_triangle_pressed = True
+            self.draw_triangle_buttons_smart(canvas)
+            # Schedule flag reset and redraw after a short delay to simulate button press
+            canvas.after(150, lambda: self._reset_caricature_triangle(canvas))
             self.set_style_and_convert("caricature")
+    
+    def _reset_portrait_triangle(self, canvas):
+        """Reset portrait triangle press state and redraw"""
+        self.portrait_triangle_pressed = False
+        self.draw_triangle_buttons_smart(canvas)
+    
+    def _reset_caricature_triangle(self, canvas):
+        """Reset caricature triangle press state and redraw"""
+        self.caricature_triangle_pressed = False
+        self.draw_triangle_buttons_smart(canvas)
     
     def create_status_indicators(self, parent):
         """Create compact status indicators"""
@@ -829,11 +916,12 @@ class SimpleRobotGUI:
                         font=('Arial', 12), bg=self.COLORS['background'], fg=self.COLORS['start_drawing'])
         self.progress_label.pack(side=tk.RIGHT)
         
-        # Setup button
-        tk.Button(status_frame, text="⚙️ Advanced Setup", 
+        # Settings button
+        self.settings_btn = self.make_touch_button(status_frame, text="⚙️ Settings", 
             command=self.open_setup_window,
             font=('Arial', 10), bg=self.COLORS['photo_preview'], fg='white',
-            width=15, height=1).pack(side=tk.RIGHT, padx=(10, 20))
+            width=15, height=1)
+        self.settings_btn.pack(side=tk.RIGHT, padx=(10, 0))
     
     def create_step_section(self, parent, title, content_func):
         """
@@ -880,7 +968,7 @@ class SimpleRobotGUI:
         buttons_frame.pack()
 
         # Take Photo button (main action)
-        self.take_photo_btn = tk.Button(buttons_frame, text="📷 TAKE PHOTO", 
+        self.take_photo_btn = self.make_touch_button(buttons_frame, text="📷 TAKE PHOTO", 
             command=self.get_picture_from_robot,
             bg=self.COLORS['take_photo'], fg='white', font=('Arial', 16, 'bold'), relief='flat', 
             padx=40, pady=20, cursor='hand2', width=20)
@@ -1327,7 +1415,7 @@ class SimpleRobotGUI:
         start_frame = tk.Frame(layout_frame, bg='white')
         start_frame.pack(pady=(0, 20))
 
-        self.draw_btn = tk.Button(start_frame, text="🎨 START DRAWING", 
+        self.draw_btn = self.make_touch_button(start_frame, text="🎨 START DRAWING", 
             command=self.start_robot_drawing,
             bg=self.COLORS['photo_preview'], fg='white', font=('Arial', 18, 'bold'),
             relief='flat', padx=50, pady=25, cursor='hand2', width=25,
@@ -4025,7 +4113,8 @@ class SimpleRobotGUI:
         # Disable triangle overlay to prevent clicks and show disabled appearance
         if hasattr(self, 'triangle_overlay'):
             self.triangle_buttons_disabled = True
-            self.triangle_overlay.unbind('<Button-1>')
+            # Keep click event bound so blinking still works during processing
+            # self.triangle_overlay.unbind('<Button-1>')  # Commented out to keep blinking
             self.draw_triangle_buttons_disabled(self.triangle_overlay)
     
     def enable_all_buttons(self):
@@ -4051,7 +4140,8 @@ class SimpleRobotGUI:
         # Re-enable triangle overlay by rebinding click events
         if hasattr(self, 'triangle_overlay'):
             self.triangle_buttons_disabled = False
-            self.triangle_overlay.bind('<Button-1>', self.handle_triangle_click)
+            # Click event should already be bound, just update the appearance
+            # self.triangle_overlay.bind('<Button-1>', self.handle_triangle_click)  # Already bound
             self.draw_triangle_buttons_smart(self.triangle_overlay)
 
     def set_style_and_convert(self, style):
