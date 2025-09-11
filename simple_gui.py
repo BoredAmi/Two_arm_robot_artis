@@ -284,8 +284,8 @@ class SimpleRobotGUI:
         # Update connection display with initial values
         self.root.after(100, self._update_connection_display)
 
-        # Try to load custom gear image on startup
-        self.load_custom_gear_image()
+        # Try to load custom gear images on startup
+        self.load_custom_gear_images()
 
     def _load_config(self):
         try:
@@ -2778,7 +2778,7 @@ class SimpleRobotGUI:
                                     bg='white', padx=15, pady=10)
         gear_section.pack(fill=tk.X, pady=(15, 0))
         
-        tk.Label(gear_section, text="The app uses 'gear.png' from the current directory as the spinning gear\nduring image conversions. This file must be present for the animation to work.", 
+        tk.Label(gear_section, text="The app uses 'gear.png' for conversion overlays and 'gear_white.png' for drawing overlays.\nBoth files should be present in the current directory for the animations to work.", 
                 font=('Arial', 9), bg='white', fg='#666').pack(anchor='w', pady=(5, 0))
         
         tk.Label(buffer_section, text="Creates safety zones around robot positions in dual-arm mode", 
@@ -4267,6 +4267,10 @@ class SimpleRobotGUI:
             self.bottom_progress_bar.config(maximum=total_points)
         self.bottom_progress_bar.config(value=0)
         self.bottom_progress_label.config(text=f"0 / {total_points} points")
+        
+        # Start drawing button overlay animation
+        self._start_drawing_button_overlay()
+        
         thread = threading.Thread(target=self._draw_thread)
         thread.daemon = True
         thread.start()
@@ -4304,6 +4308,9 @@ class SimpleRobotGUI:
             except Exception as e:
                 messagebox.showerror("Error", f"Could not stop robot: {e}")
                 self.status_text.set("Stop command failed")
+            
+            # Stop drawing button overlay
+            self._stop_drawing_button_overlay()
             
             # Hide progress elements
             self.progress_container.pack_forget()
@@ -4431,6 +4438,10 @@ class SimpleRobotGUI:
         """Handle successful drawing"""
         import time
         self.drawing_active = False
+        
+        # Stop drawing button overlay
+        self._stop_drawing_button_overlay()
+        
         if hasattr(self, 'draw_btn'): 
             self.draw_btn.config(state='normal')
         if hasattr(self, 'start_drawing_btn'): 
@@ -4475,6 +4486,10 @@ class SimpleRobotGUI:
             print(f"❌ Drawing failed")
             
         self.drawing_active = False
+        
+        # Stop drawing button overlay
+        self._stop_drawing_button_overlay()
+        
         if hasattr(self, 'draw_btn'): 
             self.draw_btn.config(state='normal')
         if hasattr(self, 'start_drawing_btn'): 
@@ -4498,6 +4513,10 @@ class SimpleRobotGUI:
     def _draw_error(self, error):
         """Handle drawing error"""
         self.drawing_active = False
+        
+        # Stop drawing button overlay
+        self._stop_drawing_button_overlay()
+        
         if hasattr(self, 'draw_btn'): 
             self.draw_btn.config(state='normal')
         if hasattr(self, 'start_drawing_btn'): 
@@ -4524,25 +4543,80 @@ class SimpleRobotGUI:
         self.status_text.set(f"Converting to {conversion_type}...")
         self.progress_indicator.config(text=f"🔄 Converting...")
         
-        # Flash the main window to get user attention
+        # Flash the main window to get user attention (removed system sound)
         try:
-            self.root.bell()  # System sound
+            pass  # Removed bell() call to eliminate unwanted system sound
         except Exception:
             pass
             
+        # Set conversion active flag BEFORE starting overlay
+        self.conversion_active = True
+        
         # Add animated overlay to the image preview
         self._start_conversion_overlay(conversion_type)
     
     def _stop_conversion_feedback(self):
         """Stop visual feedback for image conversion process"""
-        # Stop overlay animation (no progress bar to stop for conversions)
-        self._stop_conversion_overlay()
+        try:
+            # Set conversion active flag to False to stop animation
+            self.conversion_active = False
+            
+            # Stop the conversion overlay animation and cleanup
+            self._stop_conversion_overlay()
+            
+            # Reset progress indicator if it still shows conversion status
+            if hasattr(self, 'progress_indicator'):
+                current_text = self.progress_indicator.cget('text')
+                if "Converting" in current_text or "🔄" in current_text:
+                    self.progress_indicator.config(text="Ready")
+                    
+        except Exception as e:
+            pass
     
-    def _create_gear_polygon(self, canvas, center_x, center_y, gear_size, rotation_angle=0):
+    def _stop_conversion_overlay(self):
+        """Stop and remove the conversion overlay"""
+        try:
+            # Set conversion active flag to False to stop animation
+            self.conversion_active = False
+            
+            # Cancel animation timers
+            if hasattr(self, 'conversion_animation_id'):
+                self.root.after_cancel(self.conversion_animation_id)
+                delattr(self, 'conversion_animation_id')
+                
+            # Remove overlay elements from both possible canvases
+            if hasattr(self, 'overlay_canvas') and self.overlay_canvas.winfo_exists():
+                self.overlay_canvas.delete("conversion_overlay")
+                # Destroy the overlay canvas itself
+                self.overlay_canvas.destroy()
+                delattr(self, 'overlay_canvas')
+                
+            if hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
+                self.original_canvas.delete("conversion_overlay")
+                
+            # Clean up gear animation variables
+            if hasattr(self, 'gear_id'):
+                delattr(self, 'gear_id')
+            if hasattr(self, 'gear_angle'):
+                delattr(self, 'gear_angle')
+            if hasattr(self, 'conversion_text'):
+                delattr(self, 'conversion_text')
+            if hasattr(self, 'conversion_overlay'):
+                delattr(self, 'conversion_overlay')
+        except Exception:
+            pass
+    
+    def _create_gear_polygon(self, canvas, center_x, center_y, gear_size, rotation_angle=0, gear_type='black'):
         """Create a gear from custom image (always available)"""
         try:
+            # Select the appropriate gear image
+            if gear_type == 'white' and hasattr(self, 'custom_gear_white_image'):
+                gear_image = self.custom_gear_white_image
+            else:
+                gear_image = self.custom_gear_image
+            
             # Rotate the image
-            rotated_image = self._rotate_image(self.custom_gear_image, rotation_angle)
+            rotated_image = self._rotate_image(gear_image, rotation_angle)
 
             # Store reference to prevent garbage collection
             self.current_gear_image = rotated_image
@@ -4582,25 +4656,28 @@ class SimpleRobotGUI:
             return image
         except Exception as e:
             return image
-    
-    def load_custom_gear_image(self, image_path=None):
-        """Load gear.png from current directory (always present)"""
+
+    def load_custom_gear_images(self):
+        """Load both gear.png and gear_white.png from current directory"""
         try:
             from PIL import Image, ImageTk
             import os
             
+            # Load black gear (for conversion)
             gear_path = os.path.join(os.getcwd(), "gear.png")
-            # Load and resize the image
-            image = Image.open(gear_path)
+            if os.path.exists(gear_path):
+                image = Image.open(gear_path)
+                image = image.resize((100, 100), Image.Resampling.LANCZOS)
+                self.custom_gear_image = image
+                self.custom_gear_photo = ImageTk.PhotoImage(image)
             
-            # Resize to a reasonable size (will be scaled later)
-            image = image.resize((100, 100), Image.Resampling.LANCZOS)
-            
-            # Store the PIL image for rotation
-            self.custom_gear_image = image
-            
-            # Create PhotoImage for immediate use
-            self.custom_gear_photo = ImageTk.PhotoImage(image)
+            # Load white gear (for drawing)
+            white_gear_path = os.path.join(os.getcwd(), "gear_white.png")
+            if os.path.exists(white_gear_path):
+                white_image = Image.open(white_gear_path)
+                white_image = white_image.resize((100, 100), Image.Resampling.LANCZOS)
+                self.custom_gear_white_image = white_image
+                self.custom_gear_white_photo = ImageTk.PhotoImage(white_image)
             
             return True
             
@@ -4661,7 +4738,7 @@ class SimpleRobotGUI:
                     gear_center_y = preview_height // 2 - 30
 
                     # Create gear as a single polygon with integrated teeth - one color design
-                    self.gear_id = self._create_gear_polygon(self.overlay_canvas, gear_center_x, gear_center_y, gear_size, 0)
+                    self.gear_id = self._create_gear_polygon(self.overlay_canvas, gear_center_x, gear_center_y, gear_size, 0, 'black')
                     
                     # No gear center hole needed - using custom image
 
@@ -4700,7 +4777,7 @@ class SimpleRobotGUI:
                     gear_center_x = canvas_width // 2
                     gear_center_y = canvas_height // 2 - 30
 
-                    self.gear_id = self._create_gear_polygon(self.original_canvas, gear_center_x, gear_center_y, gear_size, 0)
+                    self.gear_id = self._create_gear_polygon(self.original_canvas, gear_center_x, gear_center_y, gear_size, 0, 'black')
                     
 
                     # Start animations
@@ -4752,17 +4829,18 @@ class SimpleRobotGUI:
                     # Delete the old gear
                     active_canvas.delete(self.gear_id)
                     # Create new gear at rotated position
-                    self.gear_id = self._create_gear_polygon(active_canvas, gear_center_x, gear_center_y, gear_size, self.gear_angle)
+                    self.gear_id = self._create_gear_polygon(active_canvas, gear_center_x, gear_center_y, gear_size, self.gear_angle, 'black')
 
                 # Continue animation if still converting (check both overlay and original canvas)
                 should_continue = False
-                if hasattr(self, 'conversion_overlay') and self.conversion_overlay:
-                    should_continue = True
-                elif hasattr(self, 'original_canvas') and hasattr(self, 'conversion_text'):
-                    should_continue = True
+                if hasattr(self, 'conversion_active') and self.conversion_active:
+                    if hasattr(self, 'conversion_overlay') and self.conversion_overlay:
+                        should_continue = True
+                    elif hasattr(self, 'original_canvas') and hasattr(self, 'conversion_text'):
+                        should_continue = True
 
                 if should_continue:
-                    self.root.after(40, self._animate_spinning_gear) 
+                    self.conversion_animation_id = self.root.after(40, self._animate_spinning_gear) 
                 else:
                     pass
         except Exception as e:
@@ -4820,33 +4898,189 @@ class SimpleRobotGUI:
             if hasattr(self, 'gear_id'):
                 self.overlay_canvas.delete(self.gear_id)
                 current_angle = getattr(self, 'gear_angle', 0)
-                self.gear_id = self._create_gear_polygon(self.overlay_canvas, gear_center_x, gear_center_y, gear_size, current_angle)
+                self.gear_id = self._create_gear_polygon(self.overlay_canvas, gear_center_x, gear_center_y, gear_size, current_angle, 'black')
 
         except Exception as e:
             pass
     
-    def _stop_conversion_overlay(self):
+    def _start_drawing_button_overlay(self):
+        """Add animated overlay to drawing button during drawing process"""
         try:
-            # Cancel animation
-            if hasattr(self, 'conversion_animation_id'):
-                self.root.after_cancel(self.conversion_animation_id)
+            # Check if draw_btn exists and is visible
+            if hasattr(self, 'draw_btn') and self.draw_btn.winfo_exists():
+                # Get drawing button position and size
+                btn_x = self.draw_btn.winfo_x()
+                btn_y = self.draw_btn.winfo_y()
+                btn_width = self.draw_btn.winfo_width()
+                btn_height = self.draw_btn.winfo_height()
+
+                if btn_width > 10 and btn_height > 10:  # Button is properly sized
+                    # Get absolute position of draw_btn
+                    btn_abs_x = self.draw_btn.winfo_rootx() - self.root.winfo_rootx()
+                    btn_abs_y = self.draw_btn.winfo_rooty() - self.root.winfo_rooty()
+
+                    # Create overlay canvas positioned over the draw_btn
+                    self.drawing_overlay_canvas = tk.Canvas(
+                        self.root,  # Use root as parent for absolute positioning
+                        width=btn_width,
+                        height=btn_height,
+                        highlightthickness=0,
+                        bg=self.COLORS['start_drawing']  # Match button background
+                    )
+
+                    # Position overlay canvas exactly over draw_btn using absolute coordinates
+                    self.drawing_overlay_canvas.place(
+                        x=btn_abs_x,
+                        y=btn_abs_y,
+                        width=btn_width,
+                        height=btn_height
+                    )
+
+                    # Create semi-transparent overlay with button background
+                    self.drawing_overlay = self.drawing_overlay_canvas.create_rectangle(
+                        0, 0, btn_width, btn_height,
+                        fill=self.COLORS['start_drawing'], tags="drawing_overlay")
+
+                    # Create centered text with white color for contrast
+                    self.drawing_text = self.drawing_overlay_canvas.create_text(
+                        btn_width // 2, btn_height // 2 + 60,
+                        text="Drawing",
+                        fill='white', font=('Arial', 22, 'bold'),
+                        tags="drawing_overlay", justify='center')
+
+                    # Create spinning gear animation - smaller size for button
+                    gear_size = min(btn_width, btn_height) // 6  # Smaller than conversion overlay
+                    gear_center_x = btn_width // 2
+                    gear_center_y = btn_height // 2 - 15
+
+                    # Create gear as a single polygon with integrated teeth - one color design
+                    self.drawing_gear_id = self._create_gear_polygon(self.drawing_overlay_canvas, gear_center_x, gear_center_y, gear_size, 0, 'white')
+                    
+                    # Ensure text stays on top of the gear
+                    self.drawing_overlay_canvas.tag_raise(self.drawing_text)
+
+                    # Start animations
+                    self.drawing_gear_angle = 0
+                    self._animate_drawing_text()
+                    self._animate_drawing_gear()
+
+                    # Bring overlay to front
+                    try:
+                        self.drawing_overlay_canvas.lift()
+                    except Exception as e:
+                        pass
+
+                    # Bind resize event to update overlay position and size
+                    self.root.bind('<Configure>', self._update_drawing_overlay_position)
+        except Exception as e:
+            pass
+    
+    def _animate_drawing_text(self):
+        """Keep the drawing text solid white"""
+        try:
+            if hasattr(self, 'drawing_overlay_canvas') and self.drawing_overlay_canvas.winfo_exists():
+                if hasattr(self, 'drawing_text'):
+                    # Keep text solid white without blinking
+                    self.drawing_overlay_canvas.itemconfig(self.drawing_text, fill='white')
+
+                    # Continue checking if still drawing (but don't animate)
+                    if self.drawing_active:
+                        self.drawing_text_animation_id = self.root.after(1000, self._animate_drawing_text)  # Check every second
+        except Exception as e:
+            pass
+    
+    def _animate_drawing_gear(self):
+        """Animate the spinning gear on the drawing button overlay"""
+        try:
+            if hasattr(self, 'drawing_overlay_canvas') and self.drawing_overlay_canvas.winfo_exists():
+                if hasattr(self, 'drawing_gear_id'):
+                    canvas_width = self.drawing_overlay_canvas.winfo_width()
+                    canvas_height = self.drawing_overlay_canvas.winfo_height()
+                    gear_center_x = canvas_width // 2
+                    gear_center_y = canvas_height // 2 - 15
+                    gear_size = min(canvas_width, canvas_height) // 6  
+
+                    # Update gear angle for rotation
+                    if not hasattr(self, 'drawing_gear_angle'):
+                        self.drawing_gear_angle = 0
+                    self.drawing_gear_angle = (self.drawing_gear_angle + 1) % 360  # Match preview gear speed
+
+                    # Rotate the gear by recreating it at the new angle
+                    if hasattr(self, 'drawing_gear_id'):
+                        # Delete the old gear
+                        self.drawing_overlay_canvas.delete(self.drawing_gear_id)
+                        # Create new gear at rotated position
+                        self.drawing_gear_id = self._create_gear_polygon(self.drawing_overlay_canvas, gear_center_x, gear_center_y, gear_size, self.drawing_gear_angle, 'white')
+                        
+                        # Ensure text stays on top of the gear
+                        if hasattr(self, 'drawing_text'):
+                            self.drawing_overlay_canvas.tag_raise(self.drawing_text)
+
+                    # Continue animation if still drawing
+                    if self.drawing_active:
+                        self.drawing_gear_animation_id = self.root.after(40, self._animate_drawing_gear)  # Match preview gear timing
+                    else:
+                        pass
+        except Exception as e:
+            pass
+    
+    def _stop_drawing_button_overlay(self):
+        """Stop and remove the drawing button overlay"""
+        try:
+            # Cancel animation timers
+            if hasattr(self, 'drawing_text_animation_id'):
+                self.root.after_cancel(self.drawing_text_animation_id)
+                delattr(self, 'drawing_text_animation_id')
+            if hasattr(self, 'drawing_gear_animation_id'):
+                self.root.after_cancel(self.drawing_gear_animation_id)
+                delattr(self, 'drawing_gear_animation_id')
                 
-            # Remove overlay elements from both possible canvases
-            if hasattr(self, 'overlay_canvas') and self.overlay_canvas.winfo_exists():
-                self.overlay_canvas.delete("conversion_overlay")
+            # Remove overlay elements
+            if hasattr(self, 'drawing_overlay_canvas') and self.drawing_overlay_canvas.winfo_exists():
+                self.drawing_overlay_canvas.delete("drawing_overlay")
                 # Destroy the overlay canvas itself
-                self.overlay_canvas.destroy()
-                delattr(self, 'overlay_canvas')
-                
-            if hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
-                self.original_canvas.delete("conversion_overlay")
+                self.drawing_overlay_canvas.destroy()
+                delattr(self, 'drawing_overlay_canvas')
                 
             # Clean up gear animation variables
-            if hasattr(self, 'gear_id'):
-                delattr(self, 'gear_id')
-            if hasattr(self, 'gear_angle'):
-                delattr(self, 'gear_angle')
+            if hasattr(self, 'drawing_gear_id'):
+                delattr(self, 'drawing_gear_id')
+            if hasattr(self, 'drawing_gear_angle'):
+                delattr(self, 'drawing_gear_angle')
+            if hasattr(self, 'drawing_text'):
+                delattr(self, 'drawing_text')
         except Exception:
+            pass
+    
+    def _update_drawing_overlay_position(self, event=None):
+        """Update the drawing overlay position when window is resized"""
+        try:
+            if hasattr(self, 'drawing_overlay_canvas') and self.drawing_overlay_canvas.winfo_exists():
+                if hasattr(self, 'draw_btn') and self.draw_btn.winfo_exists():
+                    # Get updated button position and size
+                    btn_abs_x = self.draw_btn.winfo_rootx() - self.root.winfo_rootx()
+                    btn_abs_y = self.draw_btn.winfo_rooty() - self.root.winfo_rooty()
+                    btn_width = self.draw_btn.winfo_width()
+                    btn_height = self.draw_btn.winfo_height()
+
+                    if btn_width > 10 and btn_height > 10:
+                        # Update overlay position and size
+                        self.drawing_overlay_canvas.place(
+                            x=btn_abs_x,
+                            y=btn_abs_y,
+                            width=btn_width,
+                            height=btn_height
+                        )
+                        
+                        # Update overlay rectangle size
+                        self.drawing_overlay_canvas.coords(self.drawing_overlay, 0, 0, btn_width, btn_height)
+                        
+                        # Update text position
+                        if hasattr(self, 'drawing_text'):
+                            self.drawing_overlay_canvas.coords(self.drawing_text, btn_width // 2, btn_height // 2 + 60)
+                            # Ensure text stays on top after position update
+                            self.drawing_overlay_canvas.tag_raise(self.drawing_text)
+        except Exception as e:
             pass
     
     def _show_conversion_notification(self, message, msg_type="info"):
