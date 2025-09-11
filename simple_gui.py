@@ -4197,16 +4197,8 @@ class SimpleRobotGUI:
             messagebox.showwarning("Warning", "Please take a photo first!")
             return
         
-        # Apply style processing if needed
-        style = self.drawing_style.get()
-        if style == "portrait":
-            self.convert_to_face_drawing()
-        elif style == "caricature":
-            # For caricature, we could apply special processing here
-            self.auto_process_image()
-        else:
-            # Normal processing
-            self.auto_process_image()
+        # No automatic conversion - just start drawing with current image
+        # The user should use Face Drawing/Caricature buttons if they want conversions
         
         # Update progress
         if hasattr(self, 'progress_label'):
@@ -4528,13 +4520,7 @@ class SimpleRobotGUI:
     
     def _start_conversion_feedback(self, conversion_type):
         """Start visual feedback for image conversion process"""
-        # Show progress container with indeterminate progress bar
-        self.progress_container.pack(side=tk.RIGHT, before=self.progress_indicator)
-        self.bottom_progress_bar.config(mode='indeterminate')
-        self.bottom_progress_bar.start(10)  # Start animated progress bar
-        self.bottom_progress_label.config(text=f"Converting to {conversion_type}...")
-        
-        # Update status
+        # Update status (no progress bar for conversions - we have the gear!)
         self.status_text.set(f"Converting to {conversion_type}...")
         self.progress_indicator.config(text=f"🔄 Converting...")
         
@@ -4549,11 +4535,7 @@ class SimpleRobotGUI:
     
     def _stop_conversion_feedback(self):
         """Stop visual feedback for image conversion process"""
-        # Stop and hide progress bar
-        self.bottom_progress_bar.stop()
-        self.progress_container.pack_forget()
-        
-        # Stop overlay animation
+        # Stop overlay animation (no progress bar to stop for conversions)
         self._stop_conversion_overlay()
     
     def _create_gear_polygon(self, canvas, center_x, center_y, gear_size, rotation_angle=0):
@@ -4562,24 +4544,15 @@ class SimpleRobotGUI:
             # Rotate the image
             rotated_image = self._rotate_image(self.custom_gear_image, rotation_angle)
 
-            # Calculate image position and size - fix the redundant min() call
-            image_size = gear_size * 2  # Scale appropriately
-            x1 = center_x - image_size // 2
-            y1 = center_y - image_size // 2
-            x2 = center_x + image_size // 2
-            y2 = center_y + image_size // 2
-
             # Store reference to prevent garbage collection
             self.current_gear_image = rotated_image
 
             # Create image on canvas
             gear_id = canvas.create_image(center_x, center_y, image=rotated_image, tags="conversion_overlay")
 
-            print(f"DEBUG: Gear created at ({center_x}, {center_y}) with size {image_size}")
+            
             return gear_id
         except Exception as e:
-            print(f"Failed to use custom gear image: {e}")
-            # This should never happen since gear.png is always present
             return None
     
     def _rotate_image(self, image, angle):
@@ -4604,13 +4577,10 @@ class SimpleRobotGUI:
             if len(self.gear_image_refs) > 10:
                 self.gear_image_refs.pop(0)
 
-            print(f"DEBUG: Image rotated by {angle_deg}°")
             return photo_image
         except ImportError:
-            print("PIL not available for image rotation")
             return image
         except Exception as e:
-            print(f"Image rotation failed: {e}")
             return image
     
     def load_custom_gear_image(self, image_path=None):
@@ -4632,20 +4602,16 @@ class SimpleRobotGUI:
             # Create PhotoImage for immediate use
             self.custom_gear_photo = ImageTk.PhotoImage(image)
             
-            print(f"Custom gear loaded from: {gear_path}")
             return True
             
         except ImportError:
-            print("PIL not available. Install with: pip install pillow")
             return False
         except Exception as e:
-            print(f"Failed to load gear.png: {e}")
             return False
     
 
     def _start_conversion_overlay(self, conversion_type):
         """Add animated overlay to image preview during conversion"""
-        print(f"DEBUG: _start_conversion_overlay called with {conversion_type}")
         try:
             # Create overlay canvas on top of preview_label if it exists
             if hasattr(self, 'preview_label') and self.preview_label.winfo_exists():
@@ -4677,8 +4643,6 @@ class SimpleRobotGUI:
                         height=preview_height
                     )
                     
-                    print(f"DEBUG: preview_label exists - size: {preview_width}x{preview_height}, pos: {preview_x},{preview_y}, abs: {preview_abs_x},{preview_abs_y}")
-                    
                     # Create semi-transparent overlay with white background
                     self.conversion_overlay = self.overlay_canvas.create_rectangle(
                         0, 0, preview_width, preview_height,
@@ -4686,7 +4650,7 @@ class SimpleRobotGUI:
 
                     # Create large centered text with black color for contrast
                     self.conversion_text = self.overlay_canvas.create_text(
-                        preview_width // 2, preview_height // 2 + 30,
+                        preview_width // 2, preview_height // 2 + 80,
                         text=f"Converting to\n{conversion_type}...",
                         fill='black', font=('Arial', 16, 'bold'),
                         tags="conversion_overlay", justify='center')
@@ -4702,18 +4666,15 @@ class SimpleRobotGUI:
                     # No gear center hole needed - using custom image
 
                     # Start animations
-                    self.conversion_dots = 0
                     self.gear_angle = 0
-                    print(f"DEBUG: Starting gear animation for {conversion_type}")
                     self._animate_conversion_text(conversion_type)
                     self._animate_spinning_gear()
 
                     # Bring overlay to front
                     try:
                         self.overlay_canvas.lift()
-                        print(f"DEBUG: Overlay canvas lifted")
                     except Exception as e:
-                        print(f"DEBUG: Could not lift overlay canvas: {e}")
+                        pass
 
                     # Bind resize event to update overlay position and size
                     self.root.bind('<Configure>', self._update_overlay_position)
@@ -4729,7 +4690,7 @@ class SimpleRobotGUI:
 
                     # Create large centered text with black color for contrast
                     self.conversion_text = self.original_canvas.create_text(
-                        canvas_width // 2, canvas_height // 2 + 30,
+                        canvas_width // 2, canvas_height // 2 + 80,
                         text=f"Converting to\n{conversion_type}...",
                         fill='black', font=('Arial', 16, 'bold'),
                         tags="conversion_overlay", justify='center')
@@ -4739,18 +4700,14 @@ class SimpleRobotGUI:
                     gear_center_x = canvas_width // 2
                     gear_center_y = canvas_height // 2 - 30
 
-                    # Create gear as a single polygon with integrated teeth - one color design
                     self.gear_id = self._create_gear_polygon(self.original_canvas, gear_center_x, gear_center_y, gear_size, 0)
                     
-                    # No gear center hole needed - using custom image
 
                     # Start animations
-                    self.conversion_dots = 0
                     self.gear_angle = 0
                     self._animate_conversion_text(conversion_type)
                     self._animate_spinning_gear()
         except Exception as e:
-            print(f"Error creating conversion overlay: {e}")
             pass
     
     def _animate_conversion_text(self, conversion_type):
@@ -4764,17 +4721,9 @@ class SimpleRobotGUI:
                 active_canvas = self.original_canvas
             
             if hasattr(self, 'conversion_text') and active_canvas:
-                # Cycle through different dot patterns
-                dots = "." * (self.conversion_dots % 4)
-                self.conversion_dots += 1
-                
-                # Update text with animated dots
                 active_canvas.itemconfig(
-                    self.conversion_text, 
-                    text=f"🔄 Converting to\n{conversion_type}{dots}")
-                
-                # Schedule next animation frame
-                self.conversion_animation_id = self.root.after(500, lambda: self._animate_conversion_text(conversion_type))
+                    self.conversion_text,
+                    text=f"🔄 Converting to\n{conversion_type}")
         except Exception:
             pass
     
@@ -4793,16 +4742,15 @@ class SimpleRobotGUI:
                 canvas_height = active_canvas.winfo_height()
                 gear_center_x = canvas_width // 2
                 gear_center_y = canvas_height // 2 - 30
-                gear_size = min(canvas_width, canvas_height) // 8  # Responsive sizing
+                gear_size = min(canvas_width, canvas_height) // 8  
 
-                # Update gear angle for rotation (slower for better visibility)
-                self.gear_angle = (self.gear_angle + 2) % 360  # Slower rotation
+                # Update gear angle for rotation
+                self.gear_angle = (self.gear_angle + 1) % 360
 
                 # Rotate the entire gear polygon by recreating it at the new angle
                 if hasattr(self, 'gear_id'):
                     # Delete the old gear
                     active_canvas.delete(self.gear_id)
-                    print(f"DEBUG: Deleted old gear, creating new one at angle {self.gear_angle}")
                     # Create new gear at rotated position
                     self.gear_id = self._create_gear_polygon(active_canvas, gear_center_x, gear_center_y, gear_size, self.gear_angle)
 
@@ -4814,13 +4762,10 @@ class SimpleRobotGUI:
                     should_continue = True
 
                 if should_continue:
-                    print(f"DEBUG: Continuing animation, next frame in 80ms")
-                    self.root.after(80, self._animate_spinning_gear)  # Slower animation
+                    self.root.after(40, self._animate_spinning_gear) 
                 else:
-                    print(f"DEBUG: Stopping animation - no conversion overlay found")
+                    pass
         except Exception as e:
-            print(f"Animation error: {e}")
-            # Silently handle animation errors
             pass
     
     def _update_overlay_position(self, event=None):
@@ -4848,7 +4793,7 @@ class SimpleRobotGUI:
 
                     # Update text position
                     if hasattr(self, 'conversion_text'):
-                        self.overlay_canvas.coords(self.conversion_text, preview_width // 2, preview_height // 2 + 30)
+                        self.overlay_canvas.coords(self.conversion_text, preview_width // 2, preview_height // 2 + 80)
 
                     # Update gear size and position if it exists
                     if hasattr(self, 'gear_id'):
@@ -4858,10 +4803,9 @@ class SimpleRobotGUI:
                     try:
                         self.overlay_canvas.lift()
                     except Exception as e:
-                        print(f"Error lifting overlay canvas: {e}")
+                        pass
 
         except Exception as e:
-            print(f"Error updating overlay position: {e}")
             pass
     
     def _update_gear_size_and_position(self, canvas_width, canvas_height):
@@ -4879,7 +4823,6 @@ class SimpleRobotGUI:
                 self.gear_id = self._create_gear_polygon(self.overlay_canvas, gear_center_x, gear_center_y, gear_size, current_angle)
 
         except Exception as e:
-            print(f"Error updating gear size and position: {e}")
             pass
     
     def _stop_conversion_overlay(self):
