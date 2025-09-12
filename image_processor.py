@@ -13,15 +13,11 @@ for converting images into robot-drawable paths. Features include:
 The module is designed for robotics applications where images need to be
 converted into optimal drawing paths for robotic systems.
 
-Version: 1.0
 """
 import cv2
 import numpy as np
 import os
 
-
-# Module version
-__version__ = "1.0.0"
 
 
 class ImageProcessor:
