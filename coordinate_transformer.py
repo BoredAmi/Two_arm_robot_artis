@@ -1,5 +1,58 @@
 from shapely.geometry import Polygon, box, Point
 
+def calculate_centroid(contour):
+    """
+    Calculate the centroid (center of mass) of a contour.
+    
+    Args:
+        contour: List of (x, y) coordinate tuples
+        
+    Returns:
+        tuple: (centroid_x, centroid_y) coordinates
+    """
+    if not contour:
+        return 0.0, 0.0
+    
+    centroid_x = sum(p[0] for p in contour) / len(contour)
+    centroid_y = sum(p[1] for p in contour) / len(contour)
+    return centroid_x, centroid_y
+
+def create_contour_geometry(contour, buffer_radius=2.0):
+    """
+    Create a geometric shape from a contour, with fallback to buffered point.
+    
+    Args:
+        contour: List of (x, y) coordinate tuples
+        buffer_radius: Radius for point buffer fallback
+        
+    Returns:
+        shapely geometry object (Polygon or buffered Point)
+    """
+    if len(contour) < 4:
+        if len(contour) >= 1:
+            return create_buffered_point(contour, buffer_radius)
+        else:
+            return None  # Empty contour
+    else:
+        try:
+            return Polygon(contour)
+        except Exception:
+            return create_buffered_point(contour, buffer_radius)
+
+def create_buffered_point(contour, buffer_radius=2.0):
+    """
+    Create a buffered point from a contour's centroid.
+    
+    Args:
+        contour: List of (x, y) coordinate tuples
+        buffer_radius: Radius for the buffer
+        
+    Returns:
+        shapely Point buffered by the specified radius
+    """
+    centroid_x, centroid_y = calculate_centroid(contour)
+    return Point(centroid_x, centroid_y).buffer(buffer_radius)
+
 def polygons_overlap(contour1, contour2):
     """
     Returns True if two contours (as point lists) overlap (intersect) using shapely polygons.
@@ -8,36 +61,14 @@ def polygons_overlap(contour1, contour2):
     from shapely.geometry import Point
     
     # Handle contour1
-    if len(contour1) < 4:
-        if len(contour1) >= 1:
-            centroid_x = sum(p[0] for p in contour1) / len(contour1)
-            centroid_y = sum(p[1] for p in contour1) / len(contour1)
-            poly1 = Point(centroid_x, centroid_y).buffer(2.0)
-        else:
-            return False
-    else:
-        try:
-            poly1 = Polygon(contour1)
-        except Exception:
-            centroid_x = sum(p[0] for p in contour1) / len(contour1)
-            centroid_y = sum(p[1] for p in contour1) / len(contour1)
-            poly1 = Point(centroid_x, centroid_y).buffer(2.0)
+    poly1 = create_contour_geometry(contour1)
+    if poly1 is None:
+        return False
     
     # Handle contour2
-    if len(contour2) < 4:
-        if len(contour2) >= 1:
-            centroid_x = sum(p[0] for p in contour2) / len(contour2)
-            centroid_y = sum(p[1] for p in contour2) / len(contour2)
-            poly2 = Point(centroid_x, centroid_y).buffer(2.0)
-        else:
-            return False
-    else:
-        try:
-            poly2 = Polygon(contour2)
-        except Exception:
-            centroid_x = sum(p[0] for p in contour2) / len(contour2)
-            centroid_y = sum(p[1] for p in contour2) / len(contour2)
-            poly2 = Point(centroid_x, centroid_y).buffer(2.0)
+    poly2 = create_contour_geometry(contour2)
+    if poly2 is None:
+        return False
     
     return poly1.intersects(poly2)
 
@@ -45,26 +76,9 @@ def contour_overlaps_forbidden(contour, forbidden_poly):
     """
     Returns True if the contour (as point list) overlaps the forbidden area polygon.
     """
-    if len(contour) < 4:
-        # Cannot create a valid polygon with less than 4 points
-        # For small contours, treat as point and buffer it
-        if len(contour) >= 1:
-            # Use the centroid point and create a small buffer around it
-            centroid_x = sum(p[0] for p in contour) / len(contour)
-            centroid_y = sum(p[1] for p in contour) / len(contour)
-            from shapely.geometry import Point
-            poly = Point(centroid_x, centroid_y).buffer(2.0)  # 2mm buffer around point
-        else:
-            return False  # Empty contour, no overlap
-    else:
-        try:
-            poly = Polygon(contour)
-        except Exception:
-            # If polygon creation fails, fall back to centroid method
-            centroid_x = sum(p[0] for p in contour) / len(contour)
-            centroid_y = sum(p[1] for p in contour) / len(contour)
-            from shapely.geometry import Point
-            poly = Point(centroid_x, centroid_y).buffer(2.0)
+    poly = create_contour_geometry(contour)
+    if poly is None:
+        return False
     
     return poly.intersects(forbidden_poly)
 def get_contour_bounds(contour, buffer_x=0, buffer_y=0):
@@ -109,22 +123,9 @@ def master_slave_assign_contours(contours, master, buffer_radius=40, buffer_x=10
             left_forbidden_rect = ShapelyPolygon([(0, 0), (130, 0), (130, 40), (0, 40)])
             
             # Convert contour to polygon and check intersection
-            if len(c) >= 4:
-                try:
-                    contour_poly = ShapelyPolygon(c)
-                except Exception:
-                    # Fallback to centroid method
-                    centroid_x = sum(p[0] for p in c) / len(c)
-                    centroid_y = sum(p[1] for p in c) / len(c)
-                    contour_poly = Point(centroid_x, centroid_y).buffer(2.0)
-            else:
-                # For small contours, use centroid method
-                if len(c) >= 1:
-                    centroid_x = sum(p[0] for p in c) / len(c)
-                    centroid_y = sum(p[1] for p in c) / len(c)
-                    contour_poly = Point(centroid_x, centroid_y).buffer(2.0)
-                else:
-                    return False
+            contour_poly = create_contour_geometry(c)
+            if contour_poly is None:
+                return False
             
             # Return True if contour intersects or is inside the forbidden rectangle
             return left_forbidden_rect.intersects(contour_poly)
@@ -185,14 +186,10 @@ def master_slave_assign_contours(contours, master, buffer_radius=40, buffer_x=10
                 master_forbidden_area = master_poly.buffer(buffer_radius)
             except Exception:
                 # Fallback to centroid method
-                centroid_x = sum(p[0] for p in master_contour) / len(master_contour)
-                centroid_y = sum(p[1] for p in master_contour) / len(master_contour)
-                master_forbidden_area = Point(centroid_x, centroid_y).buffer(buffer_radius)
+                master_forbidden_area = create_buffered_point(master_contour, buffer_radius)
         else:
             # Small contour - use centroid method
-            centroid_x = sum(p[0] for p in master_contour) / len(master_contour)
-            centroid_y = sum(p[1] for p in master_contour) / len(master_contour)
-            master_forbidden_area = Point(centroid_x, centroid_y).buffer(buffer_radius)
+            master_forbidden_area = create_buffered_point(master_contour, buffer_radius)
     
     # 3. Calculate the bounds of the complete forbidden area to determine tail width
     bounds = master_forbidden_area.bounds  # (minx, miny, maxx, maxy)
@@ -247,20 +244,9 @@ def master_slave_assign_contours(contours, master, buffer_radius=40, buffer_x=10
         if slave_side == 'left' and _contour_in_left_forbidden(c):
             continue
         # Convert to polygon (buffer if needed)
-        if len(c) < 4:
-            if len(c) >= 1:
-                centroid_x = sum(p[0] for p in c) / len(c)
-                centroid_y = sum(p[1] for p in c) / len(c)
-                slave_poly = Point(centroid_x, centroid_y).buffer(2.0)
-            else:
-                continue  # Skip empty contours
-        else:
-            try:
-                slave_poly = Polygon(c)
-            except Exception:
-                centroid_x = sum(p[0] for p in c) / len(c)
-                centroid_y = sum(p[1] for p in c) / len(c)
-                slave_poly = Point(centroid_x, centroid_y).buffer(2.0)
+        slave_poly = create_contour_geometry(c)
+        if slave_poly is None:
+            continue  # Skip empty contours
         # Only assign if there is NO intersection at all
         if not forbidden_poly.intersects(slave_poly):
             slave_contour = c

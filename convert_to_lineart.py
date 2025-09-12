@@ -30,14 +30,16 @@ def create_catalog_structure():
     
     return base_dir
 
-def save_conversion_to_catalog(input_path, output_path, prompt_type, base_dir):
+def save_to_catalog(input_path=None, output_path=None, prompt_type=None, text_prompt=None, style=None, base_dir=None):
     """
-    Save input and output files to organized catalog with timestamp and metadata
+    Unified function to save conversions/generations to organized catalog with timestamp and metadata
     
     Args:
-        input_path: Path to original input image
-        output_path: Path to generated line art output
-        prompt_type: Type of conversion (minimalist, caricature, etc.)
+        input_path: Path to original input image (for image-to-image conversions)
+        output_path: Path to generated output image
+        prompt_type: Type of conversion (minimalist, caricature, etc.) for image-to-image
+        text_prompt: Original text prompt used for generation (for text-to-image)
+        style: Style of generation (line_art, etc.) for text-to-image
         base_dir: Base catalog directory
         
     Returns:
@@ -47,67 +49,137 @@ def save_conversion_to_catalog(input_path, output_path, prompt_type, base_dir):
         # Create timestamp for unique folder naming
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
-        # Create conversion-specific directory
-        conversion_dir = os.path.join(base_dir, f"{timestamp}_{prompt_type}")
+        # Determine conversion type and create appropriate directory name
+        if text_prompt is not None:
+            # Text-to-image generation
+            conversion_type = "text_to_image"
+            style_name = style or "line_art"
+            conversion_dir = os.path.join(base_dir, f"{timestamp}_text_generated_{style_name}")
+            operation_type = "Generation"
+            metadata_filename = "generation_info.txt"
+        else:
+            # Image-to-image conversion
+            conversion_type = "image_to_image"
+            conversion_dir = os.path.join(base_dir, f"{timestamp}_{prompt_type}")
+            operation_type = "Conversion"
+            metadata_filename = "conversion_info.txt"
+        
         os.makedirs(conversion_dir, exist_ok=True)
         
-        # Generate meaningful filenames
-        input_basename = os.path.splitext(os.path.basename(input_path))[0]
+        result = {
+            'conversion_dir': conversion_dir,
+            'timestamp': timestamp,
+            'type': conversion_type
+        }
         
-        # Define target paths
-        saved_input_path = os.path.join(conversion_dir, f"input_{input_basename}.png")
-        saved_output_path = os.path.join(conversion_dir, f"output_{prompt_type}_lineart.png")
-        metadata_path = os.path.join(conversion_dir, "conversion_info.txt")
+        # Handle input file (only for image-to-image conversions)
+        if input_path and os.path.exists(input_path):
+            input_basename = os.path.splitext(os.path.basename(input_path))[0]
+            saved_input_path = os.path.join(conversion_dir, f"input_{input_basename}.png")
+            shutil.copy2(input_path, saved_input_path)
+            result['input_saved'] = saved_input_path
         
-        # Copy input file
-        shutil.copy2(input_path, saved_input_path)
+        # Handle output file
+        if output_path and os.path.exists(output_path):
+            if text_prompt is not None:
+                saved_output_path = os.path.join(conversion_dir, f"output_text_generated_{style_name}.png")
+            else:
+                saved_output_path = os.path.join(conversion_dir, f"output_{prompt_type}_lineart.png")
+            shutil.copy2(output_path, saved_output_path)
+            result['output_saved'] = saved_output_path
         
-        # Copy output file
-        shutil.copy2(output_path, saved_output_path)
+        # Handle text prompt (only for text-to-image generations)
+        if text_prompt is not None:
+            saved_prompt_path = os.path.join(conversion_dir, "text_prompt.txt")
+            with open(saved_prompt_path, 'w', encoding='utf-8') as f:
+                f.write(text_prompt)
+            result['prompt_saved'] = saved_prompt_path
         
         # Create metadata file
+        metadata_path = os.path.join(conversion_dir, metadata_filename)
+        result['metadata_saved'] = metadata_path
+        
         metadata = [
-            f"Line Art Conversion - {timestamp}",
+            f"Line Art {operation_type} - {timestamp}",
             f"==========================================",
-            f"Conversion Type: {prompt_type}",
-            f"Original Input: {os.path.basename(input_path)}",
-            f"Generated Output: output_{prompt_type}_lineart.png",
-            f"Conversion Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            f"Input File Size: {os.path.getsize(input_path)} bytes",
-            f"Output File Size: {os.path.getsize(output_path)} bytes",
-            f"",
-            f"Prompt Used:",
-            f"------------",
-            f"{PROMPTS.get(prompt_type, 'Unknown prompt type')}",
-            f"",
-            f"Files in this conversion:",
-            f"- input_{input_basename}.png (original image)",
-            f"- output_{prompt_type}_lineart.png (generated line art)",
-            f"- conversion_info.txt (this metadata file)",
         ]
+        
+        if text_prompt is not None:
+            metadata.extend([
+                f"Generation Type: {conversion_type}",
+                f"Style: {style_name}",
+                f"Generated Output: output_text_generated_{style_name}.png",
+                f"Generation Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                f"Output File Size: {os.path.getsize(output_path)} bytes" if output_path else "Output File Size: Unknown",
+                f"",
+                f"Original Text Prompt:",
+                f"--------------------",
+                f"{text_prompt}",
+                f"",
+                f"Files in this generation:",
+                f"- output_text_generated_{style_name}.png (generated image)",
+                f"- text_prompt.txt (original text prompt)",
+                f"- {metadata_filename} (this metadata file)",
+            ])
+        else:
+            metadata.extend([
+                f"Conversion Type: {prompt_type}",
+                f"Original Input: {os.path.basename(input_path) if input_path else 'Unknown'}",
+                f"Generated Output: output_{prompt_type}_lineart.png",
+                f"Conversion Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                f"Input File Size: {os.path.getsize(input_path)} bytes" if input_path else "Input File Size: Unknown",
+                f"Output File Size: {os.path.getsize(output_path)} bytes" if output_path else "Output File Size: Unknown",
+                f"",
+                f"Prompt Used:",
+                f"------------",
+                f"{PROMPTS.get(prompt_type, 'Unknown prompt type')}",
+                f"",
+                f"Files in this conversion:",
+                f"- input_{input_basename}.png (original image)" if input_path else "",
+                f"- output_{prompt_type}_lineart.png (generated line art)",
+                f"- {metadata_filename} (this metadata file)",
+            ])
         
         with open(metadata_path, 'w', encoding='utf-8') as f:
             f.write('\n'.join(metadata))
         
-        result = {
-            'conversion_dir': conversion_dir,
-            'input_saved': saved_input_path,
-            'output_saved': saved_output_path,
-            'metadata_saved': metadata_path,
-            'timestamp': timestamp
-        }
-        
-        print(f"✅ Conversion saved to catalog:")
+        print(f"✅ {operation_type} saved to catalog:")
         print(f"   Directory: {conversion_dir}")
-        print(f"   Input: {os.path.basename(saved_input_path)}")
-        print(f"   Output: {os.path.basename(saved_output_path)}")
-        print(f"   Metadata: {os.path.basename(metadata_path)}")
+        if 'input_saved' in result:
+            print(f"   Input: {os.path.basename(result['input_saved'])}")
+        if 'output_saved' in result:
+            print(f"   Output: {os.path.basename(result['output_saved'])}")
+        if 'prompt_saved' in result:
+            print(f"   Prompt: {os.path.basename(result['prompt_saved'])}")
+        print(f"   Metadata: {os.path.basename(result['metadata_saved'])}")
         
         return result
         
     except Exception as e:
         print(f"❌ Error saving to catalog: {e}")
         return None
+
+def save_conversion_to_catalog(input_path, output_path, prompt_type, base_dir):
+    """
+    Legacy function - now uses unified save_to_catalog function
+    """
+    return save_to_catalog(
+        input_path=input_path,
+        output_path=output_path,
+        prompt_type=prompt_type,
+        base_dir=base_dir
+    )
+
+def save_text_generation_to_catalog(text_prompt, output_path, style, base_dir):
+    """
+    Legacy function - now uses unified save_to_catalog function
+    """
+    return save_to_catalog(
+        text_prompt=text_prompt,
+        output_path=output_path,
+        style=style,
+        base_dir=base_dir
+    )
 
 def view_catalog_summary():
     """Display a summary of all conversions in the catalog"""
@@ -271,79 +343,14 @@ def generate_image_from_text(text_prompt, style="line_art"):
 
 def save_text_generation_to_catalog(text_prompt, output_path, style, base_dir):
     """
-    Save text-to-image generation to organized catalog with timestamp and metadata
-    
-    Args:
-        text_prompt: Original text prompt used for generation
-        output_path: Path to generated image output
-        style: Style of generation (line_art, etc.)
-        base_dir: Base catalog directory
-        
-    Returns:
-        Dictionary with saved file paths and metadata
+    Legacy function - now uses unified save_to_catalog function
     """
-    try:
-        # Create timestamp for unique folder naming
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
-        # Create conversion-specific directory
-        conversion_dir = os.path.join(base_dir, f"{timestamp}_text_generated_{style}")
-        os.makedirs(conversion_dir, exist_ok=True)
-        
-        # Define target paths
-        saved_output_path = os.path.join(conversion_dir, f"output_text_generated_{style}.png")
-        saved_prompt_path = os.path.join(conversion_dir, "text_prompt.txt")
-        metadata_path = os.path.join(conversion_dir, "generation_info.txt")
-        
-        # Copy output file
-        shutil.copy2(output_path, saved_output_path)
-        
-        # Save the text prompt
-        with open(saved_prompt_path, 'w', encoding='utf-8') as f:
-            f.write(text_prompt)
-        
-        # Create metadata file
-        metadata = [
-            f"Text-to-Image Generation - {timestamp}",
-            f"==========================================",
-            f"Generation Type: text_to_image",
-            f"Style: {style}",
-            f"Generated Output: output_text_generated_{style}.png",
-            f"Generation Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            f"Output File Size: {os.path.getsize(output_path)} bytes",
-            f"",
-            f"Original Text Prompt:",
-            f"--------------------",
-            f"{text_prompt}",
-            f"",
-            f"Files in this generation:",
-            f"- output_text_generated_{style}.png (generated image)",
-            f"- text_prompt.txt (original text prompt)",
-            f"- generation_info.txt (this metadata file)",
-        ]
-        
-        with open(metadata_path, 'w', encoding='utf-8') as f:
-            f.write('\n'.join(metadata))
-        
-        result = {
-            'conversion_dir': conversion_dir,
-            'output_saved': saved_output_path,
-            'prompt_saved': saved_prompt_path,
-            'metadata_saved': metadata_path,
-            'timestamp': timestamp
-        }
-        
-        print(f"✅ Generation saved to catalog:")
-        print(f"   Directory: {conversion_dir}")
-        print(f"   Output: {os.path.basename(saved_output_path)}")
-        print(f"   Prompt: {os.path.basename(saved_prompt_path)}")
-        print(f"   Metadata: {os.path.basename(metadata_path)}")
-        
-        return result
-        
-    except Exception as e:
-        print(f"❌ Error saving generation to catalog: {e}")
-        return None
+    return save_to_catalog(
+        text_prompt=text_prompt,
+        output_path=output_path,
+        style=style,
+        base_dir=base_dir
+    )
 
 def convert_to_lineart(face_image_path, prompt_type="minimalist"):
     """Convert a face image to line art using OpenAI's image editing capabilities."""

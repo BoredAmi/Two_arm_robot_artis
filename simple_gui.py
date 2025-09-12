@@ -18,8 +18,6 @@ Features:
 
 The GUI is designed to be accessible to users of all technical levels while providing
 access to advanced features for power users.
-
-Version: 1.0 - EXPO MODE
 """
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -45,7 +43,6 @@ from robot_drawer import RobotDrawer
 class SimpleRobotGUI:
     """
     Main GUI class for the Robot Drawing System.
-    
     Provides a clean, step-by-step interface for:
     - Image loading and drawing creation
     - Robot connection management  
@@ -103,7 +100,6 @@ class SimpleRobotGUI:
         if font is None:
             font = self.BUTTON_FONT
         
-        # Create darker pressed color by reducing brightness
         def darken_color(color):
             # Simple darkening for touch feedback
             if color.startswith('#') and len(color) == 7:
@@ -129,7 +125,6 @@ class SimpleRobotGUI:
         if 'cursor' not in kwargs:
             kwargs['cursor'] = 'hand2'
         
-        # Create button with touch feedback
         btn = tk.Button(parent, text=text, command=command, font=font, bg=bg, **kwargs)
         
         def on_press(event):
@@ -155,6 +150,41 @@ class SimpleRobotGUI:
         
         return btn
     
+    def create_standard_button(self, parent, text, command, bg=None, fg=None, font=None, 
+                              relief='flat', padx=10, pady=5, cursor='hand2', width=None, **kwargs):
+        """
+        Create a standard button with consistent styling and common defaults.
+        
+        Args:
+            parent: Parent widget
+            text (str): Button text
+            command: Button command function
+            bg (str): Background color (defaults to photo_preview color)
+            fg (str): Foreground color (defaults to white)
+            font: Font specification (defaults to BUTTON_FONT)
+            relief: Button relief style (defaults to 'flat')
+            padx, pady: Button padding (defaults to 10, 5)
+            cursor: Mouse cursor (defaults to 'hand2')
+            width: Button width
+            **kwargs: Additional button parameters
+            
+        Returns:
+            tk.Button: Configured button widget
+        """
+        # Set defaults
+        if bg is None:
+            bg = self.COLORS['photo_preview']
+        if fg is None:
+            fg = 'white'
+        if font is None:
+            font = self.BUTTON_FONT
+            
+        # Create button with all parameters
+        button = tk.Button(parent, text=text, command=command, bg=bg, fg=fg, font=font,
+                          relief=relief, padx=padx, pady=pady, cursor=cursor, width=width, **kwargs)
+        
+        return button
+    
     def __init__(self):
         """Initialize the GUI application."""
         import json
@@ -167,9 +197,6 @@ class SimpleRobotGUI:
         self.root.geometry(f"{self.WINDOW_WIDTH}x{self.WINDOW_HEIGHT}")
         self.root.configure(bg=self.COLORS['background'])
 
-        # Create a lightweight placeholder for legacy callers that expect self.file_label
-        # The real `self.file_label` will be created in `create_image_section`; this avoids
-        # attribute errors if other routines attempt to update it before the setup UI exists.
         try:
             if not hasattr(self, 'file_label'):
                 self.file_label = tk.Label(self.root, text="No image selected", bg=self.COLORS['section_bg'])
@@ -177,16 +204,12 @@ class SimpleRobotGUI:
             # If Tk isn't fully ready, keep a None fallback
             self.file_label = None
 
-        # Dual-arm mode state (must be after tk.Tk() and self is defined)
         self.dual_arm_mode = tk.BooleanVar(master=self.root, value=False)
 
-        # Initialize robot drawer with TSP enabled by default and default dimensions
         self.drawer = RobotDrawer(max_x=290, max_y=210, enable_tsp=True, use_center_origin=True, margin_x=10, margin_y=10)
 
-        # Initialize state variables
         self._init_variables()
 
-        # Override defaults with config values if present
         if self.config.get("robot_ip"):
             self.robot_ip.set(self.config["robot_ip"])
         if self.config.get("robot_port"):
@@ -209,7 +232,6 @@ class SimpleRobotGUI:
             self.margin_x.set(self.config["margin_x"])
         if self.config.get("margin_y") is not None:
             self.margin_y.set(self.config["margin_y"])
-        # Restore additional UI settings (quality, detection, modes, brush, dual-arm)
         if self.config.get("quality_var") is not None:
             try:
                 self.quality_var.set(self.config["quality_var"])
@@ -247,10 +269,8 @@ class SimpleRobotGUI:
             except Exception:
                 pass
 
-        # Create the user interface (compact main view). Full setup is in a separate window.
         self.create_simple_interface()
 
-        # Restore text prompt after UI is created
         if self.config.get("text_prompt") is not None:
             try:
                 if hasattr(self, 'text_entry'):
@@ -259,7 +279,6 @@ class SimpleRobotGUI:
             except Exception:
                 pass
 
-        # Start voice listener (background thread). Calls into _on_voice_command -> main thread dispatcher.
         try:
             self._voice_listener = VoiceCommandListener(callback=self._on_voice_command)
             self._voice_listener.start()
@@ -267,7 +286,6 @@ class SimpleRobotGUI:
             # If voice model not available or sound device missing, continue without voice control
             self._voice_listener = None
 
-        # Restore forbidden buffer from config (created during UI setup)
         if self.config.get("forbidden_buffer") is not None:
             try:
                 if hasattr(self, 'forbidden_buffer_var'):
@@ -275,16 +293,13 @@ class SimpleRobotGUI:
             except Exception:
                 pass
 
-        # Autosave on window close: ensure config persisted and robot disconnected
         try:
             self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         except Exception:
             pass
 
-        # Update connection display with initial values
         self.root.after(100, self._update_connection_display)
 
-        # Try to load custom gear images on startup
         self.load_custom_gear_images()
 
     def _load_config(self):
@@ -363,18 +378,15 @@ class SimpleRobotGUI:
     
     def _init_variables(self):
         """Initialize all GUI state variables."""
-        # File and drawing state
         self.image_path = tk.StringVar()
         self.drawing_mode = tk.StringVar(value="load")  # "load", "draw", or "text"
         self.text_prompt = tk.StringVar()  # For text-to-image generation
         
-        # Robot connection
         self.robot_ip = tk.StringVar(value=self.DEFAULT_ROBOT_IP)
         self.robot_port = tk.StringVar(value=self.DEFAULT_ROBOT_PORT)
         self.robot_port_l = tk.StringVar(value=self.DEFAULT_ROBOT_PORT_L)  # Left robot port
         self.is_connected = False
         
-        # Processing state
         self.status_text = tk.StringVar(value="Ready")
         self.quality_var = tk.StringVar(value="high")
         self.detection_method = tk.StringVar(value="threshold")  # Default to threshold for performance
@@ -383,22 +395,17 @@ class SimpleRobotGUI:
         self.use_center_origin = tk.BooleanVar(value=True)  # Default to center-based coordinates
         self.is_processed = False
         
-        # Logo settings
         self.enable_logo = tk.BooleanVar(value=False)  # Logo disabled by default
         self.logo_size = tk.IntVar(value=20)  # Logo size in mm
         
-        # Frame filtering settings
         self.enable_frame_filtering = tk.BooleanVar(value=False)  # Frame filtering disabled by default
         
-        # Drawing dimensions (mm)
         self.max_x = tk.IntVar(value=290)  # Default robot workspace width
         self.max_y = tk.IntVar(value=210)  # Default robot workspace height
         
-        # Drawing margins (mm)
         self.margin_x = tk.IntVar(value=10)  # Default horizontal margin
         self.margin_y = tk.IntVar(value=10)  # Default vertical margin
         
-        # Drawing canvas state
         self.brush_size = tk.IntVar(value=3)
         self.drawing_canvas = None
         self.drawing_data = []
@@ -407,23 +414,18 @@ class SimpleRobotGUI:
         self.drawing_image = None
         self.temp_drawing_path = None
         
-        # Drawing operation state
         self.drawing_active = False
         
-        # Forbidden buffer (for dual-arm mode)
         self.forbidden_buffer_var = tk.IntVar(value=40)
         
-        # Triangle press state flags
         self.portrait_triangle_pressed = False
         self.caricature_triangle_pressed = False
     
     def create_simple_interface(self):
         """Create a 2x2 grid layout with tile buttons for expo."""
-        # Main container with padding
         main_frame = tk.Frame(self.root, bg=self.COLORS['background'], padx=10, pady=10)
         main_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Application title
         title_label = tk.Label(main_frame, text="🤖 Robot Drawing System", 
                     font=('Arial', 24, 'bold'), 
                     bg=self.COLORS['background'], fg=self.COLORS['take_photo'])
@@ -433,7 +435,6 @@ class SimpleRobotGUI:
                     font=('Arial', 14), 
                     bg=self.COLORS['background'], fg=self.COLORS['start_drawing'])
         subtitle_label.pack(pady=(0, 15))
-        # Attempt to load company logo and place at top-right corner
         try:
             logo_path = os.path.join(os.path.dirname(__file__), 'logo_inlader.jpg')
             if os.path.exists(logo_path):
@@ -458,7 +459,6 @@ class SimpleRobotGUI:
             # If logo can't be loaded, ignore silently
             pass
         
-        # Create TRUE 2x2 grid layout 
         grid_frame = tk.Frame(main_frame, bg=self.COLORS['background'])
         grid_frame.pack(fill=tk.BOTH, expand=True)
         
@@ -514,7 +514,6 @@ class SimpleRobotGUI:
         for i in range(10):
             self.style_frame.grid_rowconfigure(i, weight=1)
         
-        # Create ultra-granular diagonal triangle effect - Portrait (orange) upper left triangle
         # Row 0 - Full width Portrait
         self.portrait_btn1 = self.make_touch_button(
             self.style_frame, text="👤 PORTRAIT", font=("Arial", 15, "bold"),
@@ -672,18 +671,16 @@ class SimpleRobotGUI:
         self.face_drawing_btn = self.portrait_btn1
         self.caricature_btn = self.caricature_btn1
         
-        # Create visual triangle overlay that looks like two simple triangular buttons
         self.create_triangle_button_overlay()
         
         # Tile 4: Start Drawing (Bottom Right) - Single column, equal size
-        self.start_drawing_btn = tk.Button(grid_frame, 
+        self.start_drawing_btn = self.create_standard_button(grid_frame, 
                                          text="4. START DRAWING\n\n🤖",
                                          command=self.start_drawing,
                                          font=self.BUTTON_FONT, bg=self.COLORS['start_drawing'], fg='white',
                                          relief=tk.RAISED, bd=3, cursor='hand2')
         self.start_drawing_btn.grid(row=1, column=1, sticky='nsew', padx=5, pady=5)  
         
-        # Create alias for backward compatibility with existing code
         self.draw_btn = self.start_drawing_btn
         
         # Initialize drawing style variable
@@ -697,7 +694,6 @@ class SimpleRobotGUI:
     
     def create_triangle_button_overlay(self):
         """Create visual overlay that makes it look like two triangle buttons while keeping staircase functional"""
-        # Create a canvas that shows triangle shapes but allows clicks to pass through
         overlay_canvas = tk.Canvas(self.style_frame, highlightthickness=0, bg=self.COLORS['photo_preview'])
         overlay_canvas.place(x=0, y=0, relwidth=1, relheight=1)
         
@@ -921,10 +917,8 @@ class SimpleRobotGUI:
         self.progress_label.pack(side=tk.RIGHT)
         
         # Add settings button instead of test button
-        settings_btn = tk.Button(status_frame, text="⚙️ Settings", 
-            command=self.open_setup_window,
-            bg=self.COLORS['photo_preview'], fg='white', font=('Arial', 8), relief='flat', 
-            padx=5, pady=2, cursor='hand2')
+        settings_btn = self.create_standard_button(status_frame, text="⚙️ Settings", 
+            command=self.open_setup_window, padx=5, pady=2, font=('Arial', 8))
         settings_btn.pack(side=tk.RIGHT, padx=(5, 0))
     
     def create_step_section(self, parent, title, content_func):
@@ -979,9 +973,8 @@ class SimpleRobotGUI:
         self.take_photo_btn.pack(pady=(0, 15))
 
         # Setup button (smaller, for advanced users)
-        setup_btn = tk.Button(parent, text="⚙️ Advanced Setup & Other Options", command=self.open_setup_window,
-              bg=self.COLORS['photo_preview'], fg='white', font=('Arial', 11), relief='flat', 
-              padx=20, pady=10, cursor='hand2')
+        setup_btn = self.create_standard_button(parent, text="⚙️ Advanced Setup & Other Options",
+            command=self.open_setup_window, bg=self.COLORS['photo_preview'], width=self.BUTTON_WIDTH)
         setup_btn.pack(pady=(20, 0))
     
     def create_image_section(self, parent):
@@ -1065,10 +1058,8 @@ class SimpleRobotGUI:
         self.file_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
         # Browse button
-        browse_btn = tk.Button(self.file_section, text="Browse Images", 
-            command=self.browse_image,
-            bg=self.COLORS['photo_preview'], fg='white', font=self.BUTTON_FONT,
-            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
+        browse_btn = self.create_standard_button(self.file_section, text="Browse Images", 
+            command=self.browse_image, width=self.BUTTON_WIDTH)
         browse_btn.pack(side=tk.RIGHT, padx=(10, 0))
         
         # Drawing section
@@ -1079,17 +1070,13 @@ class SimpleRobotGUI:
         draw_controls = tk.Frame(self.draw_section, bg='white')
         draw_controls.pack()
         
-        draw_btn = tk.Button(draw_controls, text="🎨 Open Drawing Canvas", 
-                command=self.open_drawing_window,
-                bg=self.COLORS['caricature'], fg='white', font=self.BUTTON_FONT,
-                relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
+        draw_btn = self.create_standard_button(draw_controls, text="🎨 Open Drawing Canvas", 
+                command=self.open_drawing_window, bg=self.COLORS['caricature'], width=self.BUTTON_WIDTH)
         draw_btn.pack(side=tk.LEFT, padx=(0, 10))
         
         # Templates button
-        templates_btn = tk.Button(draw_controls, text="📋 Templates", 
-                command=self.show_templates,
-        bg=self.COLORS['photo_preview'], fg='white', font=self.BUTTON_FONT,
-                relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
+        templates_btn = self.create_standard_button(draw_controls, text="📋 Templates", 
+                command=self.show_templates, width=self.BUTTON_WIDTH)
         templates_btn.pack(side=tk.LEFT)
         
         # Initially hide draw section
@@ -1117,10 +1104,8 @@ class SimpleRobotGUI:
         self.text_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
         
         # Generate button
-        generate_btn = tk.Button(text_input_frame, text="🤖 Generate Image", 
-            command=self.generate_from_text,
-            bg=self.COLORS['start_drawing'], fg='white', font=self.BUTTON_FONT,
-            relief='flat', padx=self.BUTTON_PADX, pady=self.BUTTON_PADY, cursor='hand2', width=self.BUTTON_WIDTH)
+        generate_btn = self.create_standard_button(text_input_frame, text="🤖 Generate Image", 
+            command=self.generate_from_text, bg=self.COLORS['start_drawing'], width=self.BUTTON_WIDTH)
         generate_btn.pack(side=tk.RIGHT)
         
         # Example prompts
@@ -1281,10 +1266,10 @@ class SimpleRobotGUI:
         presets = [("A4", 290, 210), ("A5", 210, 148), ("Custom", None, None)]
         for text, width, height in presets:
             if width and height:
-                preset_btn = tk.Button(preset_frame, text=text, 
+                preset_btn = self.create_standard_button(preset_frame, text=text, 
                                      command=lambda w=width, h=height: self.set_dimension_preset(w, h),
-                                     bg='white', fg=self.COLORS['take_photo'], font=('Arial', 8), relief='flat', 
-                                     padx=8, pady=2, cursor='hand2')
+                                     bg='white', fg=self.COLORS['take_photo'], font=('Arial', 8), 
+                                     padx=8, pady=2)
                 preset_btn.pack(side=tk.LEFT, padx=(2, 0))
         
         # Margins selector
@@ -1322,10 +1307,10 @@ class SimpleRobotGUI:
         
         margin_presets = [("None", 0, 0), ("Small", 5, 5), ("Medium", 10, 10), ("Large", 15, 15)]
         for text, margin_x, margin_y in margin_presets:
-            margin_preset_btn = tk.Button(margin_preset_frame, text=text, 
+            margin_preset_btn = self.create_standard_button(margin_preset_frame, text=text, 
                                         command=lambda mx=margin_x, my=margin_y: self.set_margin_preset(mx, my),
-                                        bg='white', fg=self.COLORS['take_photo'], font=('Arial', 8), relief='flat', 
-                                        padx=8, pady=2, cursor='hand2')
+                                        bg='white', fg=self.COLORS['take_photo'], font=('Arial', 8), 
+                                        padx=8, pady=2)
             margin_preset_btn.pack(side=tk.LEFT, padx=(2, 0))
 
         # Forbidden buffer radius (for dual-arm forbidden zones)
@@ -1349,7 +1334,7 @@ class SimpleRobotGUI:
         self.conn_status_label.pack(pady=(0, 10))
         
         # Connect button (prominent)
-        self.connect_btn = tk.Button(status_frame, text="🔗 CONNECT ROBOT", 
+        self.connect_btn = self.create_standard_button(status_frame, text="🔗 CONNECT ROBOT", 
             command=self.toggle_connection,
             bg=self.COLORS['portrait'], fg='white', font=('Arial', 16, 'bold'),
             relief='flat', padx=40, pady=20, cursor='hand2', width=20)
@@ -1392,7 +1377,7 @@ class SimpleRobotGUI:
         effects_buttons.pack()
 
         # Normal drawing (default)
-        self.normal_btn = tk.Button(effects_buttons, text="📄 Normal\nDrawing", 
+        self.normal_btn = self.create_standard_button(effects_buttons, text="📄 Normal\nDrawing", 
             command=lambda: self.set_drawing_mode('normal'),
             bg=self.COLORS['photo_preview'], fg='white', font=('Arial', 12, 'bold'),
             relief='flat', padx=20, pady=15, cursor='hand2', width=12,
@@ -1400,7 +1385,7 @@ class SimpleRobotGUI:
         self.normal_btn.pack(side=tk.LEFT, padx=(0, 15))
 
         # Portrait mode
-        self.face_drawing_btn = tk.Button(effects_buttons, text="👤 Portrait\nMode", 
+        self.face_drawing_btn = self.create_standard_button(effects_buttons, text="👤 Portrait\nMode", 
             command=self.convert_to_face_drawing,
             bg=self.COLORS['start_drawing'], fg='black', font=('Arial', 12, 'bold'),
             relief='flat', padx=20, pady=15, cursor='hand2', width=12,
@@ -1408,7 +1393,7 @@ class SimpleRobotGUI:
         self.face_drawing_btn.pack(side=tk.LEFT, padx=(0, 15))
 
         # Caricature mode  
-        self.caricature_btn = tk.Button(effects_buttons, text="🎭 Caricature\nMode", 
+        self.caricature_btn = self.create_standard_button(effects_buttons, text="🎭 Caricature\nMode", 
             command=self.convert_to_caricature,
             bg=self.COLORS['portrait'], fg='black', font=('Arial', 12, 'bold'),
             relief='flat', padx=20, pady=15, cursor='hand2', width=12,
@@ -1427,7 +1412,7 @@ class SimpleRobotGUI:
         self.draw_btn.pack()
 
         # Emergency stop button (initially hidden)
-        self.stop_btn = tk.Button(start_frame, text="⏹ EMERGENCY STOP", 
+        self.stop_btn = self.create_standard_button(start_frame, text="⏹ EMERGENCY STOP", 
                 command=self.emergency_stop,
                 bg=self.COLORS['take_photo'], fg='white', font=('Arial', 16, 'bold'),
                 relief='flat', padx=40, pady=20, cursor='hand2', width=25)
@@ -1440,7 +1425,7 @@ class SimpleRobotGUI:
         self.drawing_active = False
         
         # Emergency stop button (initially hidden)
-        self.stop_btn = tk.Button(start_frame, text="⏹ EMERGENCY\nSTOP", 
+        self.stop_btn = self.create_standard_button(start_frame, text="⏹ EMERGENCY\nSTOP", 
                 command=self.emergency_stop,
                 bg=self.COLORS['take_photo'], fg='white', font=('Arial', 12, 'bold'),
                 relief='flat', padx=20, pady=15, cursor='hand2', width=16)
@@ -1452,9 +1437,6 @@ class SimpleRobotGUI:
         if hasattr(self, 'current_image_path') and self.current_image_path:
             # Just process the current image normally
             self.auto_process_image()
-
-    # ---------------------- Zoom / Detailed Viewer ----------------------
-    # Removed embedded scroll/double-click zoom; only dedicated viewer retained
 
     def open_detailed_path_window(self):
         """Open a larger, dedicated window with full zoom & pan controls."""
@@ -1707,11 +1689,10 @@ class SimpleRobotGUI:
 
                 canvas.draw_idle()
 
-            # Create and store animation to avoid garbage collection
             self._current_anim = FuncAnimation(ax.figure, update, frames=len(steps), interval=1200, repeat=False)
             canvas.draw_idle()
 
-        anim_btn = tk.Button(self.detail_window, text="Animate Dual-Arm Paths", command=start_animation, bg=self.COLORS['take_photo'], fg="white", font=("Arial", 10, "bold"))
+        anim_btn = self.create_standard_button(self.detail_window, text="Animate Dual-Arm Paths", command=start_animation, bg=self.COLORS['take_photo'])
 
         anim_btn.pack(side=tk.TOP, pady=8)
 
@@ -1733,7 +1714,6 @@ class SimpleRobotGUI:
                 
                 # Use Professional/Industrial colors with arm roles if in dual-arm mode
                 if self.dual_arm_mode.get():
-                    # Create alternating arm roles for demonstration (this could be improved with actual assignments)
                     arm_roles = ['left' if i % 2 == 0 else 'right' for i in range(len(self.drawer.drawing_points))]
                     colors = None  # Let the animation helper determine colors based on arm_roles
                 else:
@@ -1751,7 +1731,7 @@ class SimpleRobotGUI:
                 ax.text(0, 0, 'No point data to animate!', ha='center', va='center', color='red', fontsize=14)
             canvas.draw_idle()
 
-        anim_point_btn = tk.Button(self.detail_window, text="Animate Point by Point (fast)", command=start_point_animation, bg=self.COLORS['photo_preview'], fg="white", font=("Arial", 10, "bold"))
+        anim_point_btn = self.create_standard_button(self.detail_window, text="Animate Point by Point (fast)", command=start_point_animation, bg=self.COLORS['photo_preview'])
         anim_point_btn.pack(side=tk.TOP, pady=4)
 
     def _detail_scroll_zoom(self, event, ax, canvas):
@@ -1791,7 +1771,6 @@ class SimpleRobotGUI:
         # Progress bar container (initially hidden)
         self.progress_container = tk.Frame(status_frame, bg=self.COLORS['background'])
 
-        # Create a ttk style for the progress bar using palette colors
         style = ttk.Style()
         try:
             style.theme_use('default')
@@ -2274,7 +2253,6 @@ class SimpleRobotGUI:
             old_robot = self.drawer.robot
             was_connected = True
         
-        # Create new drawer with margins
         self.drawer = RobotDrawer(
             ip=self.robot_ip.get(),
             port=int(self.robot_port.get()),
@@ -2317,26 +2295,22 @@ class SimpleRobotGUI:
         self.brush_size_scale.pack(side=tk.LEFT, padx=(0, 20))
         
         # Action buttons
-        clear_btn = tk.Button(controls_frame, text="🗑️ Clear", command=self.clear_canvas,
-                             bg='#f44336', fg='white', font=('Arial', 10, 'bold'),
-                             relief='flat', padx=15, pady=5)
+        clear_btn = self.create_standard_button(controls_frame, text="🗑️ Clear", command=self.clear_canvas,
+                             bg='#f44336', font=('Arial', 10, 'bold'))
         clear_btn.pack(side=tk.LEFT, padx=(0, 10))
         
-        save_btn = tk.Button(controls_frame, text="💾 Save Drawing", command=self.save_drawing,
-                            bg=self.COLORS['photo_preview'], fg='white', font=('Arial', 10, 'bold'),
-                            relief='flat', padx=15, pady=5)
+        save_btn = self.create_standard_button(controls_frame, text="💾 Save Drawing", command=self.save_drawing,
+                            font=('Arial', 10, 'bold'))
         save_btn.pack(side=tk.LEFT, padx=(0, 10))
         
-        use_btn = tk.Button(controls_frame, text="✅ Use Drawing", command=self.use_drawing,
-                           bg=self.COLORS['take_photo'], fg='white', font=('Arial', 10, 'bold'),
-                           relief='flat', padx=15, pady=5)
+        use_btn = self.create_standard_button(controls_frame, text="✅ Use Drawing", command=self.use_drawing,
+                           bg=self.COLORS['take_photo'], font=('Arial', 10, 'bold'))
         use_btn.pack(side=tk.LEFT)
         
         # Canvas frame
         canvas_frame = tk.Frame(self.drawing_window, bg='white', relief='sunken', bd=2)
         canvas_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
         
-        # Create canvas
         self.drawing_canvas = tk.Canvas(canvas_frame, bg='white', cursor='pencil')
         self.drawing_canvas.pack(fill=tk.BOTH, expand=True)
         
@@ -2363,31 +2337,25 @@ class SimpleRobotGUI:
         self.setup_window.geometry("900x700")
         self.setup_window.configure(bg='#f5f5f5')
         
-        # Create notebook for organized tabs
         notebook = ttk.Notebook(self.setup_window)
         notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # Tab 1: Input Methods & Image Loading
         input_frame = ttk.Frame(notebook)
         notebook.add(input_frame, text="Input Methods")
         self.create_input_methods_tab(input_frame)
         
-        # Tab 2: Image Processing Settings
         processing_frame = ttk.Frame(notebook)
         notebook.add(processing_frame, text="Image Processing")
         self.create_processing_tab(processing_frame)
         
-        # Tab 3: Robot Connection Settings  
         connection_frame = ttk.Frame(notebook)
         notebook.add(connection_frame, text="Robot Connection")
         self.create_connection_tab(connection_frame)
         
-        # Tab 4: Drawing Settings
         drawing_frame = ttk.Frame(notebook)
         notebook.add(drawing_frame, text="Drawing Settings")
         self.create_drawing_tab(drawing_frame)
         
-        # Tab 5: Advanced Options
         advanced_frame = ttk.Frame(notebook)
         notebook.add(advanced_frame, text="Advanced Options")
         self.create_advanced_tab(advanced_frame)
@@ -2409,10 +2377,9 @@ class SimpleRobotGUI:
         self.file_label.pack(fill=tk.X, pady=(0, 10))
         
         # Browse button
-        browse_btn = tk.Button(file_section, text="📁 Browse Images", 
-                command=self.browse_image,
-                bg=self.COLORS['photo_preview'], fg='white', font=('Arial', 11, 'bold'),
-                relief='flat', padx=20, pady=10, cursor='hand2')
+        browse_btn = self.create_standard_button(file_section, text="📁 Browse Images", 
+                command=self.browse_image, bg=self.COLORS['photo_preview'], fg='white',
+                font=('Arial', 11, 'bold'), relief='flat', padx=20, pady=10, cursor='hand2')
         browse_btn.pack(pady=(0, 5))
         
         # Drawing Section
@@ -2424,17 +2391,15 @@ class SimpleRobotGUI:
         draw_controls = tk.Frame(draw_section, bg='white')
         draw_controls.pack()
         
-        draw_btn = tk.Button(draw_controls, text="🎨 Open Drawing Canvas", 
-                command=self.open_drawing_window,
-                bg=self.COLORS['caricature'], fg='white', font=('Arial', 11, 'bold'),
-                relief='flat', padx=20, pady=10, cursor='hand2')
+        draw_btn = self.create_standard_button(draw_controls, text="🎨 Open Drawing Canvas", 
+                command=self.open_drawing_window, bg=self.COLORS['caricature'], fg='white',
+                font=('Arial', 11, 'bold'), relief='flat', padx=20, pady=10, cursor='hand2')
         draw_btn.pack(side=tk.LEFT, padx=(0, 10))
         
         # Templates button
-        templates_btn = tk.Button(draw_controls, text="📋 Shape Templates", 
-                command=self.show_templates,
-                bg='#607D8B', fg='white', font=('Arial', 11, 'bold'),
-                relief='flat', padx=20, pady=10, cursor='hand2')
+        templates_btn = self.create_standard_button(draw_controls, text="📋 Shape Templates", 
+                command=self.show_templates, bg='#607D8B', fg='white',
+                font=('Arial', 11, 'bold'), relief='flat', padx=20, pady=10, cursor='hand2')
         templates_btn.pack(side=tk.LEFT)
         
         # AI Generation Section
@@ -2454,10 +2419,9 @@ class SimpleRobotGUI:
         self.text_entry.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
         
         # Generate button
-        generate_btn = tk.Button(ai_section, text="🤖 Generate Image from Text", 
-                command=self.generate_from_text,
-                bg='#FF5722', fg='white', font=('Arial', 11, 'bold'),
-                relief='flat', padx=20, pady=10, cursor='hand2')
+        generate_btn = self.create_standard_button(ai_section, text="🤖 Generate Image from Text", 
+                command=self.generate_from_text, bg='#FF5722', fg='white',
+                font=('Arial', 11, 'bold'), relief='flat', padx=20, pady=10, cursor='hand2')
         generate_btn.pack(pady=(0, 10))
         
         # Example prompts
@@ -2480,10 +2444,10 @@ class SimpleRobotGUI:
         ]
         
         for i, example in enumerate(examples):
-            btn = tk.Button(examples_grid, text=example,
-                           command=lambda e=example: self.text_entry.insert(tk.END, e + "\n"),
-                           bg='#e0e0e0', fg='#333', font=('Arial', 9),
-                           relief='flat', padx=8, pady=3, cursor='hand2')
+            btn = self.create_standard_button(examples_grid, text=example,
+                   command=lambda e=example: self.text_entry.insert(tk.END, e + "\n"),
+                   bg='#e0e0e0', fg='#333', font=('Arial', 9),
+                   relief='flat', padx=8, pady=3, cursor='hand2')
             btn.grid(row=i//2, column=i%2, sticky='ew', padx=2, pady=1)
         
         examples_grid.columnconfigure(0, weight=1)
@@ -2494,10 +2458,9 @@ class SimpleRobotGUI:
                                        bg='white', padx=15, pady=10)
         preview_section.pack(fill=tk.X, pady=(15, 0))
         
-        preview_btn = tk.Button(preview_section, text="🔍 Open Detailed Path Viewer",
-                command=self.open_detailed_path_window,
-                bg='#607D8B', fg='white', font=('Arial', 11, 'bold'),
-                relief='flat', padx=20, pady=10, cursor='hand2')
+        preview_btn = self.create_standard_button(preview_section, text="🔍 Open Detailed Path Viewer",
+                command=self.open_detailed_path_window, bg='#607D8B', fg='white',
+                font=('Arial', 11, 'bold'), relief='flat', padx=20, pady=10, cursor='hand2')
         preview_btn.pack()
 
     def create_processing_tab(self, parent):
@@ -2620,10 +2583,9 @@ class SimpleRobotGUI:
         button_frame = tk.Frame(status_section, bg='white')
         button_frame.pack(fill=tk.X, pady=(0, 5))
         
-        self.connect_btn = tk.Button(button_frame, text="Connect to Robot", 
-                                   command=self.toggle_connection,
-                                   font=('Arial', 12, 'bold'), bg=self.COLORS['photo_preview'], fg='white',
-                                   width=20, height=2, relief=tk.RAISED, bd=2)
+        self.connect_btn = self.create_standard_button(button_frame, text="Connect to Robot",
+            command=self.toggle_connection, bg=self.COLORS['photo_preview'], fg='white',
+            font=('Arial', 12, 'bold'), width=20, height=2, relief=tk.RAISED, bd=2)
         self.connect_btn.pack(pady=5)
         
         # Target info
@@ -2702,9 +2664,9 @@ class SimpleRobotGUI:
         presets = [("A4", 290, 210), ("A5", 210, 148), ("Custom", None, None)]
         for text, width, height in presets:
             if width and height:
-                btn = tk.Button(preset_buttons, text=text, 
-                               command=lambda w=width, h=height: self.set_dimension_preset(w, h),
-                               bg='#607D8B', fg='white', font=('Arial', 9), padx=15, pady=5)
+                btn = self.create_standard_button(preset_buttons, text=text, 
+                       command=lambda w=width, h=height: self.set_dimension_preset(w, h),
+                       bg='#607D8B', fg='white', font=('Arial', 9), padx=15, pady=5)
                 btn.pack(side=tk.LEFT, padx=(0, 5))
         
         # Safety Margins
@@ -2806,7 +2768,7 @@ class SimpleRobotGUI:
         self.text_entry.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
         
         # Generate button
-        generate_btn = tk.Button(input_section, text="🤖 Generate Image from Text", 
+        generate_btn = self.create_standard_button(input_section, text="🤖 Generate Image from Text",
                 command=self.generate_from_text,
                 bg='#FF5722', fg='white', font=('Arial', 12, 'bold'),
                 relief='flat', padx=20, pady=10, cursor='hand2')
@@ -2827,10 +2789,10 @@ class SimpleRobotGUI:
         ]
         
         for i, example in enumerate(examples):
-            btn = tk.Button(examples_section, text=example,
-                           command=lambda e=example: self.text_entry.insert(tk.END, e + "\n"),
-                           bg='#e0e0e0', fg='#333', font=('Arial', 9),
-                           relief='flat', padx=10, pady=3, cursor='hand2')
+            btn = self.create_standard_button(examples_section, text=example,
+                   command=lambda e=example: self.text_entry.insert(tk.END, e + "\n"),
+                   bg='#e0e0e0', fg='#333', font=('Arial', 9),
+                   relief='flat', padx=10, pady=3, cursor='hand2')
             btn.pack(fill=tk.X, pady=1)
         if hasattr(self, 'setup_window') and self.setup_window.winfo_exists():
             self.setup_window.lift()
@@ -2841,7 +2803,6 @@ class SimpleRobotGUI:
         self.setup_window.geometry("760x620")
         self.setup_window.configure(bg=self.COLORS['background'])
 
-        # Create scrollable frame for long setup content
         canvas = tk.Canvas(self.setup_window, bg=self.COLORS['background'])
         scrollbar = ttk.Scrollbar(self.setup_window, orient="vertical", command=canvas.yview)
         scroll_frame = tk.Frame(canvas, bg=self.COLORS['background'])
@@ -2902,15 +2863,16 @@ class SimpleRobotGUI:
         ]
         
         for i, (name, func) in enumerate(templates):
-            btn = tk.Button(templates_frame, text=name, command=func,
-                           bg='white', font=('Arial', 11), relief='solid', bd=1,
-                           padx=20, pady=10, cursor='hand2', width=20)
+            btn = self.create_standard_button(templates_frame, text=name, command=func,
+                   bg='white', font=('Arial', 11), relief='solid', bd=1,
+                   padx=20, pady=10, cursor='hand2', width=20)
             btn.pack(pady=5)
         
         # Close button
-        tk.Button(template_window, text="Close", command=template_window.destroy,
+        close_btn = self.create_standard_button(template_window, text="Close", command=template_window.destroy,
                  bg='#f44336', fg='white', font=('Arial', 10, 'bold'),
-                 relief='flat', padx=20, pady=8).pack(pady=10)
+                 relief='flat', padx=20, pady=8)
+        close_btn.pack(pady=10)
     
     def create_circle_template(self):
         """Create a circle template"""
@@ -2943,7 +2905,6 @@ class SimpleRobotGUI:
         from PIL import Image, ImageDraw
         
         try:
-            # Create 400x400 white image
             img = Image.new('RGB', (400, 400), 'white')
             draw = ImageDraw.Draw(img)
             
@@ -3027,8 +2988,6 @@ class SimpleRobotGUI:
             # Process automatically
             self.auto_process_image()
             
-            # Template created successfully - no popup needed
-            
         except Exception as e:
             messagebox.showerror("Error", f"Failed to create template: {e}")
     
@@ -3075,13 +3034,11 @@ class SimpleRobotGUI:
             canvas_width = self.drawing_canvas.winfo_width()
             canvas_height = self.drawing_canvas.winfo_height()
             
-            # Create image from canvas
             try:
                 import cv2
                 import numpy as np
                 from PIL import Image, ImageDraw
                 
-                # Create a white image
                 img = Image.new('RGB', (canvas_width, canvas_height), 'white')
                 draw = ImageDraw.Draw(img)
                 
@@ -3097,7 +3054,6 @@ class SimpleRobotGUI:
                 
                 # Save the image
                 img.save(filename)
-                # Drawing saved successfully - no popup needed
                 
             except ImportError:
                 messagebox.showerror("Error", "PIL library required for saving drawings")
@@ -3116,11 +3072,9 @@ class SimpleRobotGUI:
                 messagebox.showwarning("Warning", "Please draw something first!")
                 return
             
-            # Create temporary file
             import tempfile
             from PIL import Image, ImageDraw
             
-            # Create a white image
             img = Image.new('RGB', (canvas_width, canvas_height), 'white')
             draw = ImageDraw.Draw(img)
             
@@ -3311,7 +3265,6 @@ class SimpleRobotGUI:
             port = int(self.robot_port.get().strip())
             port_l = int(self.robot_port_l.get().strip())
             
-            # Create new drawer with custom connection
             self.drawer = RobotDrawer(
                 ip=ip, 
                 port=port,
@@ -3403,7 +3356,6 @@ class SimpleRobotGUI:
         )
         
         if prompt:
-            # Create temporary text widget for compatibility with existing generate_from_text
             if not hasattr(self, 'text_entry'):
                 self.text_entry = tk.Text(self.root)
             self.text_entry.delete('1.0', tk.END)
@@ -3476,7 +3428,6 @@ class SimpleRobotGUI:
     
     def show_camera_preview(self):
         """Show live camera preview with capture controls"""
-        # Create camera preview window - massive for full visibility
         self.camera_window = tk.Toplevel(self.root)
         self.camera_window.title("📷 Camera Preview - Position Yourself")
         self.camera_window.geometry("1400x1000")  # Much larger window
@@ -3521,7 +3472,7 @@ class SimpleRobotGUI:
             font=('Arial', 16),
             fg='white',
             bg='#1E1E1E'
-            # Removed width/height constraints to let image fill naturally
+            
         )
         self.camera_label.pack(padx=20, pady=20, expand=True, fill='both')
         
@@ -3530,7 +3481,7 @@ class SimpleRobotGUI:
         controls_frame.pack(fill=tk.X, pady=(0, 20))
         
         # Take Photo button
-        self.capture_btn = tk.Button(
+        self.capture_btn = self.create_standard_button(
             controls_frame,
             text="📸 TAKE PHOTO",
             font=('Arial', 18, 'bold'),
@@ -3544,7 +3495,7 @@ class SimpleRobotGUI:
         self.capture_btn.pack(side=tk.LEFT, padx=(30, 15), pady=15)
         
         # Cancel button
-        cancel_btn = tk.Button(
+        cancel_btn = self.create_standard_button(
             controls_frame,
             text="❌ CANCEL",
             font=('Arial', 16, 'bold'),
@@ -3712,7 +3663,6 @@ class SimpleRobotGUI:
         """Handle successful robot ready"""
         self.ready_btn.config(state='normal')
         self.status_text.set("Robot ready for manual positioning - place paper and start drawing!")
-        # Robot ready - status shown in GUI, no popup needed
     
     def _ready_robot_failed(self):
         """Handle robot ready failure"""
@@ -3788,7 +3738,6 @@ class SimpleRobotGUI:
             self.auto_process_image()
             
             self.take_photo_btn.config(state='normal')
-            # Picture taken successfully - image loaded in GUI, no popup needed
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load robot image: {e}")
@@ -4161,8 +4110,6 @@ class SimpleRobotGUI:
         """Set drawing style and apply conversion if needed"""
         self.drawing_style.set(style)
         
-        # Style selection debug removed - no popup needed
-        
         # Check if we have an image to process
         if not hasattr(self, 'current_image_path') or not self.current_image_path:
             messagebox.showwarning("Warning", "Please take a photo first!")
@@ -4304,7 +4251,6 @@ class SimpleRobotGUI:
                         self.status_text.set("EMERGENCY STOP sent to robot")
                 else:
                     self.status_text.set("Drawing stopped (no robot connection)")
-                # Drawing stopped - status shown in GUI, no popup needed
             except Exception as e:
                 messagebox.showerror("Error", f"Could not stop robot: {e}")
                 self.status_text.set("Stop command failed")
@@ -4378,7 +4324,6 @@ class SimpleRobotGUI:
                 # Use optimized drawing with real batch progress tracking
                 print("Starting ultra-fast drawing with batch progress tracking...")
                 
-                # Create progress callback that updates GUI and checks for stop
                 def progress_callback(current_batch, total_batches, points_sent, total_points):
                     if self.drawing_active:  # Only update if drawing is still active
                         percent = (points_sent / total_points) * 100 if total_points > 0 else 0
@@ -4387,7 +4332,6 @@ class SimpleRobotGUI:
                     else:
                         return False  # Stop drawing
                 
-                # Create a stop check function for the drawer
                 def should_continue():
                     return self.drawing_active
                 
@@ -4472,8 +4416,7 @@ class SimpleRobotGUI:
         else:
             print(f"🎉 Drawing completed successfully!")
             msg = "Drawing completed successfully!"
-        # Drawing completed - status shown in GUI, no popup needed
-    
+        
     def _draw_failed(self):
         """Handle drawing failure"""
         # Print failure message to terminal with timing if available
@@ -4543,9 +4486,8 @@ class SimpleRobotGUI:
         self.status_text.set(f"Converting to {conversion_type}...")
         self.progress_indicator.config(text=f"🔄 Converting...")
         
-        # Flash the main window to get user attention (removed system sound)
         try:
-            pass  # Removed bell() call to eliminate unwanted system sound
+            pass
         except Exception:
             pass
             
@@ -4621,7 +4563,6 @@ class SimpleRobotGUI:
             # Store reference to prevent garbage collection
             self.current_gear_image = rotated_image
 
-            # Create image on canvas
             gear_id = canvas.create_image(center_x, center_y, image=rotated_image, tags="conversion_overlay")
 
             
@@ -4690,7 +4631,6 @@ class SimpleRobotGUI:
     def _start_conversion_overlay(self, conversion_type):
         """Add animated overlay to image preview during conversion"""
         try:
-            # Create overlay canvas on top of preview_label if it exists
             if hasattr(self, 'preview_label') and self.preview_label.winfo_exists():
                 # Get preview_label position and size
                 preview_x = self.preview_label.winfo_x()
@@ -4703,7 +4643,6 @@ class SimpleRobotGUI:
                     preview_abs_x = self.preview_label.winfo_rootx() - self.root.winfo_rootx()
                     preview_abs_y = self.preview_label.winfo_rooty() - self.root.winfo_rooty()
 
-                    # Create overlay canvas positioned over the preview_label
                     self.overlay_canvas = tk.Canvas(
                         self.root,  # Use root as parent for absolute positioning
                         width=preview_width,
@@ -4720,27 +4659,24 @@ class SimpleRobotGUI:
                         height=preview_height
                     )
                     
-                    # Create semi-transparent overlay with white background
                     self.conversion_overlay = self.overlay_canvas.create_rectangle(
                         0, 0, preview_width, preview_height,
                         fill='white', tags="conversion_overlay")
 
-                    # Create large centered text with black color for contrast
                     self.conversion_text = self.overlay_canvas.create_text(
                         preview_width // 2, preview_height // 2 + 80,
                         text=f"Converting to\n{conversion_type}...",
                         fill='black', font=('Arial', 16, 'bold'),
                         tags="conversion_overlay", justify='center')
 
-                    # Create spinning gear animation - responsive sizing
                     gear_size = min(preview_width, preview_height) // 8  # Scale with canvas size
                     gear_center_x = preview_width // 2
                     gear_center_y = preview_height // 2 - 30
 
-                    # Create gear as a single polygon with integrated teeth - one color design
+
                     self.gear_id = self._create_gear_polygon(self.overlay_canvas, gear_center_x, gear_center_y, gear_size, 0, 'black')
                     
-                    # No gear center hole needed - using custom image
+                    
 
                     # Start animations
                     self.gear_angle = 0
@@ -4760,19 +4696,16 @@ class SimpleRobotGUI:
                 canvas_height = self.original_canvas.winfo_height()
 
                 if canvas_width > 100 and canvas_height > 100:  # Canvas is properly sized
-                    # Create semi-transparent overlay with white background
                     self.conversion_overlay = self.original_canvas.create_rectangle(
                         0, 0, canvas_width, canvas_height,
                         fill='white', tags="conversion_overlay")
 
-                    # Create large centered text with black color for contrast
                     self.conversion_text = self.original_canvas.create_text(
                         canvas_width // 2, canvas_height // 2 + 80,
                         text=f"Converting to\n{conversion_type}...",
                         fill='black', font=('Arial', 16, 'bold'),
                         tags="conversion_overlay", justify='center')
 
-                    # Create spinning gear animation - larger and more visible
                     gear_size = 40  # Increased size
                     gear_center_x = canvas_width // 2
                     gear_center_y = canvas_height // 2 - 30
@@ -4828,7 +4761,6 @@ class SimpleRobotGUI:
                 if hasattr(self, 'gear_id'):
                     # Delete the old gear
                     active_canvas.delete(self.gear_id)
-                    # Create new gear at rotated position
                     self.gear_id = self._create_gear_polygon(active_canvas, gear_center_x, gear_center_y, gear_size, self.gear_angle, 'black')
 
                 # Continue animation if still converting (check both overlay and original canvas)
@@ -4919,7 +4851,6 @@ class SimpleRobotGUI:
                     btn_abs_x = self.draw_btn.winfo_rootx() - self.root.winfo_rootx()
                     btn_abs_y = self.draw_btn.winfo_rooty() - self.root.winfo_rooty()
 
-                    # Create overlay canvas positioned over the draw_btn
                     self.drawing_overlay_canvas = tk.Canvas(
                         self.root,  # Use root as parent for absolute positioning
                         width=btn_width,
@@ -4936,24 +4867,20 @@ class SimpleRobotGUI:
                         height=btn_height
                     )
 
-                    # Create semi-transparent overlay with button background
                     self.drawing_overlay = self.drawing_overlay_canvas.create_rectangle(
                         0, 0, btn_width, btn_height,
                         fill=self.COLORS['start_drawing'], tags="drawing_overlay")
 
-                    # Create centered text with white color for contrast
                     self.drawing_text = self.drawing_overlay_canvas.create_text(
                         btn_width // 2, btn_height // 2 + 60,
                         text="Drawing",
                         fill='white', font=('Arial', 22, 'bold'),
                         tags="drawing_overlay", justify='center')
 
-                    # Create spinning gear animation - smaller size for button
                     gear_size = min(btn_width, btn_height) // 6  # Smaller than conversion overlay
                     gear_center_x = btn_width // 2
                     gear_center_y = btn_height // 2 - 15
 
-                    # Create gear as a single polygon with integrated teeth - one color design
                     self.drawing_gear_id = self._create_gear_polygon(self.drawing_overlay_canvas, gear_center_x, gear_center_y, gear_size, 0, 'white')
                     
                     # Ensure text stays on top of the gear
@@ -5009,7 +4936,6 @@ class SimpleRobotGUI:
                     if hasattr(self, 'drawing_gear_id'):
                         # Delete the old gear
                         self.drawing_overlay_canvas.delete(self.drawing_gear_id)
-                        # Create new gear at rotated position
                         self.drawing_gear_id = self._create_gear_polygon(self.drawing_overlay_canvas, gear_center_x, gear_center_y, gear_size, self.drawing_gear_angle, 'white')
                         
                         # Ensure text stays on top of the gear
@@ -5085,13 +5011,10 @@ class SimpleRobotGUI:
     
     def _show_conversion_notification(self, message, msg_type="info"):
         """Show a temporary notification for conversion status - disabled for expo"""
-        # Success notifications disabled for cleaner expo experience
         if msg_type == "success":
-            return  # No success notifications shown
+            return
         
-        # Still show error notifications for debugging
         if msg_type == "error":
-            # Create a temporary notification in the original canvas area
             try:
                 if hasattr(self, 'original_canvas') and self.original_canvas.winfo_exists():
                     # Clear any existing notification
@@ -5101,7 +5024,6 @@ class SimpleRobotGUI:
                     bg_color = "#f44336"
                     text_color = "white"
                     
-                    # Create notification rectangle and text
                     canvas_width = self.original_canvas.winfo_width()
                     canvas_height = self.original_canvas.winfo_height()
                     
@@ -5113,7 +5035,6 @@ class SimpleRobotGUI:
                             canvas_width // 2, 35, text=message, 
                             fill=text_color, font=('Arial', 11, 'bold'), tags="notification")
                         
-                        # Remove notification after 3 seconds
                         self.root.after(3000, lambda: self.original_canvas.delete("notification"))
             except Exception:
                 pass  # Fail silently if canvas notification doesn't work
@@ -5333,8 +5254,6 @@ class SimpleRobotGUI:
             # Show success notification
             self._show_conversion_notification("✅ Face Drawing conversion completed!", "success")
             
-            # Line art conversion completed - image loaded in GUI, no popup needed
-            
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load line art: {e}")
             self._face_drawing_failed()
@@ -5491,8 +5410,6 @@ class SimpleRobotGUI:
             
             # Show success notification
             self._show_conversion_notification("✅ Caricature conversion completed!", "success")
-            
-            # Caricature conversion completed - image loaded in GUI, no popup needed
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load caricature: {e}")
