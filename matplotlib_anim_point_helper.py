@@ -16,18 +16,17 @@ def animate_points(ax, paths, colors=None, interval=1, on_frame=None, show_left_
     - arm_roles: list of 'left' or 'right' for each path (for dual-arm mode)
     Returns: FuncAnimation object
     """
-    points_per_frame = 10  # You can change this value for more/less speed
+    points_per_frame = 10  
     if colors is None:
         if arm_roles is not None:
-            # Professional/Industrial color scheme - standardized safety colors
             colors = []
             for role in arm_roles:
                 if role == 'right':
-                    colors.append('#004E89')  # Deep Blue - professional, reliable
+                    colors.append('#004E89') 
                 elif role == 'left':
-                    colors.append('#FF6B35')  # Safety Orange - industrial safety standard
+                    colors.append('#FF6B35') 
                 else:
-                    colors.append('#9E9E9E')  # Gray - fallback for unknown roles
+                    colors.append('#9E9E9E')  
         else:
             colors = [plt.cm.tab20(i % 20) for i in range(len(paths))]
     
