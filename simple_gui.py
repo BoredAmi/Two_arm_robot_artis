@@ -1,7 +1,7 @@
 """
 Simple, user-friendly GUI for Robot Drawing System.
 
-This module provides a clean, intuitive graphical interface for the Robot Drawing System.
+This module provides a clean, intuitive graphical interface.
 It offers three main input methods:
 1. Load image files (JPG, PNG, BMP, etc.)
 2. Create drawings using an interactive canvas
@@ -16,24 +16,24 @@ Features:
 - Quality/precision settings
 - AI-powered text-to-image generation
 
-The GUI is designed to be accessible to users of all technical levels while providing
-access to advanced features for power users.
 """
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import threading
 import time
-import subprocess
 import os
-from datetime import datetime
 import webbrowser
 from PIL import Image, ImageTk
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.backends.backend_tkagg import (
+    FigureCanvasTkAgg, NavigationToolbar2Tk
+)
 from matplotlib.figure import Figure
 import math
+import json
+import os
 
 from voice_commands import VoiceCommandListener
 
@@ -45,7 +45,7 @@ class SimpleRobotGUI:
     Main GUI class for the Robot Drawing System.
     Provides a clean, step-by-step interface for:
     - Image loading and drawing creation
-    - Robot connection management  
+    - Robot connection management
     - Image processing with quality controls
     - Real-time drawing progress tracking
     """
@@ -59,10 +59,10 @@ class SimpleRobotGUI:
     WINDOW_WIDTH = 1600
     WINDOW_HEIGHT = 900
     PREVIEW_WIDTH = 640
-    PREVIEW_HEIGHT = 480 
+    PREVIEW_HEIGHT = 480
 
     # Button fonts for larger UI elements 
-    BUTTON_FONT = ('Arial', 22,'bold')
+    BUTTON_FONT = ('Arial', 22, 'bold')
     SMALL_BUTTON_FONT = ('Arial', 12)
     # Uniform button sizing (width in chars, height via padding)
     BUTTON_WIDTH = 18
@@ -70,7 +70,8 @@ class SimpleRobotGUI:
     BUTTON_PADY = 15
     
     # Color scheme
-    # Primary palette: use only these colors + white background for a clean, consistent UI
+    # Primary palette: use only these colors + white background
+    # for a clean, consistent UI
     COLORS = {
         'background': 'white',            # white background requested
         'section_bg': 'white',
@@ -79,12 +80,12 @@ class SimpleRobotGUI:
         'header_text': 'white',
 
         # Main palette
-        'take_photo': '#1B4965',    # deep navy / primary
-        'portrait': '#BEE9E8',      # light aqua
-        'start_drawing': '#62B6CB', # cyan
-        'caricature': '#CAE9FF',    # very light blue
-        'photo_preview': '#5FA8D3', # medium blue
-        'drawing_active': '#1B4965',    # deep navy
+        'take_photo': '#1B4965',
+        'portrait': '#BEE9E8',
+        'start_drawing': '#62B6CB',
+        'caricature': '#CAE9FF',
+        'photo_preview': '#5FA8D3',
+        'drawing_active': '#1B4965',
 
         # Borders / subtle fills should reuse palette entries
         'portrait_border': '#BEE9E8',
@@ -95,7 +96,16 @@ class SimpleRobotGUI:
         'button_stop': '#1B4965',   # use deep navy for stop to match palette
     }
     
-    def make_touch_button(self, parent, text, bg, command, font=None, triangle_type=None, **kwargs):
+    def make_touch_button(
+        self,
+        parent,
+        text,
+        bg,
+        command,
+        font=None,
+        triangle_type=None,
+        **kwargs,
+    ):
         """Create a touch-friendly button with visual feedback on press/release"""
         if font is None:
             font = self.BUTTON_FONT
@@ -150,8 +160,9 @@ class SimpleRobotGUI:
         
         return btn
     
-    def create_standard_button(self, parent, text, command, bg=None, fg=None, font=None, 
-                              relief='flat', padx=10, pady=5, cursor='hand2', width=None, **kwargs):
+    def create_standard_button(self, parent, text, command, bg=None, fg=None,
+                               font=None, relief='flat', padx=10, pady=5,
+                               cursor='hand2', width=None, **kwargs):
         """
         Create a standard button with consistent styling and common defaults.
         
@@ -180,8 +191,20 @@ class SimpleRobotGUI:
             font = self.BUTTON_FONT
             
         # Create button with all parameters
-        button = tk.Button(parent, text=text, command=command, bg=bg, fg=fg, font=font,
-                          relief=relief, padx=padx, pady=pady, cursor=cursor, width=width, **kwargs)
+        button = tk.Button(
+            parent,
+            text=text,
+            command=command,
+            bg=bg,
+            fg=fg,
+            font=font,
+            relief=relief,
+            padx=padx,
+            pady=pady,
+            cursor=cursor,
+            width=width,
+            **kwargs,
+        )
         
         return button
     
@@ -304,7 +327,6 @@ class SimpleRobotGUI:
 
     def _load_config(self):
         try:
-            import json, os
             if os.path.exists(self.config_path):
                 with open(self.config_path, "r") as f:
                     return json.load(f)
@@ -1176,7 +1198,6 @@ class SimpleRobotGUI:
         coord_logo_frame = tk.Frame(parent, bg='white')
         coord_logo_frame.pack(fill=tk.X, pady=(10, 0))
         
-
         # Coordinate system section
         tk.Label(coord_logo_frame, text="Coordinate System:", font=('Arial', 10, 'bold'), 
             bg='white').pack(side=tk.LEFT)
@@ -1449,7 +1470,8 @@ class SimpleRobotGUI:
         self.detail_window.configure(bg='white')
 
         # Figure with correct aspect ratio
-        max_x = self.max_x.get(); max_y = self.max_y.get()
+        max_x = self.max_x.get()
+        max_y = self.max_y.get()
         drawing_aspect_ratio = max_x / max_y
         fig_width = 8.0
         fig_height = fig_width / drawing_aspect_ratio
@@ -1490,7 +1512,8 @@ class SimpleRobotGUI:
             effective_boundary_x = [margin_x, max_x-margin_x, max_x-margin_x, margin_x, margin_x]
             effective_boundary_y = [margin_y, margin_y, max_y-margin_y, max_y-margin_y, margin_y]
         
-        ax.set_xlabel('X (mm)'); ax.set_ylabel('Y (mm)')
+        ax.set_xlabel('X (mm)')
+        ax.set_ylabel('Y (mm)')
         ax.grid(True, alpha=0.3)
         
         # Invert y-axis so (0,0) is at top-left corner
@@ -1512,7 +1535,8 @@ class SimpleRobotGUI:
             colors = plt.cm.tab20(np.linspace(0, 1, len(self.drawer.drawing_points)))
             for i, path in enumerate(self.drawer.drawing_points):
                 if path:
-                    xs = [p[0] for p in path]; ys = [p[1] for p in path]
+                    xs = [p[0] for p in path]
+                    ys = [p[1] for p in path]
                     ax.plot(xs, ys, '-', color=colors[i], linewidth=1)
             total_points = sum(len(p) for p in self.drawer.drawing_points)
             coord_info = "center" if use_center else "corner"
@@ -1600,7 +1624,8 @@ class SimpleRobotGUI:
             def update(frame):
                 # Clear and set labels
                 ax.clear()
-                ax.set_xlabel('X (mm)'); ax.set_ylabel('Y (mm)')
+                ax.set_xlabel('X (mm)')
+                ax.set_ylabel('Y (mm)')
                 ax.grid(True, alpha=0.3)
                 
                 # Invert y-axis so (0,0) is at top-left corner (only if not already inverted)
@@ -2444,11 +2469,14 @@ class SimpleRobotGUI:
         ]
         
         for i, example in enumerate(examples):
-            btn = self.create_standard_button(examples_grid, text=example,
-                   command=lambda e=example: self.text_entry.insert(tk.END, e + "\n"),
-                   bg='#e0e0e0', fg='#333', font=('Arial', 9),
-                   relief='flat', padx=8, pady=3, cursor='hand2')
-            btn.grid(row=i//2, column=i%2, sticky='ew', padx=2, pady=1)
+            btn = self.create_standard_button(
+                examples_grid,
+                text=example,
+                command=lambda e=example: self.text_entry.insert(tk.END, e + "\n"),
+                bg='#e0e0e0', fg='#333', font=('Arial', 9),
+                relief='flat', padx=8, pady=3, cursor='hand2'
+            )
+            btn.grid(row=i // 2, column=i % 2, sticky='ew', padx=2, pady=1)
         
         examples_grid.columnconfigure(0, weight=1)
         examples_grid.columnconfigure(1, weight=1)
@@ -4261,7 +4289,8 @@ class SimpleRobotGUI:
             # Hide progress elements
             self.progress_container.pack_forget()
             self.stop_btn.pack_forget()
-            if hasattr(self, 'draw_btn'): self.draw_btn.config(state='normal')
+            if hasattr(self, 'draw_btn'):
+                self.draw_btn.config(state='normal')
             self.progress_indicator.config(text="⏹ Stopped")
     
     def _draw_thread(self):
@@ -4365,8 +4394,8 @@ class SimpleRobotGUI:
                 try:
                     self.drawer.send_pen_up()
                     self.drawer.send_stop()
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Error stopping robot: {e}")
                 self.root.after(0, lambda: self._draw_error(str(e)))
                 
         except Exception as e:
