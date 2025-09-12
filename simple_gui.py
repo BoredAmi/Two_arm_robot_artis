@@ -95,6 +95,10 @@ class SimpleRobotGUI:
         'button_stop': '#1B4965',   # use deep navy for stop to match palette
     }
     
+    # ========================================================================================
+    # UTILITY AND HELPER METHODS
+    # ========================================================================================
+
     def make_touch_button(
         self,
         parent,
@@ -207,120 +211,21 @@ class SimpleRobotGUI:
         
         return button
     
+    # ========================================================================================
+    # INITIALIZATION AND SETUP METHODS
+    # ========================================================================================
+
     def __init__(self):
         """Initialize the GUI application."""
         self.config_path = "robot_gui_config.json"
-        self.config = self._load_config()
-
-        self.root = tk.Tk()
-        self.root.title("🤖 Robot Drawing System - EXPO MODE")
-        self.root.geometry(f"{self.WINDOW_WIDTH}x{self.WINDOW_HEIGHT}")
-        self.root.configure(bg=self.COLORS['background'])
-
-        try:
-            if not hasattr(self, 'file_label'):
-                self.file_label = tk.Label(self.root, text="No image selected", bg=self.COLORS['section_bg'])
-        except Exception:
-            # If Tk isn't fully ready, keep a None fallback
-            self.file_label = None
-
-        self.dual_arm_mode = tk.BooleanVar(master=self.root, value=False)
-
-        self.drawer = RobotDrawer(max_x=290, max_y=210, enable_tsp=True, use_center_origin=True, margin_x=10, margin_y=10)
-
+        
+        # Setup core components
+        self._setup_root_window()
         self._init_variables()
-
-        if self.config.get("robot_ip"):
-            self.robot_ip.set(self.config["robot_ip"])
-        if self.config.get("robot_port"):
-            self.robot_port.set(self.config["robot_port"])
-        if self.config.get("robot_port_l"):
-            self.robot_port_l.set(self.config["robot_port_l"])
-        if self.config.get("use_center_origin") is not None:
-            self.use_center_origin.set(self.config["use_center_origin"])
-        if self.config.get("enable_logo") is not None:
-            self.enable_logo.set(self.config["enable_logo"])
-        if self.config.get("logo_size") is not None:
-            self.logo_size.set(self.config["logo_size"])
-        if self.config.get("enable_frame_filtering") is not None:
-            self.enable_frame_filtering.set(self.config["enable_frame_filtering"])
-        if self.config.get("max_x") is not None:
-            self.max_x.set(self.config["max_x"])
-        if self.config.get("max_y") is not None:
-            self.max_y.set(self.config["max_y"])
-        if self.config.get("margin_x") is not None:
-            self.margin_x.set(self.config["margin_x"])
-        if self.config.get("margin_y") is not None:
-            self.margin_y.set(self.config["margin_y"])
-        if self.config.get("quality_var") is not None:
-            try:
-                self.quality_var.set(self.config["quality_var"])
-            except Exception:
-                pass
-        if self.config.get("detection_method") is not None:
-            try:
-                self.detection_method.set(self.config["detection_method"])
-            except Exception:
-                pass
-        if self.config.get("enable_tsp") is not None:
-            try:
-                self.enable_tsp.set(self.config["enable_tsp"])
-            except Exception:
-                pass
-        if self.config.get("use_batch_mode") is not None:
-            try:
-                self.use_batch_mode.set(self.config["use_batch_mode"])
-            except Exception:
-                pass
-        if self.config.get("drawing_mode") is not None:
-            try:
-                self.drawing_mode.set(self.config["drawing_mode"])
-            except Exception:
-                pass
-        if self.config.get("brush_size") is not None:
-            try:
-                self.brush_size.set(self.config["brush_size"])
-            except Exception:
-                pass
-        if self.config.get("dual_arm_mode") is not None:
-            try:
-                # stored as bool
-                self.dual_arm_mode.set(self.config["dual_arm_mode"])
-            except Exception:
-                pass
-
-        self.create_simple_interface()
-
-        if self.config.get("text_prompt") is not None:
-            try:
-                if hasattr(self, 'text_entry'):
-                    self.text_entry.delete("1.0", tk.END)
-                    self.text_entry.insert("1.0", self.config["text_prompt"])
-            except Exception:
-                pass
-
-        try:
-            self._voice_listener = VoiceCommandListener(callback=self._on_voice_command)
-            self._voice_listener.start()
-        except Exception:
-            # If voice model not available or sound device missing, continue without voice control
-            self._voice_listener = None
-
-        if self.config.get("forbidden_buffer") is not None:
-            try:
-                if hasattr(self, 'forbidden_buffer_var'):
-                    self.forbidden_buffer_var.set(int(self.config.get("forbidden_buffer", 40)))
-            except Exception:
-                pass
-
-        try:
-            self.root.protocol("WM_DELETE_WINDOW", self._on_close)
-        except Exception:
-            pass
-
-        self.root.after(100, self._update_connection_display)
-
-        self.load_custom_gear_images()
+        self._load_configuration()
+        self._setup_ui()
+        self._setup_voice_listener()
+        self._setup_final_components()
 
     def _load_config(self):
         try:
@@ -438,21 +343,198 @@ class SimpleRobotGUI:
         
         self.portrait_triangle_pressed = False
         self.caricature_triangle_pressed = False
+        
+        self.dual_arm_mode = tk.BooleanVar(value=False)
+
+    def _setup_root_window(self):
+        """Setup the main Tkinter root window."""
+        self.root = tk.Tk()
+        self.root.title("🤖 Robot Drawing System")
+        self.root.geometry("1200x800")
+        self.root.configure(bg=self.COLORS['background'])
+        
+        # Set window icon if available
+        try:
+            self.root.iconbitmap("robot_icon.ico")
+        except Exception:
+            pass
+        
+        # Configure grid weights for responsive layout
+        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
+
+    def _load_configuration(self):
+        """Load configuration from file and apply settings."""
+        config = self._load_config()
+        
+        # Apply loaded configuration
+        if "robot_ip" in config:
+            self.robot_ip.set(config["robot_ip"])
+        if "robot_port" in config:
+            self.robot_port.set(config["robot_port"])
+        if "robot_port_l" in config:
+            self.robot_port_l.set(config["robot_port_l"])
+        if "use_center_origin" in config:
+            self.use_center_origin.set(config["use_center_origin"])
+        if "enable_logo" in config:
+            self.enable_logo.set(config["enable_logo"])
+        if "logo_size" in config:
+            self.logo_size.set(config["logo_size"])
+        if "enable_frame_filtering" in config:
+            self.enable_frame_filtering.set(config["enable_frame_filtering"])
+        if "max_x" in config:
+            self.max_x.set(config["max_x"])
+        if "max_y" in config:
+            self.max_y.set(config["max_y"])
+        if "margin_x" in config:
+            self.margin_x.set(config["margin_x"])
+        if "margin_y" in config:
+            self.margin_y.set(config["margin_y"])
+        if "quality_var" in config:
+            self.quality_var.set(config["quality_var"])
+        if "detection_method" in config:
+            self.detection_method.set(config["detection_method"])
+        if "enable_tsp" in config:
+            self.enable_tsp.set(config["enable_tsp"])
+        if "use_batch_mode" in config:
+            self.use_batch_mode.set(config["use_batch_mode"])
+        if "drawing_mode" in config:
+            self.drawing_mode.set(config["drawing_mode"])
+        if "brush_size" in config:
+            self.brush_size.set(config["brush_size"])
+        if "dual_arm_mode" in config:
+            self.dual_arm_mode.set(config["dual_arm_mode"])
+        if "forbidden_buffer" in config:
+            self.forbidden_buffer_var.set(config["forbidden_buffer"])
+
+    def _setup_ui(self):
+        """Setup the main user interface components."""
+        # Create the main interface
+        self.create_simple_interface()
+        
+        # Setup additional UI components
+        self.setup_mode_selection()
+        self.setup_file_section()
+        self.setup_drawing_section()
+        self.setup_text_section()
+
+    def _setup_voice_listener(self):
+        """Setup voice command listener."""
+        try:
+            self.voice_listener = VoiceCommandListener()
+            self.voice_listener.set_callback(self._on_voice_command)
+            self.voice_listener.start()
+        except Exception as e:
+            print(f"Voice listener setup failed: {e}")
+            self.voice_listener = None
+
+    def _setup_final_components(self):
+        """Setup final components and initialize the application."""
+        # Initialize robot drawer
+        self.drawer = RobotDrawer(
+            ip=self.robot_ip.get(),
+            port=int(self.robot_port.get()),
+            port_l=int(self.robot_port_l.get()),
+            max_x=self.max_x.get(),
+            max_y=self.max_y.get(),
+            enable_tsp=self.enable_tsp.get(),
+            use_center_origin=self.use_center_origin.get(),
+            margin_x=self.margin_x.get(),
+            margin_y=self.margin_y.get()
+        )
+        
+        # Setup window close handler
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+        
+        # Initialize status
+        self.status_text.set("Ready to start!")
+        
+        # Update UI based on loaded configuration
+        self.on_mode_change()
     
+    def setup_mode_selection(self):
+        """Setup mode selection UI components."""
+        # Stub implementation - mode selection is handled in the main interface
+        pass
+    
+    def setup_file_section(self):
+        """Setup file loading section UI components."""
+        # Stub implementation - file section is handled in the main interface
+        pass
+    
+    def setup_drawing_section(self):
+        """Setup drawing section UI components."""
+        # Stub implementation - drawing section is handled in the main interface
+        pass
+    
+    def setup_text_section(self):
+        """Setup text generation section UI components."""
+        # Stub implementation - text section is handled in the main interface
+        pass
+    
+    def on_closing(self):
+        """Handle application closing event."""
+        try:
+            # Save configuration before closing
+            self._save_configuration()
+        except Exception:
+            pass
+        
+        try:
+            # Stop voice listener if running
+            if hasattr(self, 'voice_listener') and self.voice_listener:
+                self.voice_listener.stop()
+        except Exception:
+            pass
+        
+        # Destroy the window
+        self.root.destroy()
+    
+    # ========================================================================================
+    # UI CREATION METHODS
+    # ========================================================================================
+
     def create_simple_interface(self):
         """Create a 2x2 grid layout with tile buttons for expo."""
+        # Create main frame and header
+        main_frame = self._create_main_header()
+
+        # Create grid layout
+        grid_frame = self._create_grid_layout(main_frame)
+
+        # Create individual tiles
+        self._create_take_photo_tile(grid_frame)
+        self._create_photo_preview_tile(grid_frame)
+        self._create_style_selection_tile(grid_frame)
+        self._create_start_drawing_tile(grid_frame)
+
+        # Add status indicators and bar
+        self._create_status_section(main_frame)
+
+    def _create_main_header(self):
+        """Create the main frame with title, subtitle, and logo."""
         main_frame = tk.Frame(self.root, bg=self.COLORS['background'], padx=10, pady=10)
         main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        title_label = tk.Label(main_frame, text="🤖 Robot Drawing System", 
-                    font=('Arial', 24, 'bold'), 
+
+        # Title
+        title_label = tk.Label(main_frame, text="🤖 Robot Drawing System",
+                    font=('Arial', 24, 'bold'),
                     bg=self.COLORS['background'], fg=self.COLORS['take_photo'])
         title_label.pack(pady=(0, 10))
-        
-        subtitle_label = tk.Label(main_frame, text="Simple • Fast • Interactive Robot Art", 
-                    font=('Arial', 14), 
+
+        # Subtitle
+        subtitle_label = tk.Label(main_frame, text="Simple • Fast • Interactive Robot Art",
+                    font=('Arial', 14),
                     bg=self.COLORS['background'], fg=self.COLORS['start_drawing'])
         subtitle_label.pack(pady=(0, 15))
+
+        # Logo
+        self._setup_logo(main_frame)
+
+        return main_frame
+
+    def _setup_logo(self, parent):
+        """Setup and display the company logo."""
         try:
             logo_path = os.path.join(os.path.dirname(__file__), 'logo_inlader.jpg')
             if os.path.exists(logo_path):
@@ -464,7 +546,7 @@ class SimpleRobotGUI:
                 except Exception:
                     img.thumbnail(max_size)
                 self.logo_image = ImageTk.PhotoImage(img)
-                self.logo_label = tk.Label(main_frame, image=self.logo_image, bg=self.COLORS['background'], cursor='hand2')
+                self.logo_label = tk.Label(parent, image=self.logo_image, bg=self.COLORS['background'], cursor='hand2')
                 # Make logo clickable and open company site
                 try:
                     self.logo_label.bind('<Button-1>', lambda e: webbrowser.open_new_tab('https://inlader.pl'))
@@ -476,239 +558,329 @@ class SimpleRobotGUI:
         except Exception:
             # If logo can't be loaded, ignore silently
             pass
-        
-        grid_frame = tk.Frame(main_frame, bg=self.COLORS['background'])
+
+    def _create_grid_layout(self, parent):
+        """Create the main 2x2 grid layout."""
+        grid_frame = tk.Frame(parent, bg=self.COLORS['background'])
         grid_frame.pack(fill=tk.BOTH, expand=True)
-        
+
         # Configure grid weights for TRULY EQUAL distribution (2x2 grid)
         grid_frame.grid_rowconfigure(0, weight=1, minsize=200)
         grid_frame.grid_rowconfigure(1, weight=1, minsize=200)
         grid_frame.grid_columnconfigure(0, weight=1, minsize=400)  # Equal column widths
         grid_frame.grid_columnconfigure(1, weight=1, minsize=400)  # Equal column widths
-        
-        # Tile 1: Take Picture (Top Left) - Full button
-        self.take_photo_btn = self.make_touch_button(grid_frame, 
+
+        return grid_frame
+
+    def _create_take_photo_tile(self, parent):
+        """Create the Take Picture tile (Tile 1)."""
+        self.take_photo_btn = self.make_touch_button(parent,
                                       text="1. TAKE PICTURE\n\n📷",
                                       command=self.get_picture_from_robot,
                                       font=self.BUTTON_FONT, bg=self.COLORS['take_photo'], fg='white',
                                       relief=tk.RAISED, bd=3, cursor='hand2')
         self.take_photo_btn.grid(row=0, column=0, sticky='nsew', padx=5, pady=5)
-        
-        # Tile 2: See Photo (Top Right) - Single column, equal size
-        self.preview_frame = tk.Frame(grid_frame, bg=self.COLORS['photo_preview'], relief=tk.FLAT, bd=1)
+
+    def _create_photo_preview_tile(self, parent):
+        """Create the Photo Preview tile (Tile 2)."""
+        self.preview_frame = tk.Frame(parent, bg=self.COLORS['photo_preview'], relief=tk.FLAT, bd=1)
         self.preview_frame.grid(row=0, column=1, sticky='nsew', padx=5, pady=5)  # NO COLUMNSPAN!
-        
+
         # Fixed height header
         header_frame = tk.Frame(self.preview_frame, bg=self.COLORS['photo_preview'], height=40)
         header_frame.pack(fill=tk.X)
         header_frame.pack_propagate(False)  # Maintain fixed height
-        
-        tk.Label(header_frame, text="2. SEE YOUR PHOTO", font=self.BUTTON_FONT, 
+
+        tk.Label(header_frame, text="2. SEE YOUR PHOTO", font=self.BUTTON_FONT,
                 bg=self.COLORS['photo_preview'], fg='white').pack(pady=5)
-        
+
         # Fixed size image preview container (use white background)
         preview_container = tk.Frame(self.preview_frame, bg='white', height=160)
         preview_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
         preview_container.pack_propagate(False)  # Maintain fixed height to prevent ratio changes
-        
-    # Image preview with dynamic scaling
-        self.preview_label = tk.Label(preview_container, text="Take a photo\nto see preview here", 
-                        bg='white', 
+
+        # Image preview with dynamic scaling
+        self.preview_label = tk.Label(preview_container, text="Take a photo\nto see preview here",
+                        bg='white',
                         font=('Arial', 14), relief=tk.SUNKEN, bd=0,
                         justify=tk.CENTER, fg=self.COLORS['take_photo'])
         self.preview_label.pack(fill=tk.BOTH, expand=True)
-        
+
         # Bind resize event to refresh image scaling
         preview_container.bind('<Configure>', self.on_preview_resize)
-        
-        # Tile 3: Combined Portrait/Caricature with diagonal stairs effect - Single column, equal size
+
+    def _create_style_selection_tile(self, parent):
+        """Create the Style Selection tile (Tile 3) with portrait/caricature options."""
         # Style frame uses photo_preview color for a subtle band
-        self.style_frame = tk.Frame(grid_frame, bg=self.COLORS['photo_preview'], relief=tk.RIDGE, bd=1)
+        self.style_frame = tk.Frame(parent, bg=self.COLORS['photo_preview'], relief=tk.RIDGE, bd=1)
         self.style_frame.grid(row=1, column=0, sticky='nsew', padx=5, pady=5)  # NO COLUMNSPAN!
-        
+
         # Configure grid weights for the style frame (10 rows, 20 columns for ultra-fine triangle stairs)
         for i in range(20):
             self.style_frame.grid_columnconfigure(i, weight=1)
         for i in range(10):
             self.style_frame.grid_rowconfigure(i, weight=1)
-        
-        # Row 0 - Full width Portrait
-        self.portrait_btn1 = self.make_touch_button(
-            self.style_frame, text="👤 PORTRAIT", font=("Arial", 15, "bold"),
-            bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
-        )
-        self.portrait_btn1.grid(row=0, column=0, columnspan=20, sticky="nsew", padx=1, pady=1)
-        
-        # Row 1 - 18/20 width Portrait
-        self.portrait_btn2 = self.make_touch_button(
-            self.style_frame, text="Face Drawing", font=("Arial", 13, "bold"),
-            bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
-        )
-        self.portrait_btn2.grid(row=1, column=0, columnspan=18, sticky="nsew", padx=1, pady=1)
-        
-        # Row 2 - 16/20 width Portrait
-        self.portrait_btn3 = self.make_touch_button(
-            self.style_frame, text="Style", font=("Arial", 12, "bold"),
-            bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
-        )
-        self.portrait_btn3.grid(row=2, column=0, columnspan=16, sticky="nsew", padx=1, pady=1)
-        
-        # Row 3 - 14/20 width Portrait
-        self.portrait_btn4 = self.make_touch_button(
-            self.style_frame, text="Natural", font=("Arial", 11, "bold"),
-            bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
-        )
-        self.portrait_btn4.grid(row=3, column=0, columnspan=14, sticky="nsew", padx=1, pady=1)
-        
-        # Row 4 - 12/20 width Portrait
-        self.portrait_btn5 = self.make_touch_button(
-            self.style_frame, text="Realistic", font=("Arial", 10, "bold"),
-            bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
-        )
-        self.portrait_btn5.grid(row=4, column=0, columnspan=12, sticky="nsew", padx=1, pady=1)
-        
-        # Row 5 - 10/20 width Portrait
-        self.portrait_btn6 = self.make_touch_button(
-            self.style_frame, text="Art", font=("Arial", 9, "bold"),
-            bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
-        )
-        self.portrait_btn6.grid(row=5, column=0, columnspan=10, sticky="nsew", padx=1, pady=1)
-        
-        # Row 6 - 8/20 width Portrait
-        self.portrait_btn7 = self.make_touch_button(
-            self.style_frame, text="Pro", font=("Arial", 8, "bold"),
-            bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
-        )
-        self.portrait_btn7.grid(row=6, column=0, columnspan=8, sticky="nsew", padx=1, pady=1)
-        
-        # Row 7 - 6/20 width Portrait
-        self.portrait_btn8 = self.make_touch_button(
-            self.style_frame, text="✓", font=("Arial", 8, "bold"),
-            bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
-        )
-        self.portrait_btn8.grid(row=7, column=0, columnspan=6, sticky="nsew", padx=1, pady=1)
-        
-        # Row 8 - 4/20 width Portrait
-        self.portrait_btn9 = self.make_touch_button(
-            self.style_frame, text="◆", font=("Arial", 7, "bold"),
-            bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
-        )
-        self.portrait_btn9.grid(row=8, column=0, columnspan=4, sticky="nsew", padx=1, pady=1)
-        
-        # Row 9 - 2/20 width Portrait
-        self.portrait_btn10 = self.make_touch_button(
-            self.style_frame, text="•", font=("Arial", 7, "bold"),
-            bg=self.COLORS['portrait'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("portrait"), triangle_type="portrait"
-        )
-        self.portrait_btn10.grid(row=9, column=0, columnspan=2, sticky="nsew", padx=1, pady=1)
-        
-        # Caricature (purple) lower right triangle - creating smooth stairs
-        # Row 1 - 2/20 width Caricature (right side)
-        self.caricature_btn1 = self.make_touch_button(
-            self.style_frame, text="😄", font=("Arial", 13, "bold"),
-            bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
-        )
-        self.caricature_btn1.grid(row=1, column=18, columnspan=2, sticky="nsew", padx=1, pady=1)
-        
-        # Row 2 - 4/20 width Caricature
-        self.caricature_btn2 = self.make_touch_button(
-            self.style_frame, text="Fun", font=("Arial", 12, "bold"),
-            bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
-        )
-        self.caricature_btn2.grid(row=2, column=16, columnspan=4, sticky="nsew", padx=1, pady=1)
-        
-        # Row 3 - 6/20 width Caricature
-        self.caricature_btn3 = self.make_touch_button(
-            self.style_frame, text="Cartoon", font=("Arial", 11, "bold"),
-            bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
-        )
-        self.caricature_btn3.grid(row=3, column=14, columnspan=6, sticky="nsew", padx=1, pady=1)
-        
-        # Row 4 - 8/20 width Caricature
-        self.caricature_btn4 = self.make_touch_button(
-            self.style_frame, text="Funny", font=("Arial", 10, "bold"),
-            bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
-        )
-        self.caricature_btn4.grid(row=4, column=12, columnspan=8, sticky="nsew", padx=1, pady=1)
-        
-        # Row 5 - 10/20 width Caricature
-        self.caricature_btn5 = self.make_touch_button(
-            self.style_frame, text="Exaggerated", font=("Arial", 9, "bold"),
-            bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
-        )
-        self.caricature_btn5.grid(row=5, column=10, columnspan=10, sticky="nsew", padx=1, pady=1)
-        
-        # Row 6 - 12/20 width Caricature
-        self.caricature_btn6 = self.make_touch_button(
-            self.style_frame, text="Stylized", font=("Arial", 8, "bold"),
-            bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
-        )
-        self.caricature_btn6.grid(row=6, column=8, columnspan=12, sticky="nsew", padx=1, pady=1)
-        
-        # Row 7 - 14/20 width Caricature
-        self.caricature_btn7 = self.make_touch_button(
-            self.style_frame, text="Comedy", font=("Arial", 8, "bold"),
-            bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
-        )
-        self.caricature_btn7.grid(row=7, column=6, columnspan=14, sticky="nsew", padx=1, pady=1)
-        
-        # Row 8 - 16/20 width Caricature
-        self.caricature_btn8 = self.make_touch_button(
-            self.style_frame, text="Express", font=("Arial", 7, "bold"),
-            bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
-        )
-        self.caricature_btn8.grid(row=8, column=4, columnspan=16, sticky="nsew", padx=1, pady=1)
-        
-        # Row 9 - 18/20 width Caricature (almost full)
-        self.caricature_btn9 = self.make_touch_button(
-            self.style_frame, text="🎭 SELECT CARICATURE", font=("Arial", 7, "bold"),
-            bg=self.COLORS['caricature'], fg="black", relief="flat", bd=0, cursor='hand2',
-            command=lambda: self.set_style_and_convert("caricature"), triangle_type="caricature"
-        )
-        self.caricature_btn9.grid(row=9, column=2, columnspan=18, sticky="nsew", padx=1, pady=1)
-        
+
+        # Create portrait buttons (left side staircase)
+        self._create_portrait_buttons()
+
+        # Create caricature buttons (right side staircase)
+        self._create_caricature_buttons()
+
         # Store references for backward compatibility
         self.face_drawing_btn = self.portrait_btn1
         self.caricature_btn = self.caricature_btn1
-        
+
+        # Create triangle button overlay
         self.create_triangle_button_overlay()
-        
-        # Tile 4: Start Drawing (Bottom Right) - Single column, equal size
-        self.start_drawing_btn = self.create_standard_button(grid_frame, 
+
+    def _create_portrait_buttons(self):
+        """Create the portrait selection buttons (left staircase)."""
+        # Get button configuration data
+        button_configs = self._get_portrait_button_configs()
+
+        # Create and layout each button
+        for config in button_configs:
+            self._create_portrait_button(config)
+
+    def _get_portrait_button_configs(self):
+        """Get configuration data for all portrait buttons."""
+        return [
+            {
+                'name': 'portrait_btn1',
+                'text': "👤 PORTRAIT",
+                'font': ("Arial", 15, "bold"),
+                'row': 0,
+                'columnspan': 20
+            },
+            {
+                'name': 'portrait_btn2',
+                'text': "Face Drawing",
+                'font': ("Arial", 13, "bold"),
+                'row': 1,
+                'columnspan': 18
+            },
+            {
+                'name': 'portrait_btn3',
+                'text': "Style",
+                'font': ("Arial", 12, "bold"),
+                'row': 2,
+                'columnspan': 16
+            },
+            {
+                'name': 'portrait_btn4',
+                'text': "Natural",
+                'font': ("Arial", 11, "bold"),
+                'row': 3,
+                'columnspan': 14
+            },
+            {
+                'name': 'portrait_btn5',
+                'text': "Realistic",
+                'font': ("Arial", 10, "bold"),
+                'row': 4,
+                'columnspan': 12
+            },
+            {
+                'name': 'portrait_btn6',
+                'text': "Art",
+                'font': ("Arial", 9, "bold"),
+                'row': 5,
+                'columnspan': 10
+            },
+            {
+                'name': 'portrait_btn7',
+                'text': "Pro",
+                'font': ("Arial", 8, "bold"),
+                'row': 6,
+                'columnspan': 8
+            },
+            {
+                'name': 'portrait_btn8',
+                'text': "✓",
+                'font': ("Arial", 8, "bold"),
+                'row': 7,
+                'columnspan': 6
+            },
+            {
+                'name': 'portrait_btn9',
+                'text': "◆",
+                'font': ("Arial", 7, "bold"),
+                'row': 8,
+                'columnspan': 4
+            },
+            {
+                'name': 'portrait_btn10',
+                'text': "•",
+                'font': ("Arial", 7, "bold"),
+                'row': 9,
+                'columnspan': 2
+            }
+        ]
+
+    def _create_portrait_button(self, config):
+        """Create a single portrait button with given configuration."""
+        button = self.make_touch_button(
+            self.style_frame,
+            text=config['text'],
+            font=config['font'],
+            bg=self.COLORS['portrait'],
+            fg="black",
+            relief="flat",
+            bd=0,
+            cursor='hand2',
+            command=lambda: self.set_style_and_convert("portrait"),
+            triangle_type="portrait"
+        )
+
+        # Store reference to the button
+        setattr(self, config['name'], button)
+
+        # Layout the button in the grid
+        button.grid(
+            row=config['row'],
+            column=0,
+            columnspan=config['columnspan'],
+            sticky="nsew",
+            padx=1,
+            pady=1
+        )
+
+    def _create_caricature_buttons(self):
+        """Create the caricature selection buttons (right staircase)."""
+        # Get button configuration data
+        button_configs = self._get_caricature_button_configs()
+
+        # Create and layout each button
+        for config in button_configs:
+            self._create_caricature_button(config)
+
+    def _get_caricature_button_configs(self):
+        """Get configuration data for all caricature buttons."""
+        return [
+            {
+                'name': 'caricature_btn1',
+                'text': "😄",
+                'font': ("Arial", 13, "bold"),
+                'row': 1,
+                'column': 18,
+                'columnspan': 2
+            },
+            {
+                'name': 'caricature_btn2',
+                'text': "Fun",
+                'font': ("Arial", 12, "bold"),
+                'row': 2,
+                'column': 16,
+                'columnspan': 4
+            },
+            {
+                'name': 'caricature_btn3',
+                'text': "Cartoon",
+                'font': ("Arial", 11, "bold"),
+                'row': 3,
+                'column': 14,
+                'columnspan': 6
+            },
+            {
+                'name': 'caricature_btn4',
+                'text': "Funny",
+                'font': ("Arial", 10, "bold"),
+                'row': 4,
+                'column': 12,
+                'columnspan': 8
+            },
+            {
+                'name': 'caricature_btn5',
+                'text': "Exaggerated",
+                'font': ("Arial", 9, "bold"),
+                'row': 5,
+                'column': 10,
+                'columnspan': 10
+            },
+            {
+                'name': 'caricature_btn6',
+                'text': "Stylized",
+                'font': ("Arial", 8, "bold"),
+                'row': 6,
+                'column': 8,
+                'columnspan': 12
+            },
+            {
+                'name': 'caricature_btn7',
+                'text': "Comedy",
+                'font': ("Arial", 8, "bold"),
+                'row': 7,
+                'column': 6,
+                'columnspan': 14
+            },
+            {
+                'name': 'caricature_btn8',
+                'text': "Express",
+                'font': ("Arial", 7, "bold"),
+                'row': 8,
+                'column': 4,
+                'columnspan': 16
+            },
+            {
+                'name': 'caricature_btn9',
+                'text': "🎭 SELECT CARICATURE",
+                'font': ("Arial", 7, "bold"),
+                'row': 9,
+                'column': 2,
+                'columnspan': 18
+            }
+        ]
+
+    def _create_caricature_button(self, config):
+        """Create a single caricature button with given configuration."""
+        button = self.make_touch_button(
+            self.style_frame,
+            text=config['text'],
+            font=config['font'],
+            bg=self.COLORS['caricature'],
+            fg="black",
+            relief="flat",
+            bd=0,
+            cursor='hand2',
+            command=lambda: self.set_style_and_convert("caricature"),
+            triangle_type="caricature"
+        )
+
+        # Store reference to the button
+        setattr(self, config['name'], button)
+
+        # Layout the button in the grid
+        button.grid(
+            row=config['row'],
+            column=config['column'],
+            columnspan=config['columnspan'],
+            sticky="nsew",
+            padx=1,
+            pady=1
+        )
+
+    def _create_start_drawing_tile(self, parent):
+        """Create the Start Drawing tile (Tile 4)."""
+        self.start_drawing_btn = self.create_standard_button(parent,
                                          text="4. START DRAWING\n\n🤖",
                                          command=self.start_drawing,
                                          font=self.BUTTON_FONT, bg=self.COLORS['start_drawing'], fg='white',
                                          relief=tk.RAISED, bd=3, cursor='hand2')
-        self.start_drawing_btn.grid(row=1, column=1, sticky='nsew', padx=5, pady=5)  
-        
+        self.start_drawing_btn.grid(row=1, column=1, sticky='nsew', padx=5, pady=5)
+
         self.draw_btn = self.start_drawing_btn
-        
+
         # Initialize drawing style variable
         self.drawing_style = tk.StringVar(value="normal")
-        
+
+    def _create_status_section(self, parent):
+        """Create status indicators and status bar."""
         # Add status indicators
-        self.create_status_indicators(main_frame)
-        
+        self.create_status_indicators(parent)
+
         # Status bar at bottom
-        self.create_status_bar(main_frame)
+        self.create_status_bar(parent)
     
     def create_triangle_button_overlay(self):
         """Create visual overlay that makes it look like two triangle buttons while keeping staircase functional"""
@@ -940,22 +1112,39 @@ class SimpleRobotGUI:
         settings_btn.pack(side=tk.RIGHT, padx=(5, 0))
     
 
-    def set_drawing_mode(self, mode):
-        """Set the drawing mode to normal (no special effects)"""
-        if hasattr(self, 'current_image_path') and self.current_image_path:
-            # Just process the current image normally
-            self.auto_process_image()
-
     def open_detailed_path_window(self):
         """Open a larger, dedicated window with full zoom & pan controls."""
+        # Create and configure the detailed viewer window
+        self._create_detailed_viewer_window()
+        
+        # Setup matplotlib figure and axes
+        self._setup_detailed_viewer_figure()
+        
+        # Configure coordinate system
+        self._setup_detailed_viewer_coordinates()
+        
+        # Plot drawing paths
+        self._plot_detailed_viewer_paths()
+        
+        # Setup animation controls
+        self._setup_detailed_viewer_animations()
+        
+        # Setup zoom controls
+        self._setup_detailed_viewer_zoom()
+
+    def _create_detailed_viewer_window(self):
+        """Create and configure the detailed path viewer window."""
         if hasattr(self, 'detail_window') and self.detail_window.winfo_exists():
             self.detail_window.lift()
             return
+            
         self.detail_window = tk.Toplevel(self.root)
         self.detail_window.title("Detailed Path Viewer")
         self.detail_window.geometry("900x600")
         self.detail_window.configure(bg='white')
 
+    def _setup_detailed_viewer_figure(self):
+        """Setup matplotlib figure and axes for detailed viewer."""
         # Figure with correct aspect ratio
         max_x = self.max_x.get()
         max_y = self.max_y.get()
@@ -968,37 +1157,11 @@ class SimpleRobotGUI:
         fig = Figure(figsize=(fig_width, fig_height), dpi=100, facecolor='white')
         ax = fig.add_subplot(111)
         
-        # Set coordinate system based on user selection
-        use_center = self.use_center_origin.get()
+        # Store references for later use
+        self.detail_fig = fig
+        self.detail_ax = ax
         
-        if use_center:
-            # Center-based coordinate system (0,0 at center)
-            ax.set_xlim(-max_x/2, max_x/2)
-            ax.set_ylim(-max_y/2, max_y/2)
-            origin_text = "Center (0,0)"
-            boundary_x = [-max_x/2, max_x/2, max_x/2, -max_x/2, -max_x/2]
-            boundary_y = [-max_y/2, -max_y/2, max_y/2, max_y/2, -max_y/2]
-            # Draw center axes
-            ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5, linewidth=1)
-            ax.axvline(x=0, color='gray', linestyle='--', alpha=0.5, linewidth=1)
-            # Effective drawing area with margins
-            margin_x = self.margin_x.get()
-            margin_y = self.margin_y.get()
-            effective_boundary_x = [-(max_x/2-margin_x), (max_x/2-margin_x), (max_x/2-margin_x), -(max_x/2-margin_x), -(max_x/2-margin_x)]
-            effective_boundary_y = [-(max_y/2-margin_y), -(max_y/2-margin_y), (max_y/2-margin_y), (max_y/2-margin_y), -(max_y/2-margin_y)]
-        else:
-            # Corner-based coordinate system (0,0 at corner)
-            ax.set_xlim(0, max_x)
-            ax.set_ylim(0, max_y)
-            origin_text = "Corner (0,0)"
-            boundary_x = [0, max_x, max_x, 0, 0]
-            boundary_y = [0, 0, max_y, max_y, 0]
-            # Effective drawing area with margins
-            margin_x = self.margin_x.get()
-            margin_y = self.margin_y.get()
-            effective_boundary_x = [margin_x, max_x-margin_x, max_x-margin_x, margin_x, margin_x]
-            effective_boundary_y = [margin_y, margin_y, max_y-margin_y, max_y-margin_y, margin_y]
-        
+        # Basic axes configuration
         ax.set_xlabel('X (mm)')
         ax.set_ylabel('Y (mm)')
         ax.grid(True, alpha=0.3)
@@ -1008,14 +1171,60 @@ class SimpleRobotGUI:
         
         # Set equal aspect ratio so 1mm = 1mm visually
         ax.set_aspect('equal', adjustable='box')
+
+    def _setup_detailed_viewer_coordinates(self):
+        """Setup coordinate system for detailed viewer."""
+        ax = self.detail_ax
+        max_x = self.max_x.get()
+        max_y = self.max_y.get()
+        
+        # Set coordinate system based on user selection
+        use_center = self.use_center_origin.get()
+        
+        if use_center:
+            # Center-based coordinate system (0,0 at center)
+            ax.set_xlim(-max_x/2, max_x/2)
+            ax.set_ylim(-max_y/2, max_y/2)
+            origin_text = "Center (0,0)"
+            self.boundary_x = [-max_x/2, max_x/2, max_x/2, -max_x/2, -max_x/2]
+            self.boundary_y = [-max_y/2, -max_y/2, max_y/2, max_y/2, -max_y/2]
+            # Draw center axes
+            ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5, linewidth=1)
+            ax.axvline(x=0, color='gray', linestyle='--', alpha=0.5, linewidth=1)
+            # Effective drawing area with margins
+            margin_x = self.margin_x.get()
+            margin_y = self.margin_y.get()
+            self.effective_boundary_x = [-(max_x/2-margin_x), (max_x/2-margin_x), (max_x/2-margin_x), -(max_x/2-margin_x), -(max_x/2-margin_x)]
+            self.effective_boundary_y = [-(max_y/2-margin_y), -(max_y/2-margin_y), (max_y/2-margin_y), (max_y/2-margin_y), -(max_y/2-margin_y)]
+        else:
+            # Corner-based coordinate system (0,0 at corner)
+            ax.set_xlim(0, max_x)
+            ax.set_ylim(0, max_y)
+            origin_text = "Corner (0,0)"
+            self.boundary_x = [0, max_x, max_x, 0, 0]
+            self.boundary_y = [0, 0, max_y, max_y, 0]
+            # Effective drawing area with margins
+            margin_x = self.margin_x.get()
+            margin_y = self.margin_y.get()
+            self.effective_boundary_x = [margin_x, max_x-margin_x, max_x-margin_x, margin_x, margin_x]
+            self.effective_boundary_y = [margin_y, margin_y, max_y-margin_y, max_y-margin_y, margin_y]
+        
+        # Store margin values for use in animations
+        self.margin_x_val = margin_x
+        self.margin_y_val = margin_y
         
         # Boundary
-        ax.plot(boundary_x, boundary_y, 'k--', linewidth=2, alpha=0.5, label='Workspace Area')
+        ax.plot(self.boundary_x, self.boundary_y, 'k--', linewidth=2, alpha=0.5, label='Workspace Area')
         
         # Show effective drawing area if margins are applied
         if margin_x > 0 or margin_y > 0:
-            ax.plot(effective_boundary_x, effective_boundary_y, 'g-', linewidth=1.5, alpha=0.7, label='Drawing Area (with margins)')
+            ax.plot(self.effective_boundary_x, self.effective_boundary_y, 'g-', linewidth=1.5, alpha=0.7, label='Drawing Area (with margins)')
 
+    def _plot_detailed_viewer_paths(self):
+        """Plot drawing paths in detailed viewer."""
+        ax = self.detail_ax
+        use_center = self.use_center_origin.get()
+        
         import matplotlib.pyplot as plt
         import numpy as np
         if self.drawer.drawing_points:
@@ -1030,18 +1239,30 @@ class SimpleRobotGUI:
             margin_info = f" (margins: {self.margin_x.get()}x{self.margin_y.get()}mm)" if self.margin_x.get() > 0 or self.margin_y.get() > 0 else ""
             ax.set_title(f'{len(self.drawer.drawing_points)} paths, {total_points} points ({coord_info} origin{margin_info})')
         else:
-            text_x = 0 if use_center else max_x/2
-            text_y = 0 if use_center else max_y/2
+            text_x = 0 if use_center else self.max_x.get()/2
+            text_y = 0 if use_center else self.max_y.get()/2
             coord_info = "center" if use_center else "corner"
             ax.text(text_x, text_y, f'No path generated\n(0,0) at {coord_info}', ha='center', va='center', color='#666')
 
-        canvas = FigureCanvasTkAgg(fig, self.detail_window)
+    def _setup_detailed_viewer_animations(self):
+        """Setup animation controls for detailed viewer."""
+        # Create canvas and toolbar
+        canvas = FigureCanvasTkAgg(self.detail_fig, self.detail_window)
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         toolbar = NavigationToolbar2Tk(canvas, self.detail_window)
         toolbar.update()
-        canvas.mpl_connect('scroll_event', lambda e: self._detail_scroll_zoom(e, ax, canvas))
+        
+        # Store canvas reference
+        self.detail_canvas = canvas
+        
+        # Setup dual-arm animation button
+        self._create_dual_arm_animation_button()
+        
+        # Setup point-by-point animation button
+        self._create_point_animation_button()
 
-        # --- Animation Button ---
+    def _create_dual_arm_animation_button(self):
+        """Create the dual-arm animation button."""
         def start_animation():
             # Check if dual-arm mode is enabled - only run dual-arm animation in dual-arm mode
             if not self.dual_arm_mode.get():
@@ -1062,9 +1283,9 @@ class SimpleRobotGUI:
                 import tkinter.messagebox as mb
                 msg = f"No paths to animate. drawing_points type: {type(contours)}, length: {len(contours) if contours is not None else 'None'}\nContent: {contours}"
                 mb.showwarning("No Paths to Animate", msg)
-                ax.clear()
-                ax.text(0, 0, 'No path data to animate!', ha='center', va='center', color='red', fontsize=14)
-                canvas.draw_idle()
+                self.detail_ax.clear()
+                self.detail_ax.text(0, 0, 'No path data to animate!', ha='center', va='center', color='red', fontsize=14)
+                self.detail_canvas.draw_idle()
                 return
 
             steps = []
@@ -1097,7 +1318,7 @@ class SimpleRobotGUI:
                 xs, ys = zip(*contour)
                 
                 # Transform coordinates to mirror them vertically for proper display
-                workspace_height = max_y  # Use the workspace height from boundary
+                workspace_height = self.max_y.get()  # Use the workspace height from boundary
                 ys_transformed = [workspace_height - y for y in ys]
                 
                 xs = list(xs) + [xs[0]]
@@ -1110,61 +1331,61 @@ class SimpleRobotGUI:
 
             def update(frame):
                 # Clear and set labels
-                ax.clear()
-                ax.set_xlabel('X (mm)')
-                ax.set_ylabel('Y (mm)')
-                ax.grid(True, alpha=0.3)
+                self.detail_ax.clear()
+                self.detail_ax.set_xlabel('X (mm)')
+                self.detail_ax.set_ylabel('Y (mm)')
+                self.detail_ax.grid(True, alpha=0.3)
                 
                 # Invert y-axis so (0,0) is at top-left corner (only if not already inverted)
-                if not ax.yaxis_inverted():
-                    ax.invert_yaxis()
-                print(f"Animation frame {frame}: Y-axis inverted = {ax.yaxis_inverted()}")
+                if not self.detail_ax.yaxis_inverted():
+                    self.detail_ax.invert_yaxis()
+                print(f"Animation frame {frame}: Y-axis inverted = {self.detail_ax.yaxis_inverted()}")
                 
-                ax.set_aspect('equal', adjustable='box')
+                self.detail_ax.set_aspect('equal', adjustable='box')
 
                 # Force view limits to workspace boundary so huge forbidden tails don't expand view
-                x_min, x_max = min(boundary_x), max(boundary_x)
-                y_min, y_max = min(boundary_y), max(boundary_y)
+                x_min, x_max = min(self.boundary_x), max(self.boundary_x)
+                y_min, y_max = min(self.boundary_y), max(self.boundary_y)
                 # Add small padding
                 pad_x = max(5.0, (x_max - x_min) * 0.02)
                 pad_y = max(5.0, (y_max - y_min) * 0.02)
-                ax.set_xlim(x_min - pad_x, x_max + pad_x)
-                ax.set_ylim(y_min - pad_y, y_max + pad_y)
+                self.detail_ax.set_xlim(x_min - pad_x, x_max + pad_x)
+                self.detail_ax.set_ylim(y_min - pad_y, y_max + pad_y)
 
                 # Draw static workspace outlines - transform coordinates
-                boundary_y_transformed = [max_y - y for y in boundary_y]
-                ax.plot(boundary_x, boundary_y_transformed, 'k--', linewidth=2, alpha=0.5, label='Workspace Area')
-                if margin_x > 0 or margin_y > 0:
-                    effective_boundary_y_transformed = [max_y - y for y in effective_boundary_y]
-                    ax.plot(effective_boundary_x, effective_boundary_y_transformed, 'g-', linewidth=1.5, alpha=0.7, label='Drawing Area (with margins)')
+                boundary_y_transformed = [self.max_y.get() - y for y in self.boundary_y]
+                self.detail_ax.plot(self.boundary_x, boundary_y_transformed, 'k--', linewidth=2, alpha=0.5, label='Workspace Area')
+                if self.margin_x_val > 0 or self.margin_y_val > 0:
+                    effective_boundary_y_transformed = [self.max_y.get() - y for y in self.effective_boundary_y]
+                    self.detail_ax.plot(self.effective_boundary_x, effective_boundary_y_transformed, 'g-', linewidth=1.5, alpha=0.7, label='Drawing Area (with margins)')
                 
                 # Draw static left-forbidden rectangle (0,0) to (130,40) - transform coordinates
                 if not use_center:  # Only show in corner origin mode
                     left_forbidden_x = [0, 130, 130, 0, 0]
                     left_forbidden_y = [0, 0, 40, 40, 0]
-                    left_forbidden_y_transformed = [max_y - y for y in left_forbidden_y]
-                    ax.fill(left_forbidden_x, left_forbidden_y_transformed, color='#FFCDD2', alpha=0.7, zorder=1)
-                    ax.plot(left_forbidden_x, left_forbidden_y_transformed, color='#FF1744', linewidth=2, 
+                    left_forbidden_y_transformed = [self.max_y.get() - y for y in left_forbidden_y]
+                    self.detail_ax.fill(left_forbidden_x, left_forbidden_y_transformed, color='#FFCDD2', alpha=0.7, zorder=1)
+                    self.detail_ax.plot(left_forbidden_x, left_forbidden_y_transformed, color='#FF1744', linewidth=2, 
                            linestyle='--', alpha=0.8, zorder=1)
-                ax.set_title(f'Step {frame+1} / {len(steps)}')
+                self.detail_ax.set_title(f'Step {frame+1} / {len(steps)}')
                 # Update step label text
                 try:
                     step_label.config(text=f"Step {frame+1} / {len(steps)}")
                 except Exception:
                     pass
-                ax.legend(handles=legend_handles)
+                self.detail_ax.legend(handles=legend_handles)
 
                 remaining, master_role, master, slave, forbidden_poly = steps[frame]
                 # Show current master (left/right) prominently in the corner
                 master_text = f'Master: {master_role.title()}'
-                ax.text(0.02, 0.95, master_text, transform=ax.transAxes, ha='left', va='top',
+                self.detail_ax.text(0.02, 0.95, master_text, transform=self.detail_ax.transAxes, ha='left', va='top',
                     fontsize=10, color='black', bbox=dict(facecolor='white', alpha=0.8, edgecolor='none'))
 
                 # Plot remaining contours faint
                 colors_local = plt.cm.tab20(np.linspace(0, 1, max(1, len(remaining))))
                 for i, c in enumerate(remaining):
                     if c:
-                        plot_contour(ax, c, color=colors_local[i % len(colors_local)], lw=1, alpha=0.4, zorder=1)
+                        plot_contour(self.detail_ax, c, color=colors_local[i % len(colors_local)], lw=1, alpha=0.4, zorder=1)
 
                 # Plot forbidden area clipped to view box to avoid huge tails
                 if forbidden_poly is not None:
@@ -1173,7 +1394,7 @@ class SimpleRobotGUI:
                     
                     try:
                         from shapely.geometry import box as shapely_box
-                        view_box = shapely_box(ax.get_xlim()[0], ax.get_ylim()[0], ax.get_xlim()[1], ax.get_ylim()[1])
+                        view_box = shapely_box(self.detail_ax.get_xlim()[0], self.detail_ax.get_ylim()[0], self.detail_ax.get_xlim()[1], self.detail_ax.get_ylim()[1])
                         clipped = forbidden_poly.intersection(view_box)
                     except Exception:
                         clipped = forbidden_poly
@@ -1187,40 +1408,41 @@ class SimpleRobotGUI:
                             if hasattr(poly, 'exterior') and poly.exterior is not None:
                                 x_f, y_f = poly.exterior.xy
                                 # Transform forbidden polygon coordinates
-                                y_f_transformed = [max_y - y for y in y_f]
-                                ax.fill(x_f, y_f_transformed, color=forbidden_color, alpha=0.15, zorder=2, hatch='//')
+                                y_f_transformed = [self.max_y.get() - y for y in y_f]
+                                self.detail_ax.fill(x_f, y_f_transformed, color=forbidden_color, alpha=0.15, zorder=2, hatch='//')
 
                 # Plot master and slave with Professional/Industrial colors (Deep Blue=right, Safety Orange=left)
                 if master:
                     master_color = '#004E89' if master_role == 'right' else '#FF6B35'
-                    plot_contour(ax, master, color=master_color, lw=3, alpha=1.0, zorder=3)
+                    plot_contour(self.detail_ax, master, color=master_color, lw=3, alpha=1.0, zorder=3)
                 if slave:
                     slave_role = 'left' if master_role == 'right' else 'right'
                     slave_color = '#004E89' if slave_role == 'right' else '#FF6B35'
-                    plot_contour(ax, slave, color=slave_color, lw=3, alpha=1.0, zorder=3)
+                    plot_contour(self.detail_ax, slave, color=slave_color, lw=3, alpha=1.0, zorder=3)
 
-                canvas.draw_idle()
+                self.detail_canvas.draw_idle()
 
-            self._current_anim = FuncAnimation(ax.figure, update, frames=len(steps), interval=1200, repeat=False)
-            canvas.draw_idle()
+            self._current_anim = FuncAnimation(self.detail_ax.figure, update, frames=len(steps), interval=1200, repeat=False)
+            self.detail_canvas.draw_idle()
 
         anim_btn = self.create_standard_button(self.detail_window, text="Animate Dual-Arm Paths", command=start_animation, bg=self.COLORS['take_photo'])
 
         anim_btn.pack(side=tk.TOP, pady=8)
 
-        # --- Point-by-point Animation Button ---
+    def _create_point_animation_button(self):
+        """Create the point-by-point animation button."""
         def start_point_animation():
-            ax.clear()
-            ax.set_xlabel('X (mm)'); ax.set_ylabel('Y (mm)')
-            ax.grid(True, alpha=0.3)
+            self.detail_ax.clear()
+            self.detail_ax.set_xlabel('X (mm)'); self.detail_ax.set_ylabel('Y (mm)')
+            self.detail_ax.grid(True, alpha=0.3)
             
             # Invert y-axis so (0,0) is at top-left corner
-            ax.invert_yaxis()
+            self.detail_ax.invert_yaxis()
             
-            ax.set_aspect('equal', adjustable='box')
-            ax.plot(boundary_x, boundary_y, 'k--', linewidth=2, alpha=0.5, label='Workspace Area')
-            if margin_x > 0 or margin_y > 0:
-                ax.plot(effective_boundary_x, effective_boundary_y, 'g-', linewidth=1.5, alpha=0.7, label='Drawing Area (with margins)')
+            self.detail_ax.set_aspect('equal', adjustable='box')
+            self.detail_ax.plot(self.boundary_x, self.boundary_y, 'k--', linewidth=2, alpha=0.5, label='Workspace Area')
+            if self.margin_x_val > 0 or self.margin_y_val > 0:
+                self.detail_ax.plot(self.effective_boundary_x, self.effective_boundary_y, 'g-', linewidth=1.5, alpha=0.7, label='Drawing Area (with margins)')
             if self.drawer.drawing_points and any(len(p) > 0 for p in self.drawer.drawing_points):
                 from matplotlib_anim_point_helper import animate_points
                 
@@ -1233,18 +1455,22 @@ class SimpleRobotGUI:
                     colors = plt.cm.tab20(np.linspace(0, 1, len(self.drawer.drawing_points)))
                 
                 self._current_anim = animate_points(
-                    ax, self.drawer.drawing_points, colors=colors, arm_roles=arm_roles, interval=1,
-                    on_frame=lambda f: canvas.draw_idle(), show_left_forbidden=self.dual_arm_mode.get(), invert_y=False)
-                canvas.draw_idle()
+                    self.detail_ax, self.drawer.drawing_points, colors=colors, arm_roles=arm_roles, interval=1,
+                    on_frame=lambda f: self.detail_canvas.draw_idle(), show_left_forbidden=self.dual_arm_mode.get(), invert_y=False)
+                self.detail_canvas.draw_idle()
             else:
                 import tkinter.messagebox as mb
                 msg = f"No points to animate. drawing_points type: {type(self.drawer.drawing_points)}, length: {len(self.drawer.drawing_points) if self.drawer.drawing_points is not None else 'None'}\nContent: {self.drawer.drawing_points}"
                 mb.showwarning("No Points to Animate", msg)
-                ax.text(0, 0, 'No point data to animate!', ha='center', va='center', color='red', fontsize=14)
-            canvas.draw_idle()
+                self.detail_ax.text(0, 0, 'No point data to animate!', ha='center', va='center', color='red', fontsize=14)
+            self.detail_canvas.draw_idle()
 
         anim_point_btn = self.create_standard_button(self.detail_window, text="Animate Point by Point (fast)", command=start_point_animation, bg=self.COLORS['photo_preview'])
         anim_point_btn.pack(side=tk.TOP, pady=4)
+
+    def _setup_detailed_viewer_zoom(self):
+        """Setup zoom controls for detailed viewer."""
+        self.detail_canvas.mpl_connect('scroll_event', lambda e: self._detail_scroll_zoom(e, self.detail_ax, self.detail_canvas))
 
     def _detail_scroll_zoom(self, event, ax, canvas):
         """Scroll zoom inside detailed viewer."""
@@ -1365,6 +1591,10 @@ class SimpleRobotGUI:
         else:
             print('Voice command not mapped:', cmd)
     
+    # ========================================================================================
+    # EVENT HANDLER METHODS
+    # ========================================================================================
+
     def on_mode_change(self):
         """Handle mode selection change"""
         try:
@@ -3291,6 +3521,10 @@ class SimpleRobotGUI:
         thread.daemon = True
         thread.start()
     
+    # ========================================================================================
+    # DRAWING AND PROCESSING METHODS
+    # ========================================================================================
+
     def process_image(self):
         """Process the selected image or drawing"""
         # Determine current path based on mode
@@ -3467,96 +3701,24 @@ class SimpleRobotGUI:
             max_x = self.max_x.get()
             max_y = self.max_y.get()
 
-            # Clear and prepare axes
-            self.ax.clear()
-
-            # Set coordinate system based on user selection
-            use_center = self.use_center_origin.get()
-            if use_center:
-                self.ax.set_xlim(-max_x/2, max_x/2)
-                self.ax.set_ylim(-max_y/2, max_y/2)
-                origin_x, origin_y = 0, 0
-            else:
-                self.ax.set_xlim(0, max_x)
-                self.ax.set_ylim(0, max_y)
-                origin_x, origin_y = 0, 0
+            # Setup axes and coordinate system
+            self._setup_preview_axes(max_x, max_y)
             
-            # Invert y-axis so (0,0) is at top-left corner
-            self.ax.invert_yaxis()
-
-            # Reduce outer margins so drawing fills the preview
-            try:
-                self.fig.subplots_adjust(left=0.06, right=0.98, top=0.9, bottom=0.08)
-                self.ax.set_position([0.06, 0.08, 0.88, 0.86])
-            except Exception:
-                pass
-
-            self.ax.set_xlabel('X (mm)', fontsize=9)
-            self.ax.set_ylabel('Y (mm)', fontsize=9)
-            self.ax.grid(True, alpha=0.3)
-
-            # Ensure 1mm == 1mm and eliminate data margins
-            self.ax.set_aspect('equal', adjustable='box')
-            try:
-                self.ax.margins(0)
-            except Exception:
-                pass
-
-            # Draw drawing area boundary
-            if use_center:
-                boundary_x = [-max_x/2, max_x/2, max_x/2, -max_x/2, -max_x/2]
-                boundary_y = [-max_y/2, -max_y/2, max_y/2, max_y/2, -max_y/2]
+            # Draw boundary and forbidden zones
+            self._draw_preview_boundary(max_x, max_y)
+            
+            # Plot drawing paths if available
+            if getattr(self.drawer, 'drawing_points', None):
+                self._plot_preview_paths()
+                self._update_preview_title(max_x, max_y)
             else:
-                boundary_x = [0, max_x, max_x, 0, 0]
-                boundary_y = [0, 0, max_y, max_y, 0]
-
-            self.ax.plot(boundary_x, boundary_y, 'k-', linewidth=2.5, alpha=0.9)
-
-            # Plot left-forbidden rectangle (0,0) to (130,40) - always visible in corner origin mode
-            if not use_center:  # Only show in corner origin mode where this constraint applies
-                left_forbidden_x = [0, 130, 130, 0, 0]
-                left_forbidden_y = [0, 0, 40, 40, 0]
-                self.ax.fill(left_forbidden_x, left_forbidden_y, color='pink', alpha=0.3, 
-                           label='Left-forbidden (0,0)-(130,40)')
-                self.ax.plot(left_forbidden_x, left_forbidden_y, color='red', linewidth=2, 
-                           linestyle='--', alpha=0.8)
-
-            # Plot effective drawing area (margins) if present
-            margin_x = self.margin_x.get()
-            margin_y = self.margin_y.get()
-            if margin_x > 0 or margin_y > 0:
-                if use_center:
-                    eff_x = [-(max_x/2-margin_x), (max_x/2-margin_x), (max_x/2-margin_x), -(max_x/2-margin_x), -(max_x/2-margin_x)]
-                    eff_y = [-(max_y/2-margin_y), -(max_y/2-margin_y), (max_y/2-margin_y), (max_y/2-margin_y), -(max_y/2-margin_y)]
-                else:
-                    eff_x = [margin_x, max_x-margin_x, max_x-margin_x, margin_x, margin_x]
-                    eff_y = [margin_y, margin_y, max_y-margin_y, max_y-margin_y, margin_y]
-                self.ax.plot(eff_x, eff_y, 'g-', linewidth=1.8, alpha=0.8)
-
-            # Origin marker
-            self.ax.plot(origin_x, origin_y, 'r+', markersize=9, markeredgewidth=2)
-
-            # If no drawing points, show centered message
-            if not getattr(self.drawer, 'drawing_points', None):
-                coord_info = 'center' if use_center else 'corner'
-                self.ax.text(0.5, 0.5, f'No path generated\n(0,0) at {coord_info}', ha='center', va='center', transform=self.ax.transAxes, fontsize=11, color='#666')
+                # Show centered message when no paths
+                coord_info = 'center' if self.use_center_origin.get() else 'corner'
+                self.ax.text(0.5, 0.5, f'No path generated\n(0,0) at {coord_info}', 
+                           ha='center', va='center', transform=self.ax.transAxes, 
+                           fontsize=11, color='#666')
                 self.canvas_widget.draw_idle()
                 return
-
-            # Plot paths with larger stroke and markers for visibility
-            colors = plt.cm.tab10(np.linspace(0, 1, max(1, len(self.drawer.drawing_points))))
-            for i, path in enumerate(self.drawer.drawing_points):
-                if path and len(path) > 0:
-                    x_coords = [p[0] for p in path]
-                    y_coords = [p[1] for p in path]
-                    self.ax.plot(x_coords, y_coords, '-', color=colors[i % len(colors)], linewidth=2.2, alpha=0.95)
-                    # small markers at points for clarity
-                    self.ax.plot(x_coords, y_coords, 'o', color=colors[i % len(colors)], markersize=3.5, alpha=0.9)
-
-            total_points = sum(len(path) for path in self.drawer.drawing_points)
-            coord_info = 'center' if use_center else 'corner'
-            margin_info = f" (margins: {margin_x}x{margin_y}mm)" if margin_x > 0 or margin_y > 0 else ''
-            self.ax.set_title(f'{len(self.drawer.drawing_points)} paths, {total_points} points ({coord_info} origin{margin_info})', fontsize=10)
 
             self.fig.tight_layout(pad=0.5)
             try:
@@ -3566,6 +3728,100 @@ class SimpleRobotGUI:
             
         except Exception as e:
             print(f"Preview error: {e}")
+    
+    def _setup_preview_axes(self, max_x, max_y):
+        """Setup preview axes with coordinate system and formatting"""
+        # Clear and prepare axes
+        self.ax.clear()
+
+        # Set coordinate system based on user selection
+        use_center = self.use_center_origin.get()
+        if use_center:
+            self.ax.set_xlim(-max_x/2, max_x/2)
+            self.ax.set_ylim(-max_y/2, max_y/2)
+            origin_x, origin_y = 0, 0
+        else:
+            self.ax.set_xlim(0, max_x)
+            self.ax.set_ylim(0, max_y)
+            origin_x, origin_y = 0, 0
+        
+        # Invert y-axis so (0,0) is at top-left corner
+        self.ax.invert_yaxis()
+
+        # Reduce outer margins so drawing fills the preview
+        try:
+            self.fig.subplots_adjust(left=0.06, right=0.98, top=0.9, bottom=0.08)
+            self.ax.set_position([0.06, 0.08, 0.88, 0.86])
+        except Exception:
+            pass
+
+        self.ax.set_xlabel('X (mm)', fontsize=9)
+        self.ax.set_ylabel('Y (mm)', fontsize=9)
+        self.ax.grid(True, alpha=0.3)
+
+        # Ensure 1mm == 1mm and eliminate data margins
+        self.ax.set_aspect('equal', adjustable='box')
+        try:
+            self.ax.margins(0)
+        except Exception:
+            pass
+
+        # Origin marker
+        self.ax.plot(origin_x, origin_y, 'r+', markersize=9, markeredgewidth=2)
+    
+    def _draw_preview_boundary(self, max_x, max_y):
+        """Draw drawing area boundary, forbidden zones, and margins"""
+        use_center = self.use_center_origin.get()
+        
+        # Draw drawing area boundary
+        if use_center:
+            boundary_x = [-max_x/2, max_x/2, max_x/2, -max_x/2, -max_x/2]
+            boundary_y = [-max_y/2, -max_y/2, max_y/2, max_y/2, -max_y/2]
+        else:
+            boundary_x = [0, max_x, max_x, 0, 0]
+            boundary_y = [0, 0, max_y, max_y, 0]
+
+        self.ax.plot(boundary_x, boundary_y, 'k-', linewidth=2.5, alpha=0.9)
+
+        # Plot left-forbidden rectangle (0,0) to (130,40) - always visible in corner origin mode
+        if not use_center:  # Only show in corner origin mode where this constraint applies
+            left_forbidden_x = [0, 130, 130, 0, 0]
+            left_forbidden_y = [0, 0, 40, 40, 0]
+            self.ax.fill(left_forbidden_x, left_forbidden_y, color='pink', alpha=0.3, 
+                       label='Left-forbidden (0,0)-(130,40)')
+            self.ax.plot(left_forbidden_x, left_forbidden_y, color='red', linewidth=2, 
+                       linestyle='--', alpha=0.8)
+
+        # Plot effective drawing area (margins) if present
+        margin_x = self.margin_x.get()
+        margin_y = self.margin_y.get()
+        if margin_x > 0 or margin_y > 0:
+            if use_center:
+                eff_x = [-(max_x/2-margin_x), (max_x/2-margin_x), (max_x/2-margin_x), -(max_x/2-margin_x), -(max_x/2-margin_x)]
+                eff_y = [-(max_y/2-margin_y), -(max_y/2-margin_y), (max_y/2-margin_y), (max_y/2-margin_y), -(max_y/2-margin_y)]
+            else:
+                eff_x = [margin_x, max_x-margin_x, max_x-margin_x, margin_x, margin_x]
+                eff_y = [margin_y, margin_y, max_y-margin_y, max_y-margin_y, margin_y]
+            self.ax.plot(eff_x, eff_y, 'g-', linewidth=1.8, alpha=0.8)
+    
+    def _plot_preview_paths(self):
+        """Plot drawing paths with colors and markers"""
+        # Plot paths with larger stroke and markers for visibility
+        colors = plt.cm.tab10(np.linspace(0, 1, max(1, len(self.drawer.drawing_points))))
+        for i, path in enumerate(self.drawer.drawing_points):
+            if path and len(path) > 0:
+                x_coords = [p[0] for p in path]
+                y_coords = [p[1] for p in path]
+                self.ax.plot(x_coords, y_coords, '-', color=colors[i % len(colors)], linewidth=2.2, alpha=0.95)
+                # small markers at points for clarity
+                self.ax.plot(x_coords, y_coords, 'o', color=colors[i % len(colors)], markersize=3.5, alpha=0.9)
+    
+    def _update_preview_title(self, max_x, max_y):
+        """Update preview title with path and point statistics"""
+        total_points = sum(len(path) for path in self.drawer.drawing_points)
+        coord_info = 'center' if self.use_center_origin.get() else 'corner'
+        margin_info = f" (margins: {self.margin_x.get()}x{self.margin_y.get()}mm)" if self.margin_x.get() > 0 or self.margin_y.get() > 0 else ''
+        self.ax.set_title(f'{len(self.drawer.drawing_points)} paths, {total_points} points ({coord_info} origin{margin_info})', fontsize=10)
     
     def disable_all_buttons(self):
         """Disable all buttons during processing to show conversion is happening"""
@@ -4981,6 +5237,10 @@ class SimpleRobotGUI:
         self._show_conversion_notification("❌ Caricature conversion error!", "error")
         messagebox.showerror("Error", f"Caricature conversion error: {error}")
     
+    # ========================================================================================
+    # MAIN APPLICATION METHODS
+    # ========================================================================================
+
     def run(self):
         """Start the application"""
         self.root.mainloop()
