@@ -236,6 +236,11 @@ class SimpleRobotGUI:
             self.robot_port.set(self.config["robot_port"])
         if self.config.get("robot_port_l"):
             self.robot_port_l.set(self.config["robot_port_l"])
+        if self.config.get("camera_index") is not None:
+            try:
+                self.camera_index.set(int(self.config["camera_index"]))
+            except Exception:
+                self.camera_index.set(0)
         if self.config.get("use_center_origin") is not None:
             self.use_center_origin.set(self.config["use_center_origin"])
         if self.config.get("enable_logo") is not None:
@@ -337,6 +342,7 @@ class SimpleRobotGUI:
                 "robot_ip": self.robot_ip.get(),
                 "robot_port": self.robot_port.get(),
                 "robot_port_l": self.robot_port_l.get(),
+                "camera_index": self.camera_index.get(),
                 "use_center_origin": self.use_center_origin.get(),
                 "enable_logo": self.enable_logo.get(),
                 "logo_size": self.logo_size.get(),
@@ -404,6 +410,8 @@ class SimpleRobotGUI:
         self.robot_port = tk.StringVar(value=self.DEFAULT_ROBOT_PORT)
         self.robot_port_l = tk.StringVar(value=self.DEFAULT_ROBOT_PORT_L)  # Left robot port
         self.is_connected = False
+        
+        self.camera_index = tk.IntVar(value=0)  # Default camera index
         
         self.status_text = tk.StringVar(value="Ready")
         self.quality_var = tk.StringVar(value="high")
@@ -1967,7 +1975,6 @@ class SimpleRobotGUI:
         
         examples_grid.columnconfigure(0, weight=1)
         examples_grid.columnconfigure(1, weight=1)
-        
         # Preview Section
         preview_section = tk.LabelFrame(main_frame, text="Robot Path Preview", font=('Arial', 12, 'bold'),
                                        bg='white', padx=15, pady=10)
@@ -1977,6 +1984,40 @@ class SimpleRobotGUI:
                 command=self.open_detailed_path_window, bg='#607D8B', fg='white',
                 font=('Arial', 11, 'bold'), relief='flat', padx=20, pady=10, cursor='hand2')
         preview_btn.pack()
+    def on_camera_index_change(self):
+        """Handle camera index change"""
+        try:
+            # Save the new camera index to config
+            self._save_config()
+            print(f"Camera index changed to: {self.camera_index.get()}")
+        except Exception as e:
+            print(f"Error saving camera index: {e}")
+    
+    def test_camera_connection(self):
+        """Test the selected camera index"""
+        try:
+            import cv2
+            camera_index = self.camera_index.get()
+            
+            # Try to open the camera
+            test_camera = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
+            
+            if test_camera.isOpened():
+                # Try to read a frame
+                ret, frame = test_camera.read()
+                test_camera.release()
+                
+                if ret:
+                    messagebox.showinfo("Camera Test", f"✅ Camera {camera_index} is working correctly!\n\nResolution: {frame.shape[1]}x{frame.shape[0]}")
+                else:
+                    messagebox.showwarning("Camera Test", f"⚠️ Camera {camera_index} opened but couldn't read frames.\n\nThis might indicate:\n• Camera is busy with another application\n• Camera drivers need updating\n• Camera hardware issue")
+            else:
+                messagebox.showerror("Camera Test", f"❌ Could not open camera {camera_index}.\n\nPlease check:\n• Camera is connected and powered on\n• Camera index is correct (try 0, 1, 2...)\n• Camera permissions are granted\n• No other application is using the camera")
+                
+        except ImportError:
+            messagebox.showerror("Error", "OpenCV not available for camera testing")
+        except Exception as e:
+            messagebox.showerror("Camera Test Error", f"Error testing camera: {str(e)}")
 
     def create_processing_tab(self, parent):
         """Create image processing settings tab"""
@@ -2235,6 +2276,32 @@ class SimpleRobotGUI:
         logo_size_spinbox.pack(side=tk.LEFT, padx=(10, 5))
         tk.Label(logo_size_frame, text="mm", font=('Arial', 10), bg='white').pack(side=tk.LEFT)
         
+        # Camera Settings Section
+        camera_section = tk.LabelFrame(main_frame, text="Camera Settings", font=('Arial', 12, 'bold'),
+                                      bg='white', padx=15, pady=10)
+        camera_section.pack(fill=tk.X, pady=(15, 15))
+        
+        # Camera index setting
+        camera_index_frame = tk.Frame(camera_section, bg='white')
+        camera_index_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        tk.Label(camera_index_frame, text="Camera Index:", font=('Arial', 10, 'bold'), 
+                bg='white', width=15, anchor='w').pack(side=tk.LEFT)
+        
+        camera_index_spinbox = tk.Spinbox(camera_index_frame, from_=0, to=10, textvariable=self.camera_index, 
+                                         width=5, font=('Arial', 10), command=self.on_camera_index_change)
+        camera_index_spinbox.pack(side=tk.LEFT, padx=(10, 5))
+        camera_index_spinbox.bind('<KeyRelease>', lambda e: self.on_camera_index_change())
+        
+        tk.Label(camera_index_frame, text="(0=default, 1=secondary camera, etc.)", 
+                font=('Arial', 9), bg='white', fg='#666').pack(side=tk.LEFT, padx=(10, 0))
+        
+        # Camera test button
+        test_camera_btn = self.create_standard_button(camera_section, text="🔍 Test Camera", 
+                command=self.test_camera_connection, bg='#607D8B', fg='white',
+                font=('Arial', 10, 'bold'), relief='flat', padx=15, pady=8, cursor='hand2')
+        test_camera_btn.pack(pady=(5, 0))
+        
         # Dual-arm buffer settings
         buffer_section = tk.LabelFrame(main_frame, text="Dual-arm Buffer Zone", font=('Arial', 11, 'bold'),
                                       bg='white', padx=15, pady=10)
@@ -2248,15 +2315,7 @@ class SimpleRobotGUI:
         buffer_spin = tk.Spinbox(buffer_frame, from_=0, to=200, width=8, textvariable=self.forbidden_buffer_var, 
                                 font=('Arial', 10), command=lambda: self._on_forbidden_buffer_change())
         buffer_spin.pack(side=tk.LEFT, padx=(0, 5))
-        tk.Label(buffer_frame, text="mm", font=('Arial', 10), bg='white').pack(side=tk.LEFT, padx=(0, 10))
-        
-        # Custom Gear Settings Section
-        gear_section = tk.LabelFrame(main_frame, text="Custom Gear Animation", font=('Arial', 11, 'bold'),
-                                    bg='white', padx=15, pady=10)
-        gear_section.pack(fill=tk.X, pady=(15, 0))
-        
-        tk.Label(gear_section, text="The app uses 'gear.png' for conversion overlays and 'gear_white.png' for drawing overlays.\nBoth files should be present in the current directory for the animations to work.", 
-                font=('Arial', 9), bg='white', fg='#666').pack(anchor='w', pady=(5, 0))
+        tk.Label(buffer_section, text="mm", font=('Arial', 10), bg='white').pack(side=tk.LEFT, padx=(0, 10))
         
         tk.Label(buffer_section, text="Creates safety zones around robot positions in dual-arm mode", 
                 font=('Arial', 9), bg='white', fg='#666').pack(anchor='w', pady=(5, 0))
@@ -3043,10 +3102,11 @@ class SimpleRobotGUI:
         """Initialize camera with faster settings and higher resolution"""
         try:
             # Fast camera initialization with optimized settings for Windows
-            self.camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # Use DirectShow for faster init on Windows
+            camera_index = self.camera_index.get()
+            self.camera = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)  # Use DirectShow for faster init on Windows
             
             if not self.camera.isOpened():
-                raise Exception("Could not open camera")
+                raise Exception(f"Could not open camera index {camera_index}")
             
             # Set camera properties for speed and quality
             self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)   # Higher resolution to match display
@@ -3059,7 +3119,7 @@ class SimpleRobotGUI:
             if not ret:
                 raise Exception("Could not read from camera")
             
-            self.camera_status.config(text="✅ Camera ready - Position yourself and click 'Take Photo'", fg=self.COLORS['photo_preview'])
+            self.camera_status.config(text=f"✅ Camera {camera_index} ready - Position yourself and click 'Take Photo'", fg=self.COLORS['photo_preview'])
             self.capture_btn.config(state='normal')
             
             # Start video preview immediately
@@ -3067,7 +3127,7 @@ class SimpleRobotGUI:
             
         except Exception as e:
             self.camera_status.config(text=f"❌ Camera error: {str(e)}", fg='#F44336')
-            self.camera_label.config(text="📹 Camera not available\n\nPlease check:\n• Camera permissions\n• Camera not used by other apps\n• Camera drivers installed")
+            self.camera_label.config(text=f"📹 Camera {self.camera_index.get()} not available\n\nPlease check:\n• Camera permissions\n• Camera not used by other apps\n• Camera drivers installed\n• Camera index setting")
             self.capture_btn.config(state='disabled')
     
     def update_camera_preview(self):
@@ -3204,7 +3264,9 @@ class SimpleRobotGUI:
             return
 
         try:
-            cam = RobotCameraCapture()
+            # Use configurable camera index
+            camera_index = self.camera_index.get()
+            cam = RobotCameraCapture(camera_index=camera_index)
             ok = cam.capture_image()
             image_path = os.path.abspath(cam.local_path)
             if ok and os.path.exists(image_path):

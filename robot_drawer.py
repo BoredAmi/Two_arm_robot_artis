@@ -372,6 +372,10 @@ class RobotDrawer:
                     
                     robot_contour.append((x, y))
                 
+                # Apply minimum distance filtering to logo contours (same as main images)
+                if robot_contour:
+                    robot_contour = self.transformer._filter_min_distance(robot_contour)
+                
                 if robot_contour:
                     logo_robot_contours.append(robot_contour)
             return logo_robot_contours
