@@ -648,12 +648,12 @@ class RobotController:
     def send_move(self, x, y, wait_response=True, target='right'):
         """Send movement command to robot with coordinate system awareness"""
         # Safety: block single MOVE commands to left if the coordinate is in left-forbidden area
-        try:
-            if target == 'left' and float(x) < 130.0 and float(y) < 40.0:
-                print(f"Refusing MOVE to left for point ({x:.1f},{y:.1f}): inside left-forbidden rectangle (x<130,y<40)")
-                return False
-        except Exception:
-            pass
+#        try:
+#            if target == 'left' and float(x) < 130.0 and float(y) < 40.0:
+#                print(f"Refusing MOVE to left for point ({x:.1f},{y:.1f}): inside left-forbidden rectangle (x<130,y<40)")
+#                return False
+#        except Exception:
+#            pass
 
         cmd = f"MOVE,{x:.2f},{y:.2f}\n"
         ok = self._send_command(cmd, wait_response, target=target)
@@ -1234,9 +1234,9 @@ class RobotController:
         if not points:
             return True
         # Safety: refuse to send to left if any point is in left-forbidden area
-        if target == 'left' and self._contains_left_forbidden(points):
-            print(f"Refusing to send ultra-fast batch to left: contains points inside left-forbidden rectangle (x<130,y<40)")
-            return False
+ #       if target == 'left' and self._contains_left_forbidden(points):
+ #           print(f"Refusing to send ultra-fast batch to left: contains points inside left-forbidden rectangle (x<130,y<40)")
+ #           return False
         # Process points in large batches with coordinate conversion
         for i in range(0, len(points), batch_size):
             batch = points[i:i + batch_size]

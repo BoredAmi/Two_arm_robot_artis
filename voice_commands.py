@@ -4,11 +4,13 @@ import json
 import sounddevice as sd
 from vosk import Model, KaldiRecognizer
 import time
+import sys
+import os
 
 
 # Default model path and commands (Polish small model used in this repo)
 DEFAULT_MODEL_PATH = "vosk-model-small-pl-0.22"
-DEFAULT_COMMANDS = ["start", "stop", "uchwyć", "połącz", "karykatura", "portret", "podgląd"]
+DEFAULT_COMMANDS = ["start", "stop", "akcja", "połącz", "karykatura", "portret", "podgląd", "kamera"]
 
 
 class VoiceCommandListener:
@@ -27,7 +29,18 @@ class VoiceCommandListener:
     def __init__(self, callback=None, commands=None, model_path=None, samplerate=16000):
         self.callback = callback
         self.commands = commands or DEFAULT_COMMANDS
-        self.model_path = model_path or DEFAULT_MODEL_PATH
+        
+        # Handle model path for both development and packaged environments
+        if model_path is None:
+            if getattr(sys, '_MEIPASS', None):
+                # Running from PyInstaller packaged executable
+                self.model_path = os.path.join(sys._MEIPASS, DEFAULT_MODEL_PATH)
+            else:
+                # Running from source
+                self.model_path = DEFAULT_MODEL_PATH
+        else:
+            self.model_path = model_path
+            
         self.samplerate = samplerate
 
         self._q = queue.Queue()

@@ -210,8 +210,14 @@ class RobotDrawer:
         
         return True
 
-    def connect(self):
+    def connect(self, ip=None, port=None, port_l=None):
         """Connect to the robot"""
+        if ip is not None:
+            self.robot.ip = ip
+        if port is not None:
+            self.robot.port = port
+        if port_l is not None:
+            self.robot.port_l = port_l
         return self.robot.connect()
     
     def disconnect(self):

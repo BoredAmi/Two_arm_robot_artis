@@ -1334,6 +1334,20 @@ class SimpleRobotGUI:
         Edit mappings here if you want different behavior.
         """
         cmd = (cmd or '').lower().strip()
+
+        # Check if conversion is currently active and block ALL commands
+        if hasattr(self, 'conversion_active') and self.conversion_active:
+            print(f"⚠️ Voice command '{cmd}' ignored - conversion in progress")
+            self.status_text.set(f"⚠️ Voice command '{cmd}' ignored - conversion in progress")
+            return
+
+        # Check if drawing is currently active and block ALL commands except stop
+        if self.drawing_active:
+            if cmd != 'stop':
+                print(f"⚠️ Voice command '{cmd}' ignored - drawing in progress")
+                self.status_text.set(f"⚠️ Voice command '{cmd}' ignored - drawing in progress")
+                return
+
         if cmd == 'połącz':
             # Polish: connect
             try:
@@ -1350,28 +1364,46 @@ class SimpleRobotGUI:
                 self.emergency_stop()
             except Exception:
                 pass
-        elif cmd == 'uchwyć':
+        elif cmd == 'akcja':
+            # Check if camera window is open before allowing capture
+            if not hasattr(self, 'camera_window') or not self.camera_window or not self.camera_window.winfo_exists():
+                print(f"⚠️ Voice command '{cmd}' ignored - camera preview not open")
+                self.status_text.set(f"⚠️ Voice command '{cmd}' ignored - camera preview not open")
+                return
+            try:
+                self.capture_photo_from_preview()
+            except Exception:
+                pass
+        elif cmd == 'kamera':
+            # Check if camera window is already open
+            if hasattr(self, 'camera_window') and self.camera_window and self.camera_window.winfo_exists():
+                print(f"⚠️ Voice command '{cmd}' ignored - camera preview already open")
+                self.status_text.set(f"⚠️ Voice command '{cmd}' ignored - camera preview already open")
+                return
             try:
                 self.get_picture_from_robot()
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"DEBUG: Exception in get_picture_from_robot: {e}")
         elif cmd == 'portret':
+            print("DEBUG: Processing 'portret' command")
             try:
                 self.convert_to_face_drawing()
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"DEBUG: Exception in convert_to_face_drawing: {e}")
         elif cmd == 'karykatura':
+            print("DEBUG: Processing 'karykatura' command")
             try:
                 self.convert_to_caricature()
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"DEBUG: Exception in convert_to_caricature: {e}")
         elif cmd == 'podgląd':
+            print("DEBUG: Processing 'podgląd' command")
             try:
                 self.update_robot_preview()
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"DEBUG: Exception in update_robot_preview: {e}")
         else:
-            print('Voice command not mapped:', cmd)
+            print(f"DEBUG: Unknown voice command: '{cmd}'")
     
     def on_mode_change(self):
         """Handle mode selection change"""
@@ -2820,7 +2852,8 @@ class SimpleRobotGUI:
         if not self.is_connected:
             # Connect
             self.status_text.set("Connecting to robot...")
-            self.connect_btn.config(state='disabled')
+            if hasattr(self, 'connect_btn') and self.connect_btn.winfo_exists():
+                self.connect_btn.config(state='disabled')
             thread = threading.Thread(target=self._connect_thread)
             thread.daemon = True
             thread.start()
@@ -2828,16 +2861,20 @@ class SimpleRobotGUI:
             # Disconnect
             self.drawer.disconnect()
             self.is_connected = False
-            self.connect_btn.config(text="Connect", bg=self.COLORS['portrait'])
-            self.conn_status_label.config(text="⚫ Not Connected", fg='#f44336')
+            if hasattr(self, 'connect_btn') and self.connect_btn.winfo_exists():
+                self.connect_btn.config(text="Connect", bg=self.COLORS['portrait'])
+            if hasattr(self, 'conn_status_label') and self.conn_status_label.winfo_exists():
+                self.conn_status_label.config(text="⚫ Not Connected", fg='#f44336')
             self.status_text.set("Disconnected from robot")
     
     def _connect_thread(self):
         """Connect in background thread"""
+        print("DEBUG: _connect_thread started")
         try:
             ip = self.robot_ip.get().strip()
             port = int(self.robot_port.get().strip())
             port_l = int(self.robot_port_l.get().strip())
+            print(f"DEBUG: Connecting to {ip}:{port} and {ip}:{port_l}")
             
             self.drawer = RobotDrawer(
                 ip=ip, 
@@ -2862,8 +2899,10 @@ class SimpleRobotGUI:
     def _connection_success(self):
         """Handle successful connection"""
         self.is_connected = True
-        self.connect_btn.config(text="Disconnect", bg='#f44336', state='normal')
-        self.conn_status_label.config(text="🟢 Connected", fg=self.COLORS['photo_preview'])
+        if hasattr(self, 'connect_btn') and self.connect_btn.winfo_exists():
+            self.connect_btn.config(text="Disconnect", bg='#f44336', state='normal')
+        if hasattr(self, 'conn_status_label') and self.conn_status_label.winfo_exists():
+            self.conn_status_label.config(text="🟢 Connected", fg=self.COLORS['photo_preview'])
         
         # Update robot status in the new tile interface
         if hasattr(self, 'robot_status'):
@@ -2901,7 +2940,8 @@ class SimpleRobotGUI:
     
     def _connection_failed(self):
         """Handle connection failure"""
-        self.connect_btn.config(state='normal')
+        if hasattr(self, 'connect_btn') and self.connect_btn.winfo_exists():
+            self.connect_btn.config(state='normal')
         
         # Update robot status in the new tile interface
         if hasattr(self, 'robot_status'):
@@ -2913,7 +2953,8 @@ class SimpleRobotGUI:
     
     def _connection_error(self, error):
         """Handle connection error"""
-        self.connect_btn.config(state='normal')
+        if hasattr(self, 'connect_btn') and self.connect_btn.winfo_exists():
+            self.connect_btn.config(state='normal')
         # Keep get picture button available for local camera
         self.status_text.set("Connection error")
         messagebox.showerror("Error", f"Connection error: {error}")
@@ -4553,8 +4594,27 @@ class SimpleRobotGUI:
                 delattr(self, 'drawing_gear_angle')
             if hasattr(self, 'drawing_text'):
                 delattr(self, 'drawing_text')
-        except Exception:
-            pass
+                
+            # Ensure button is reset to normal state
+            if hasattr(self, 'start_drawing_btn') and self.start_drawing_btn.winfo_exists():
+                self.start_drawing_btn.config(
+                    state='normal', 
+                    text="START\nDRAWING", 
+                    bg=self.COLORS['start_drawing']
+                )
+                
+        except Exception as e:
+            print(f"Error stopping drawing overlay: {e}")
+            # Fallback: ensure button is reset even if overlay cleanup fails
+            try:
+                if hasattr(self, 'start_drawing_btn') and self.start_drawing_btn.winfo_exists():
+                    self.start_drawing_btn.config(
+                        state='normal', 
+                        text="START\nDRAWING", 
+                        bg=self.COLORS['start_drawing']
+                    )
+            except Exception:
+                pass
     
     def _update_drawing_overlay_position(self, event=None):
         """Update the drawing overlay position when window is resized"""
