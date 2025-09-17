@@ -66,8 +66,6 @@ class RobotController:
         
         # Shared state to track when robots are in WAIT position
         wait_states = {'right': False, 'left': False}
-        # Track which robots sent WAIT commands in current cycle
-        sent_wait_commands = {'right': False, 'left': False}
         wait_lock = threading.Lock()
 
         # Prepare progress tracking for dual-arm: combined total points and steps
@@ -87,7 +85,7 @@ class RobotController:
         points_sent = {'value': 0}
         points_lock = threading.Lock()
 
-        def do_action_list(actions, target):
+        def do_action_list(actions, other_actions, target):
             for idx, action in enumerate(actions):
                 # Check if drawing should stop
                 if self.should_stop():
@@ -110,9 +108,6 @@ class RobotController:
                 ok = True
                 if action == 'wait':
                     print(f"[{target}] Sending wait command and waiting for acknowledgment...")
-                    # Mark that this robot sent a WAIT command
-                    with wait_lock:
-                        sent_wait_commands[target] = True
                     ok = self.send_wait(target=target)
                     if ok:
                         # Mark this robot as being in WAIT position
@@ -132,32 +127,25 @@ class RobotController:
                     ok = True
                 else:
                     try:
-                        # Check if the other robot sent a WAIT command in this cycle
+                        # Check if the other robot's action is 'wait'
                         other_target = 'left' if target == 'right' else 'right'
-                        with wait_lock:
-                            other_sent_wait = sent_wait_commands[other_target]
-                            other_is_waiting = wait_states[other_target]
-                        
-                        # Only wait for other robot's WAIT position if it actually sent a WAIT command
-                        if other_sent_wait and not other_is_waiting:
-                            print(f"[{target}] Waiting for {other_target} robot to reach WAIT position...")
-                            # Poll until other robot is in WAIT position or timeout
-                            wait_timeout = 30.0  # 30 second timeout
+                        if other_actions[idx] == 'wait':
+                            print(f"[{target}] Other robot {other_target} will send WAIT, waiting for it to reach WAIT position...")
+                            # Poll until other robot is in WAIT position
+                            wait_timeout = 30.0
                             start_time = time.time()
-                            while not other_is_waiting and (time.time() - start_time) < wait_timeout:
+                            while not wait_states[other_target] and (time.time() - start_time) < wait_timeout:
                                 time.sleep(0.1)
                                 with wait_lock:
-                                    other_is_waiting = wait_states[other_target]
-                            
-                            if not other_is_waiting:
+                                    if wait_states[other_target]:
+                                        break
+                            if not wait_states[other_target]:
                                 print(f"[{target}] Timeout waiting for {other_target} robot to reach WAIT position")
                                 ok = False
                             else:
                                 print(f"[{target}] {other_target} robot is now in WAIT position, proceeding with movement...")
-                        elif other_sent_wait:
-                            print(f"[{target}] {other_target} robot already in WAIT position, proceeding with movement...")
                         else:
-                            print(f"[{target}] {other_target} robot didn't send WAIT command, proceeding with movement...")
+                            print(f"[{target}] Other robot {other_target} is not sending WAIT, proceeding with movement...")
                         
                         if ok:
                             # Pen should already be up from previous contour
@@ -345,15 +333,13 @@ class RobotController:
                     barrier.wait()
                     print(f"[{target}] Barrier passed, proceeding to next action...")
                     
-                    # Clear wait states and wait command flags after both robots have synchronized
+                    # Clear wait states after both robots have synchronized
                     # (Only one robot needs to do this since they're synchronized)
                     if target == 'right':
                         with wait_lock:
                             wait_states['right'] = False
                             wait_states['left'] = False
-                            sent_wait_commands['right'] = False
-                            sent_wait_commands['left'] = False
-                        print("Wait states and command flags cleared after synchronization")
+                        print("Wait states cleared after synchronization")
                     
                     # Add small staggered delay to prevent simultaneous movement and collision
                     if target == 'left':
@@ -376,8 +362,8 @@ class RobotController:
         right_padded = list(right_actions) + [None] * (max_len - len(right_actions))
         left_padded = list(left_actions) + [None] * (max_len - len(left_actions))
 
-        t_right = threading.Thread(target=do_action_list, args=(right_padded, 'right'))
-        t_left = threading.Thread(target=do_action_list, args=(left_padded, 'left'))
+        t_right = threading.Thread(target=do_action_list, args=(right_padded, left_padded, 'right'))
+        t_left = threading.Thread(target=do_action_list, args=(left_padded, right_padded, 'left'))
         t_right.start()
         t_left.start()
         t_right.join()
@@ -1165,7 +1151,7 @@ class RobotController:
             if not self._transition_to_start(start_x, start_y):
                 print(f"Failed to transition to start of contour {contour_idx + 1}")
                 return False
-            time.sleep(0.02)  # Ultra-minimal delay
+            time.sleep(0.02)  
             
             # Update progress for the first point (move to start)
             points_processed += 1
@@ -1174,7 +1160,7 @@ class RobotController:
             
             # Put pen down to start drawing this contour
             self.send_pen_down()
-            time.sleep(0.02)  # Ultra-minimal delay
+            time.sleep(0.02)  
             
             # Explicitly move to first point with pen down to ensure precise start
             start_x, start_y = contour[0]
