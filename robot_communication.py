@@ -34,6 +34,12 @@ class RobotController:
         result = self._send_command("WAIT\n", target=target, timeout=10.0)
         if result:
             print(f"[{target}] Robot acknowledged WAIT command")
+            # After OK, give robot a moment to physically move to WAIT position
+            try:
+                if getattr(self, 'post_retreat_delay', 0):
+                    time.sleep(float(self.post_retreat_delay))
+            except Exception:
+                pass
         else:
             print(f"[{target}] Robot failed to acknowledge WAIT command")
         return result
