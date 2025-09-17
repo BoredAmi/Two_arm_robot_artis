@@ -52,6 +52,7 @@ MODULE DrawingModule
     ! MAIN PROCEDURE - Server initialization and loop
     !==================================================
     PROC main()
+        CornerPathWarning FALSE;
         MotionSup \Off;
         AccSet 100, 100;  
         ! Initialize robot to base position
@@ -143,7 +144,7 @@ MODULE DrawingModule
             ELSEIF StrMatch(cmd, 1, "START_CORNER") = 1 THEN 
                 setup_corner;
             ELSEIF StrMatch(cmd, 1, "WAIT") = 1 THEN
-                MoveL Offs(base_position,0,0,current_z),fast_speed,move_zone,tool1 \WObj:=current_wobject;
+                MoveL Offs(base_position,-20,0,current_z),fast_speed,move_zone,tool1 \WObj:=current_wobject;
                 SendResponse("OK"); 
             ELSEIF StrMatch(cmd, 1, "RETREAT")=1 THEN
                 retreat_position := Offs(target_position,-80,0,current_z);  ! Right arm retreats in negative X

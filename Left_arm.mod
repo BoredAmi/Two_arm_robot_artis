@@ -15,9 +15,9 @@ MODULE Module1
     CONST num z_up:=-10;                ! Pen lifted (moving)
     
     ! Batch coordinate processing - Enhanced for higher performance
-    VAR robtarget batch_targets{15};    ! Buffer for batch coordinates (increased to 15 points)
+    VAR robtarget batch_targets{15};    ! Buffer for batch coordinates
     VAR num batch_count;                ! Number of coordinates in current batch
-    VAR num max_batch_size := 30;       ! Increased maximum batch size for performance
+    VAR num max_batch_size := 30;       
      
     ! Position control variables
     VAR robtarget retreat_position;
@@ -53,6 +53,7 @@ MODULE Module1
     ! MAIN PROCEDURE - Server initialization and loop
     !==================================================
     PROC main() 
+        CornerPathWarning FALSE;
         MotionSup \Off;
         AccSet 100, 100;  
         ! Initialize robot to base position
@@ -143,7 +144,7 @@ MODULE Module1
             ELSEIF StrMatch(cmd, 1, "START_CORNER") = 1 THEN
                 setup_corner;
             ELSEIF StrMatch(cmd, 1, "WAIT") = 1 THEN
-                MoveL Offs(base_position,290,0,current_z),fast_speed,move_zone,tool1 \WObj:=current_wobject;
+                MoveL Offs(base_position,310,0,current_z),fast_speed,move_zone,tool1 \WObj:=current_wobject;
                 SendResponse("OK");
             ELSEIF StrMatch(cmd, 1, "RETREAT")=1 THEN
                 retreat_position := Offs(target_position,80,0,current_z);
@@ -291,7 +292,7 @@ MODULE Module1
     PROC setup_corner()
         current_wobject:=const_kartka;
         current_z:=z_up;
-        base_position:=  [[10.57,13.92,93.28],[0.747182,-0.00110485,-0.664604,0.00436478],[-1,0,2,4],[-167.54,9E+09,9E+09,9E+09,9E+09,9E+09]];
+
         MoveJ Offs(base_position,290,0,-10),fast_speed,fine,tool1\WObj:=current_wobject;
         target_position:=offs(base_position,290,0,0);
         SendResponse("OK");

@@ -2865,6 +2865,8 @@ class SimpleRobotGUI:
                 self.connect_btn.config(text="Connect", bg=self.COLORS['portrait'])
             if hasattr(self, 'conn_status_label') and self.conn_status_label.winfo_exists():
                 self.conn_status_label.config(text="⚫ Not Connected", fg='#f44336')
+            if hasattr(self, 'robot_status') and self.robot_status.winfo_exists():
+                self.robot_status.config(text="⚫ Robot: Disconnected",fg=self.COLORS['take_photo'])
             self.status_text.set("Disconnected from robot")
     
     def _connect_thread(self):
