@@ -4,9 +4,22 @@
 \usepackage[T1]{fontenc}
 \usepackage[english]{babel}
 \usepackage{graphicx}
-\usepackage{geometry}
-\usepackage{float}
+\usepackage{geometry} % For margin control
+\usepackage{float} % For [H] figure placement
 \usepackage{titlepic}
+\usepackage{hyperref} % For interactive TOC and links
+\usepackage{parskip} % For better paragraph spacing
+\usepackage{titlesec} % For customizing section titles
+\usepackage[skip=10pt]{caption} % For better figure captions
+
+% Set nicer margins
+\geometry{margin=1in}
+
+% Improve section title formatting
+\titleformat{\section}{\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\bfseries}{\thesubsubsection}{1em}{}
+
 \titlepic{\includegraphics[width=0.4\linewidth]{logo_inlader.jpg}}
 \title{YuMi Drawing Robot User Manual}
 \date{}
