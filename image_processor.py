@@ -414,6 +414,8 @@ class ImageProcessor:
         try:
             # Load logo
             logo = cv2.imread(logo_path)
+            #mirror logo horizontally to match image flip
+            logo = cv2.flip(logo, 1)
             if logo is None:
                 print(f"Could not load logo from {logo_path}")
                 return image
