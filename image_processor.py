@@ -137,6 +137,8 @@ class ImageProcessor:
             
             # Flip image 180 degrees (rotate around center)
             image = cv2.rotate(image, cv2.ROTATE_180)
+            # mirror horizontally
+            image = cv2.flip(image, 1)
             
             # SOLUTION: Add white border padding to prevent edge detection
             # This is better than cropping because it preserves all content

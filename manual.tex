@@ -1,393 +1,389 @@
+
 \documentclass[a4paper,12pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage[polish]{babel}
+\usepackage[english]{babel}
 \usepackage{graphicx}
 \usepackage{geometry}
 \usepackage{float}
 \usepackage{titlepic}
 \titlepic{\includegraphics[width=0.4\linewidth]{logo_inlader.jpg}}
-\title{Instrukcja obsługi robota rysującego YuMi}
-\date{} 
+\title{YuMi Drawing Robot User Manual}
+\date{}
 \begin{document}
 
 \maketitle
 \tableofcontents
 
-\section{Instrukcja krok po kroku}
+\section{Step-by-Step Guide}
 
-\subsection{Przygotowanie do kalibracji}
-\subsubsection{Ustawienie robota}
-Ustaw wyłączonego robota w pozycji do kalibracji tak, jak na zdjęciach (widoczne ząbki i wskaźniki).
+\subsection{Preparation for Calibration}
+\subsubsection{Robot Positioning}
+With the robot turned off, position it for calibration as shown in the pictures (visible gears and indicators).
 \begin{figure}[H]
-    \centering
-    \includegraphics[width=0.45\linewidth]{kalibracja_1.jpeg}
-    \includegraphics[width=0.45\linewidth]{kalibracja_2.jpeg}
-\end{figure}
-
-\subsubsection{Obsługa błędów}
-Potwierdź wszystkie błędy (\textit{Acknowledge errors}).
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{blad_startu_1.png}
+\centering
+\includegraphics[width=0.45\linewidth]{kalibracja_1.jpeg}
+\includegraphics[width=0.45\linewidth]{kalibracja_2.jpeg}
 \end{figure}
 
-\subsubsection{Przejście w tryb ręczny}
-Uruchom silniki i przejdź w tryb ręczny. Jeżeli wyskakują błędy, zaakceptuj je i ponów próbę.
+\subsubsection{Error Handling}
+Acknowledge all errors.
 \begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{przejscie_na_manual_silniki.png}
+\centering
+\includegraphics[width=0.7\linewidth]{blad_startu_1.png}
 \end{figure}
 
-\subsection{Kalibracja ramion}
-\subsubsection{Kalibracja pierwszego ramienia}
-Włącz kalibrację pierwszego ramienia. Wszystkie wyskakujące błędy należy akceptować.  
-Następnie naciśnij przycisk oznaczony trójkątem na flexpendancie, aby rozpocząć aplikację.
+\subsubsection{Switching to Manual Mode}
+Start the motors and switch to manual mode. If errors pop up, accept them and try again.
 \begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{kalibracja_w_apce_1.png}
-    
-\end{figure}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{kalibracja_w_apce_2.png}
-\end{figure}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{koniec_kalibracji.png}
+\centering
+\includegraphics[width=0.7\linewidth]{przejscie_na_manual_silniki.png}
 \end{figure}
 
-\subsubsection{Kalibracja drugiego ramienia}
-Włącz kalibrację drugiego ramienia analogicznie do pierwszego.
+\subsection{Arm Calibration}
+\subsubsection{Calibrating the First Arm}
+Initiate the calibration for the first arm. All pop-up errors should be acknowledged.
+Then, press the triangle-marked button on the flexpendant to start the application.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\linewidth]{kalibracja_w_apce_1.png}
+
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\linewidth]{kalibracja_w_apce_2.png}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\linewidth]{koniec_kalibracji.png}
+\end{figure}
+
+\subsubsection{Calibrating the Second Arm}
+Initiate the calibration for the second arm, similar to the first one.
 
 \subsubsection{Pointer to Main}
-Ustaw \textit{pointer to main} na obu ramionach.
+Set the **pointer to main** for both arms.
 \begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{pp_to_main.png}
+\centering
+\includegraphics[width=0.7\linewidth]{pp_to_main.png}
 \end{figure}
 
-\subsection{Połączenie z komputerem i tryb AUTO}
-\subsubsection{Połączenie}
-Podłącz port LAN robota do komputera kablem ethernetowym. 
+\subsection{Connecting to the Computer and AUTO Mode}
+\subsubsection{Connection}
+Connect the robot's LAN port to the computer using an Ethernet cable.
 \begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{obudowa.jpg}
+\centering
+\includegraphics[width=0.7\linewidth]{obudowa.jpg}
 \end{figure}
-\subsubsection{Tryb automatyczny}
-Przejdź w tryb automatyczny (tak samo jak wcześniej w manualny, ale bez uruchamiania silników).
+\subsubsection{Automatic Mode}
+Switch to automatic mode (the same way you switched to manual, but without starting the motors).
 
-\subsection{Uruchamianie aplikacji}
-\subsubsection{Na robocie}
-Uruchom aplikację na robocie.  
-Naciśnij przycisk oznaczony trójkątem na flexpendancie, aby rozpocząć pracę aplikacji.  
+\subsection{Starting the Application}
+\subsubsection{On the Robot}
+Launch the application on the robot.
+Press the triangle-marked button on the flexpendant to start the application.
 
-\textbf{Uwaga: robot zacznie się ruszać!}
+\textbf{Note: The robot will start moving!}
 
-\subsubsection{Na komputerze}
-Uruchom aplikację na komputerze, otwierając plik \texttt{simple\_gui.py} w Pythonie.
+\subsubsection{On the Computer}
+Launch the application on the computer by opening the \texttt{simple\_gui.py} file in Python.
 
-\subsection{Obsługa aplikacji graficznej}
-\subsubsection{Ustawienia połączenia}
-Wejdź w \textbf{Settings}.
+\subsection{Operating the Graphical Application}
+\subsubsection{Connection Settings}
+Go to **Settings**.
 \begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{wejdz_w_settings.png}
-\end{figure}
-
-\noindent W sekcji \textbf{Robot Connection} kliknij \textit{Connect}.
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{polacz.png}
+\centering
+\includegraphics[width=0.7\linewidth]{wejdz_w_settings.png}
 \end{figure}
 
-\noindent Zamknij ustawienia.
-
-\subsubsection{Zdjęcie}
-Kliknij \textbf{Take Picture}.
+\noindent In the **Robot Connection** section, click **Connect**.
 \begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{take_picture.png}
+\centering
+\includegraphics[width=0.7\linewidth]{polacz.png}
 \end{figure}
 
-\noindent Ustaw się i naciśnij \textbf{Take Photo}.
+\noindent Close the settings.
+
+\subsubsection{Taking a Photo}
+Click **Take Picture**.
 \begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{take_photo.png}
+\centering
+\includegraphics[width=0.7\linewidth]{take_picture.png}
 \end{figure}
 
-\noindent Oceń zdjęcie. Jeśli nie spełnia oczekiwań, wykonaj nowe.
-
-\subsubsection{Wybór trybu}
-Wybierz tryb: \textbf{Portret} lub \textbf{Karykatura}.
+\noindent Position yourself and click **Take Photo**.
 \begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{portet_karykatura.png}
+\centering
+\includegraphics[width=0.7\linewidth]{take_photo.png}
 \end{figure}
 
-\noindent Obraz zostanie wygenerowany (wymagane stabilne połączenie z Internetem).
+\noindent Evaluate the photo. If it doesn't meet expectations, take a new one.
 
-\subsubsection{Rozpoczęcie rysowania}
-Naciśnij \textbf{Start Drawing}, aby rozpocząć rysowanie.
+\subsubsection{Selecting a Mode}
+Choose a mode: **Portrait** or **Caricature**.
 \begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{start.png}
+\centering
+\includegraphics[width=0.7\linewidth]{portet_karykatura.png}
 \end{figure}
-\subsection{Komendy głosowe}
+
+\noindent The image will be generated (requires a stable internet connection).
+
+\subsubsection{Starting to Draw}
+Press **Start Drawing** to begin the drawing process.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\linewidth]{start.png}
+\end{figure}
+\subsection{Voice Commands}
 \begin{itemize}
-    \item \textbf{Kamera} - włącz kamerę
-    \item  \textbf{Akcja} - zrób zdjęcie
-    \item \textbf{Portret} - stwórz portret
-    \item  \textbf{Karykatura} - stwórz karykaturę
-    \item  \textbf{Połącz} - połącz z robotem
-    \item  \textbf{Start} -start
-    \item  \textbf{Stop} - stop
+\item \textbf{Camera} - turn on the camera
+\item \textbf{Action} - take a photo
+\item \textbf{Portrait} - create a portrait
+\item \textbf{Caricature} - create a caricature
+\item \textbf{Connect} - connect to the robot
+\item \textbf{Start} - start
+\item \textbf{Stop} - stop
 \end{itemize}
-\section{Najczęstsze błędy i ich rozwiązania}
+\section{Most Common Errors and Solutions}
 
-\subsection{Problemy z połączeniem robota}
-\textbf{Błąd:} Nie można połączyć się z robotem. Aplikacja wyświetla komunikat o błędzie połączenia.
+\subsection{Robot Connection Problems}
+\textbf{Error:} Unable to connect to the robot. The application displays a connection error message.
 
-\textbf{Rozwiązanie:}
+\textbf{Solution:}
 \begin{itemize}
-    \item Sprawdź, czy robot jest włączony i w trybie automatycznym.
-    \item Upewnij się, że kabel Ethernet jest prawidłowo podłączony między komputerem a robotem.
-    \item Zweryfikuj adres IP robota (domyślnie 192.168.125.1) i porty (1025 dla prawego ramienia, 1026 dla lewego).
-    \item Sprawdź ustawienia firewall na komputerze – upewnij się, że TCP połączenia na portach 1025 i 1026 są dozwolone.
-    \item Uruchom ponownie aplikację na robocie i komputerze.
-\end{itemize}
-
-\subsection{Błędy podczas kalibracji}
-\textbf{Błąd:} Robot nie kalibruje się lub wyświetla błędy podczas uruchamiania aplikacji.
-
-\textbf{Rozwiązanie:}
-\begin{itemize}
-    \item Upewnij się, że robot jest w pozycji kalibracyjnej (widoczne ząbki i wskaźniki na zdjęciach).
-    \item Potwierdź wszystkie błędy na panelu robota przyciskiem "Acknowledge errors".
-    \item Przejdź w tryb manualny, a następnie wróć do trybu automatycznego.
-    \item Ustaw "pointer to main" na obu ramionach.
+\item Check if the robot is turned on and in automatic mode.
+\item Make sure the Ethernet cable is correctly connected between the computer and the robot.
+\item Verify the robot's IP address (default is 192.168.125.1) and ports (1025 for the right arm, 1026 for the left).
+\item Check your computer's firewall settings—ensure that TCP connections on ports 1025 and 1026 are allowed.
+\item Restart the application on both the robot and the computer.
 \end{itemize}
 
-\subsection{Problemy z kamerą}
-\textbf{Błąd:} Nie można zrobić zdjęcia lub kamera nie działa.
+\subsection{Calibration Errors}
+\textbf{Error:} The robot doesn't calibrate or displays errors when the application starts.
 
-\textbf{Rozwiązanie:}
+\textbf{Solution:}
 \begin{itemize}
-    \item Sprawdź, czy kamera jest podłączona do komputera i rozpoznawana przez system (np. w Menedżerze urządzeń w Windows).
-    \item Upewnij się, że inne aplikacje nie używają kamery.
-    \item Spróbuj zmienić indeks kamery w ustawieniach aplikacji (domyślnie 0).
-    \item Jeśli kamera zewnętrzna, sprawdź połączenie USB i zasilanie.
-    \item Zamknij i uruchom ponownie aplikację.
+\item Make sure the robot is in the calibration position (visible gears and indicators in the photos).
+\item Acknowledge all errors on the robot panel using the "Acknowledge errors" button.
+\item Switch to manual mode, then return to automatic mode.
+\item Set the "pointer to main" on both arms.
 \end{itemize}
 
-\subsection{Błędy generowania obrazu przez OpenAI}
-\textbf{Błąd:} OpenAI nie generuje obrazu lub zwraca błąd API.
+\subsection{Camera Problems}
+\textbf{Error:} Unable to take a picture or the camera isn't working.
 
-\textbf{Rozwiązanie:}
+\textbf{Solution:}
 \begin{itemize}
-    \item Sprawdź połączenie internetowe – wymagane stabilne łącze.
-    \item Upewnij się, że klucz API OpenAI jest prawidłowo skonfigurowany w aplikacji.
-    \item Sprawdź limit wykorzystania API – jeśli przekroczony, poczekaj lub wpłać pieniądze.
-    \item Spróbuj ponownie z tym samym zdjęciem lub wykonaj nowe zdjęcie.
-    \item Jeśli błąd trwa, sprawdź status usług OpenAI.
+\item Check if the camera is connected to the computer and recognized by the system (e.g., in Windows Device Manager).
+\item Make sure no other applications are using the camera.
+\item Try changing the camera index in the application settings (default is 0).
+\item If it's an external camera, check the USB connection and power supply.
+\item Close and restart the application.
 \end{itemize}
 
-\subsection{Problemy z przetwarzaniem obrazu}
-\textbf{Błąd:} Obraz po przetworzeniu ma złe kontury lub jest nieczytelny.
+\subsection{OpenAI Image Generation Errors}
+\textbf{Error:} OpenAI doesn't generate an image or returns an API error.
 
-\textbf{Rozwiązanie:}
+\textbf{Solution:}
 \begin{itemize}
-    \item Wypróbuj inną metodę detekcji krawędzi (threshold, canny lub adaptive) w ustawieniach.
-    \item Dostrój parametry jakości (wyższa jakość dla lepszych wyników, ale dłuższy czas przetwarzania).
-    \item Wykonaj lepsze zdjęcie – upewnij się o dobrym oświetleniu i ostrości.
-    \item Sprawdź, czy obraz nie jest zbyt złożony; uprość tło lub pozycję.
+\item Check your internet connection—a stable link is required.
+\item Ensure that the OpenAI API key is correctly configured in the application.
+\item Check the API usage limit—if it's exceeded, wait or top up your account.
+\item Try again with the same photo or take a new one.
+\item If the error persists, check the status of OpenAI services.
 \end{itemize}
 
-\subsection{Błędy podczas rysowania}
-\textbf{Błąd:} Robot zatrzymuje się podczas rysowania lub występuje kolizja.
+\subsection{Image Processing Problems}
+\textbf{Error:} The processed image has poor contours or is unreadable.
 
-\textbf{Rozwiązanie:}
+\textbf{Solution:}
 \begin{itemize}
-    \item Włącz tryb manualny i odjedź ramionami w bezpieczne miejsce
-    \item Zwiększ bufor kolizyjny w ustawieniach (domyślnie 40 mm).
-    \item Sprawdź marginesy bezpieczeństwa (domyślnie 10 mm od krawędzi).
-    \item Jeśli timeout, zwiększ timeout w ustawieniach lub sprawdź połączenie.
-    \item W przypadku zatrzymania, użyj przycisku awaryjnego stop na robocie.
+\item Try a different edge detection method (threshold, canny, or adaptive) in the settings.
+\item Fine-tune the quality parameters (higher quality for better results, but longer processing time).
+\item Take a better photo—ensure good lighting and sharpness.
+\item Check if the image is too complex; simplify the background or position.
 \end{itemize}
 
-\subsection{Problemy z rozpoznawaniem głosu}
-\textbf{Błąd:} VOSK nie rozpoznaje poleceń głosowych.
+\subsection{Drawing Errors}
+\textbf{Error:} The robot stops while drawing or a collision occurs.
 
-\textbf{Rozwiązanie:}
+\textbf{Solution:}
 \begin{itemize}
-    \item Upewnij się, że model VOSK (vosk-model-small-pl-0.22) jest pobrany i w odpowiednim folderze.
-    \item Mów wyraźnie po polsku, w cichym środowisku.
-    \item Dostrój czułość mikrofonu w ustawieniach systemu.
-    \item Jeśli nie działa, użyj komend tekstowych zamiast głosowych.
-    \item 
+\item Switch to manual mode and move the arms to a safe location.
+\item Increase the collision buffer in the settings (default is 40 mm).
+\item Check the safety margins (default is 10 mm from the edge).
+\item If a timeout occurs, increase the timeout in the settings or check the connection.
+\item In case of a stop, use the emergency stop button on the robot.
 \end{itemize}
-\subsection{Inne problemy}
-\textbf{Błąd:} Aplikacja się zawiesza lub wyświetla błędy Python.
 
-\textbf{Rozwiązanie:}
+\subsection{Voice Recognition Problems}
+\textbf{Error:} VOSK doesn't recognize voice commands.
+
+\textbf{Solution:}
 \begin{itemize}
-    \item Sprawdź w terminalu jakie błędy wyskakują.
-    \item Sprawdź, czy wszystkie wymagane biblioteki są zainstalowane (np. OpenCV, Matplotlib, Shapely).
-    \item Uruchom aplikację z wiersza poleceń, aby zobaczyć szczegóły błędów.
-    \item Sprawdź dostępność pamięci RAM – przetwarzanie dużych obrazów wymaga zasobów.
-    \item Zaktualizuj Python do wersji 3.8+.
-    \item Jeśli błąd trwa, zrestartuj komputer i spróbuj ponownie.
+\item Make sure the VOSK model (vosk-model-small-pl-0.22) is downloaded and in the correct folder.
+\item Speak clearly in Polish, in a quiet environment.
+\item Adjust the microphone sensitivity in your system settings.
+\item If it doesn't work, use text commands instead of voice.
 \end{itemize}
-\section{Alarmy do zaakceptowania}
-Naciśnij "Acknowlage" zawsze jak się pojawiają.
+\subsection{Other Problems}
+\textbf{Error:} The application freezes or displays Python errors.
+
+\textbf{Solution:}
 \begin{itemize}
-    \item \textbf{20032} Rev counter not updated
-    \item  \textbf{38200} Battery backup lost
-    \item \textbf{50091} Restart not possible
-    \item \textbf{50441} Low voltage on battery inputs
-    \item \textbf{50490} Measurment error detected
-    \item  \textbf{71367} No communication with I/O device
+\item Check the terminal for any errors.
+\item Verify that all required libraries are installed (e.g., OpenCV, Matplotlib, Shapely).
+\item Run the application from the command line to see detailed errors.
+\item Check RAM availability—processing large images requires resources.
+\item Update Python to version 3.8+.
+\item If the error persists, restart the computer and try again.
+\end{itemize}
+\section{Alarms to Acknowledge}
+Press "Acknowledge" whenever they appear.
+\begin{itemize}
+\item \textbf{20032} Rev counter not updated
+\item \textbf{38200} Battery backup lost
+\item \textbf{50091} Restart not possible
+\item \textbf{50441} Low voltage on battery inputs
+\item \textbf{50490} Measurement error detected
+\item \textbf{71367} No communication with I/O device
 \end{itemize}
 
 \section{FAQ}
 
-\subsection{Jak działa cały proces tworzenia rysunku przez robota?}
-Cały proces rozpoczyna się od wykonania zdjęcia za pomocą kamery podłączonej do komputera. Następnie zdjęcie jest wysyłane poprzez API OpenAI z wybranym promptem (portret lub karykatura), aby wygenerować nowy obraz w wybranym stylu. Zwrócony obraz jest przetwarzany przez jedną z trzech metod detekcji krawędzi (threshold, canny lub adaptive), upraszczany do konturów, obracany i optymalizowany pod kątem ścieżki rysowania. Na koniec robot ABB YuMi rysuje obraz na podstawie wygenerowanych współrzędnych.
+\subsection{How does the entire drawing process work?}
+The whole process begins with a photo taken by a camera connected to the computer. This photo is then sent via the OpenAI API with a chosen prompt (portrait or caricature) to generate a new image in the selected style. The returned image is processed using one of three edge detection methods (threshold, canny, or adaptive), simplified to contours, rotated, and optimized for the drawing path. Finally, the ABB YuMi robot draws the image based on the generated coordinates.
 
-
-\subsection{Jakie są metody przetwarzania obrazu?}
-System oferuje trzy metody detekcji krawędzi:
+\subsection{What are the image processing methods?}
+The system offers three edge detection methods:
 \begin{itemize}
-    \item - \textbf{Threshold}: Prosta binaryzacja obrazu ze sztywno ustaloną jasnością odcięcia (dobra dla dobrego światła) 1 gdzie jest ciemniej, 0 gdzie jaśniej.
-    \item \textbf{Canny}: Znajdywanie zmian jasności w miejscu zmian dajemy 1, gdzie nie ma zmian dajemy 0.
-    \item \textbf{Adaptive}: To samo co Threshold, ale sam dobiera parametry (bardziej uniwersalny).
+\item - \textbf{Threshold}: Simple binarization of the image with a rigidly set brightness cutoff (good for good lighting). 1 where it's darker, 0 where it's lighter.
+\item \textbf{Canny}: Finds changes in brightness. Where there are changes, we get 1; where there are no changes, we get 0.
+\item \textbf{Adaptive}: The same as Threshold, but it automatically selects the parameters (more universal).
 \end{itemize}
 
+\subsection{Why do we process images in the cloud with AI?}
+We can get much nicer, simpler lines to create the best image for drawing. Otherwise, the robot would work for an extremely long time to draw every shadow in the hair, etc.
 
-\subsection{Po co przetwarzamy zdjęcia w chmurze z AI?}
-Możemy uzyskać zdecydowanie ładniejsze proste linie żeby stworzyć najlepszy obrazek do rysowania inaczej robot by pracował ekstremalnie długo żeby narysować każdy cień we włosach itp.
+\subsection{How exactly do we convert a binary image to contours?}
+After applying one of the three edge detection methods (threshold, canny, or adaptive), the image becomes binary—black and white, where white pixels represent edges and black is the background. We then use an algorithm that scans the image and identifies connected groups of white pixels as contours. Each contour is a list of coordinate points (x,y) that describe the shape of the line. The contours are simplified using `approxPolyDP()` with an epsilon parameter to reduce the number of points without losing the shape—this is crucial for efficiency because the robot doesn't have to draw every single pixel. Finally, the contours are filtered: small artifacts are removed, and large contours are split into segments for better control.
 
-\subsection{Jak dokładnie przechodzimy z binarnego obrazu na kontury?}
-Po zastosowaniu jednej z trzech metod detekcji krawędzi (threshold, canny lub adaptive), obraz staje się binarny – czarno-biały, gdzie białe piksele reprezentują krawędzie, a czarne tło. Następnie używamy algorytmu który skanuje obraz i identyfikuje połączone grupy białych pikseli jako kontury. Każdy kontur to lista punktów współrzędnych (x,y), które opisują kształt linii. Kontury są upraszczane za pomocą approxPolyDP() z parametrem epsilon, aby zredukować liczbę punktów bez utraty kształtu – to kluczowe dla wydajności, bo robot nie musi rysować każdego piksela. Na koniec kontury są filtrowane: małe artefakty są usuwane, a duże kontury dzielone na segmenty dla lepszej kontroli.
+\subsection{How does creating the drawing path along the contour work?}
+When we have contours as lists of points, the system creates a drawing path, treating each contour as a route. The points are connected in a sequence, creating a continuous line. For fluidity, we use smoothing—a Bézier algorithm interpolates the points, eliminating sharp corners. We can optionally enable TSP (Traveling Salesman Problem), which optimizes the order of drawing contours, minimizing the travel time between them (e.g., drawing the nearest contour next). The path is scaled to the robot's coordinates (e.g., 290x210 mm) with safety margins. In dual-arm mode, the paths are split between the arms, and each point is assigned a movement time for synchronization.
 
-\subsection{Jak działa tworzenie trasy rysowania wzdłuż konturu?}
-Gdy mamy kontury jako listy punktów, system tworzy trasę rysowania, traktując każdy kontur jak ścieżkę. Punkty są łączone w sekwencje, tworząc linię ciągłą. Dla płynności stosujemy wygładzanie – algorytm Bézier interpoluje punkty, eliminując ostre kąty. Opcjonalnie włączamy TSP (Traveling Salesman Problem), który optymalizuje kolejność rysowania konturów, minimalizując czas przejścia między nimi (np. rysujemy najbliższy kontur następny). Ścieżka jest skalowana do współrzędnych robota (np. 290x210 mm) z marginesami bezpieczeństwa. W trybie dual-arm ścieżki są dzielone między ramiona, a każdy punkt ma przypisany czas ruchu dla synchronizacji.
+\subsection{How does the system intelligently split work between two robot arms?}
+In dual-arm mode, the system uses an advanced master-slave assignment algorithm, but note—the master and slave roles are not fixed! The system dynamically decides which arm becomes the "operation brain" (master) and which is the "support" (slave), depending on the contour's position, but they usually switch roles with each contour. Special zones are key: the left arm has a forbidden zone (0,0 to 130,40 mm), so it always avoids this area to prevent collision with the robot base. The algorithm uses a collision buffer (default 40 mm)—a circular "safety bubble" around the master and a "tail" from this "bubble" towards the master's side of the paper, which the slave cannot enter. The algorithm checks for the overlap of contour polygons with these buffers, intelligently assigning tasks to avoid collisions. Additionally, contours are sorted by position: the closer arm gets priority. The arms travel in a sharp U-shape between contours to avoid collisions during transitions and to limit the time the robots spend very close to each other. All this together allows for two-arm drawing.
 
-\subsection{Jak system inteligentnie dzieli pracę między dwa ramiona robota?}
-W trybie dual-arm system używa zaawansowanego algorytmu master-slave assignment, ale uwaga – role master i slave nie są stałe! System dynamicznie decyduje, które ramię zostaje "mózgiem operacji" (masterem), a które "wsparciem" (slave), w zależności od położenia konturów, ale zazwyczaj zamieniają się co kontur. Kluczowe są specjalne strefy: lewe ramię ma zakazaną strefę (0,0 do 130,40 mm), więc zawsze unika tego obszaru, by nie kolidować z podstawą robota. System stosuje bufor kolizyjny (domyślnie 40 mm) – kołowy "bąbel bezpieczeństwa" wokół mastera oraz "ogon" od tego "bąbla" do krawędzi kartki w stronę mastera, do którego slave nie może wejść. Algorytm sprawdza nakładanie się wielokątów konturów z tymi buforami, inteligentnie przypisując zadania, aby uniknąć kolizji. Dodatkowo, kontury są sortowane wg pozycji: bliższe ramię dostaje priorytet. Ramiona między konturami podróżują w kształcie kanciastego U żeby uniknąć kolizji podczas tranzycji, także pozwala to ograniczyć czas robotów spędzony bardzo blisko siebie. To wszystko razem pracując pozwala na rysowanie używając dwóch ramion.
+\subsection{How does communication between the computer and the robot work?}
+Communication between the computer and the ABB YuMi robot takes place via the TCP/IP protocol. The computer connects to the robot on two ports: 1025 for the right arm and 1026 for the left arm. Text commands are sent, such as "MOVE,x,y" to move an arm, "BATCH$,x_1,y_1,x_2,y_2$,..." to send a group of points, and "PEN UP" and "PEN DOWN" to control the tool. In dual-arm mode, arm synchronization is achieved using thread barriers and "WAIT" commands. The batch mode groups points into packets (maximum 15 points), which increases efficiency. The system handles errors through timeouts, retries, and disconnection detection. The robot confirms command execution with an "OK" response.
 
-\subsection{Jak działa komunikacja między komputerem a robotem?}
-Komunikacja między komputerem a robotem ABB YuMi odbywa się poprzez protokół TCP/IP. Komputer łączy się z robotem na dwóch portach: 1025 dla prawego ramienia i 1026 dla lewego ramienia. Wysyłane są komendy tekstowe, takie jak "MOVE,x,y" do przesunięcia ramienia, "BATCH$,x_1,y_1,x_2,y_2$,..." do wysłania grupy punktów, "PEN UP" i "PEN DOWN" do kontroli narzędzia. W trybie dual-arm synchronizacja ramion jest realizowana za pomocą barier wątków i komend "WAIT". Tryb batch grupuje punkty w paczki (maksymalnie 15 punktów), co zwiększa wydajność. System obsługuje błędy poprzez timeouty, ponowne próby i wykrywanie rozłączeń. Robot potwierdza wykonanie komend odpowiedzią "OK".
+\section{Detailed Code Structure}
 
-\section{Szczegółowa struktura kodu}
+\subsection{Main Application Files}
 
-\subsection{Pliki główne aplikacji}
+\subsubsection{simple\_gui.py - User Interface}
+\textbf{Location:} Main project folder
 
-\subsubsection{simple\_gui.py - Interfejs użytkownika}
-\textbf{Lokalizacja:} Główny folder projektu
-
-\textbf{Główne klasy i funkcje:}
+\textbf{Main Classes and Functions:}
 \begin{itemize}
-    \item \texttt{SimpleRobotGUI} - Główna klasa interfejsu
-    \item \texttt{toggle\_connection()} - Zarządzanie połączeniem z robotem
-    \item \texttt{\_handle\_command()} - Obsługa komend głosowych
-    \item \texttt{convert\_to\_face\_drawing()} - Konwersja przy pomocy AI
-    \item \texttt{start\_robot\_drawing()} - Rozpoczęcie rysowania
+\item \texttt{SimpleRobotGUI} - Main interface class
+\item \texttt{toggle\_connection()} - Manages connection to the robot
+\item \texttt{\_handle\_command()} - Handles voice commands
+\item \texttt{convert\_to\_face\_drawing()} - Conversion using AI
+\item \texttt{start\_robot\_drawing()} - Starts the drawing process
 \end{itemize}
 
-\textbf{Kluczowe zmienne konfiguracyjne:}
+\textbf{Key Configuration Variables:}
 \begin{itemize}
-    \item \texttt{robot\_ip} - Adres IP robota (domyślnie "192.168.125.1")
-    \item \texttt{robot\_port} - Port prawego ramienia (domyślnie 1025)
-    \item \texttt{robot\_port\_l} - Port lewego ramienia (domyślnie 1026)
-    \item \texttt{max\_x, max\_y} - Wymiary obszaru roboczego (mm)
-    \item \texttt{margin\_x, margin\_y} - Marginesy bezpieczeństwa (mm)
+\item \texttt{robot\_ip} - Robot's IP address (default "192.168.125.1")
+\item \texttt{robot\_port} - Right arm's port (default 1025)
+\item \texttt{robot\_port\_l} - Left arm's port (default 1026)
+\item \texttt{max\_x, max\_y} - Working area dimensions (mm)
+\item \texttt{margin\_x, margin\_y} - Safety margins (mm)
 \end{itemize}
 
-\subsubsection{robot\_drawer.py - Główny koordynator}
-\textbf{Lokalizacja:} Główny folder projektu
+\subsubsection{robot\_drawer.py - Main Coordinator}
+\textbf{Location:} Main project folder
 
-\textbf{Główna klasa:}
+\textbf{Main Class:}
 \begin{itemize}
-    \item \texttt{RobotDrawer} - Główny orchestrator systemu
+\item \texttt{RobotDrawer} - Main system orchestrator
 \end{itemize}
 
-\textbf{Kluczowe metody:}
+\textbf{Key Methods:}
 \begin{itemize}
-    \item \texttt{connect()} - Nawiązanie połączenia z robotem
-    \item \texttt{load\_image()} - Wczytanie i przetworzenie obrazu
-    \item \texttt{draw()} - Rysowanie pojedynczym ramieniem
-    \item \texttt{draw\_dual()} - Rysowanie dwoma ramionami
-    \item \texttt{disconnect()} - Rozłączenie z robotem
+\item \texttt{connect()} - Establishes a connection with the robot
+\item \texttt{load\_image()} - Loads and processes an image
+\item \texttt{draw()} - Draws with a single arm
+\item \texttt{draw\_dual()} - Draws with two arms
+\item \texttt{disconnect()} - Disconnects from the robot
 \end{itemize}
 
-\subsubsection{robot\_communication.py - Komunikacja TCP/IP}
-\textbf{Lokalizacja:} Główny folder projektu
+\subsubsection{robot\_communication.py - TCP/IP Communication}
+\textbf{Location:} Main project folder
 
-\textbf{Główna klasa:}
+\textbf{Main Class:}
 \begin{itemize}
-    \item \texttt{RobotController} - Zarządzanie połączeniem TCP
+\item \texttt{RobotController} - Manages the TCP connection
 \end{itemize}
 
-\textbf{Kluczowe metody:}
+\textbf{Key Methods:}
 \begin{itemize}
-    \item \texttt{connect()} - Nawiązanie połączenia socket
-    \item \texttt{send\_move(x, y)} - Wysłanie pojedynczego ruchu
-    \item \texttt{send\_batch\_moves()} - Wysłanie kilku ruchów
-    \item \texttt{send\_pen\_up/down()} - Kontrola długopisu
-    \item \texttt{send\_start()} - Rozpoczęcie rysowania
+\item \texttt{connect()} - Establishes a socket connection
+\item \texttt{send\_move(x, y)} - Sends a single movement command
+\item \texttt{send\_batch\_moves()} - Sends multiple movements
+\item \texttt{send\_pen\_up/down()} - Controls the pen
+\item \texttt{send\_start()} - Starts the drawing
 \end{itemize}
 
-\subsubsection{image\_processor.py - Przetwarzanie obrazu}
-\textbf{Lokalizacja:} Główny folder projektu
+\subsubsection{image\_processor.py - Image Processing}
+\textbf{Location:} Main project folder
 
-\textbf{Główne funkcje:}
+\textbf{Main Functions:}
 \begin{itemize}
-    \item \texttt{load\_and\_process\_image()} - Główna funkcja przetwarzania
-    \item \texttt{detect\_edges\_threshold()} - Detekcja krawędzi metodą threshold
-    \item \texttt{detect\_edges\_canny()} - Detekcja krawędzi metodą Canny
-    \item \texttt{detect\_edges\_adaptive()} - Adaptacyjna detekcja krawędzi
-    \item \texttt{find\_contours()} - Znajdowanie konturów
-    \item \texttt{simplify\_contours()} - Upraszczanie konturów
+\item \texttt{load\_and\_process\_image()} - Main processing function
+\item \texttt{detect\_edges\_threshold()} - Edge detection using threshold method
+\item \texttt{detect\_edges\_canny()} - Edge detection using Canny method
+\item \texttt{detect\_edges\_adaptive()} - Adaptive edge detection
+\item \texttt{find\_contours()} - Finds contours
+\item \texttt{simplify\_contours()} - Simplifies contours
 \end{itemize}
 
-\subsubsection{coordinate\_transformer.py - Transformacja współrzędnych}
-\textbf{Lokalizacja:} Główny folder projektu
+\subsubsection{coordinate\_transformer.py - Coordinate Transformation}
+\textbf{Location:} Main project folder
 
-\textbf{Kluczowe funkcje:}
+\textbf{Key Functions:}
 \begin{itemize}
-    \item \texttt{transform\_paths()} - Główna transformacja współrzędnych
-    \item \texttt{master\_slave\_assign\_contours()} - Przydział konturów do ramion
-    \item \texttt{smooth\_path()} - Wygładzanie ścieżek
-    \item \texttt{optimize\_path\_order()} - Optymalizacja kolejności (TSP)
+\item \texttt{transform\_paths()} - Main coordinate transformation
+\item \texttt{master\_slave\_assign\_contours()} - Assigns contours to arms
+\item \texttt{smooth\_path()} - Smooths paths
+\item \texttt{optimize\_path\_order()} - Optimizes order (TSP)
 \end{itemize}
 
-\subsubsection{voice\_commands.py - Rozpoznawanie głosu}
-\textbf{Lokalizacja:} Główny folder projektu
+\subsubsection{voice\_commands.py - Voice Recognition}
+\textbf{Location:} Main project folder
 
-\textbf{Główna klasa:}
+\textbf{Main Class:}
 \begin{itemize}
-    \item \texttt{VoiceCommandListener} - Obsługa komend głosowych
+\item \texttt{VoiceCommandListener} - Handles voice commands
 \end{itemize}
 
+### convert\_to\_lineart.py - OpenAI Integration
+\textbf{Location:} Main project folder
 
-\subsubsection{convert\_to\_lineart.py - Integracja z OpenAI}
-\textbf{Lokalizacja:} Główny folder projektu
-
-\textbf{Główne funkcje:}
+\textbf{Main Functions:}
 \begin{itemize}
-    \item \texttt{generate\_image\_from\_text()} - Generowanie obrazu z tekstu
-    \item \texttt{convert\_to\_lineart()} - Konwersja do na karykaturę lub portret
+\item \texttt{generate\_image\_from\_text()} - Generates an image from text
+\item \texttt{convert\_to\_lineart()} - Converts to a caricature or portrait
 \end{itemize}
 
-\subsection{Pliki konfiguracyjne i dane}
+\subsection{Configuration and Data Files}
 
-\subsubsection{robot\_gui\_config.json - Konfiguracja aplikacji}
-\textbf{Lokalizacja:} Główny folder projektu
+\subsubsection{robot\_gui\_config.json - Application Configuration}
+\textbf{Location:} Main project folder
 
-\textbf{Przykład zawartości:}
+\textbf{Example Content:}
 \begin{verbatim}
-
 {
   "robot_ip": "192.168.125.1",
   "robot_port": "1025",
@@ -411,449 +407,802 @@ Komunikacja między komputerem a robotem ABB YuMi odbywa się poprzez protokół
   "text_prompt": "",
   "forbidden_buffer": 50
 }
-
 \end{verbatim}
 
-\subsubsection{line\_art\_catalog/ - Archiwum wygenerowanych obrazów}
-\textbf{Lokalizacja:} Główny folder projektu
+\subsubsection{line\_art\_catalog/ - Generated Image Archive}
+\textbf{Location:} Main project folder
 
-Struktura folderów: \texttt{YYYYMMDD\_HHMMSS\_style/}
+Folder structure: \texttt{YYYYMMDD\_HHMMSS\_style/}
 \begin{itemize}
-    \item Zawiera wszystkie wygenerowane obrazy
-    \item Automatycznie tworzone podczas przetwarzania
-    \item Przydatne do debugowania i archiwizacji
+\item Contains all generated images
+\item Automatically created during processing
+\item Useful for debugging and archiving
 \end{itemize}
 
-\subsection{Pliki RAPID dla robota}
+\subsection{RAPID Files for the Robot}
 
-\subsubsection{Right\_arm.mod - Program prawego ramienia}
-\textbf{Lokalizacja:} Główny folder projektu
+\subsubsection{Right\_arm.mod - Right Arm Program}
+\textbf{Location:} Main project folder
 
-\textbf{Kluczowe parametry:}
+\textbf{Key Parameters:}
 \begin{itemize}
-    \item Port: 1025
-    \item Zakres pracy: pełny obszar (290×210 mm)
-    \item Prędkość: v1500 mm/s
+\item Port: 1025
+\item Working range: full area (290×210 mm)
+\item Speed: v1500 mm/s
 \end{itemize}
 
-\subsubsection{Left\_arm.mod - Program lewego ramienia}
-\textbf{Lokalizacja:} Główny folder projektu
+\subsubsection{Left\_arm.mod - Left Arm Program}
+\textbf{Location:} Main project folder
 
-\textbf{Kluczowe parametry:}
+\textbf{Key Parameters:}
 \begin{itemize}
-    \item Port: 1026
-    \item Zakazana strefa: (0,0) do (130,40) mm
-    \item Prędkość: v1500 mm/s
+\item Port: 1026
+\item Forbidden zone: (0,0) to (130,40) mm
+\item Speed: v1500 mm/s
 \end{itemize}
 
-\section{Dostrajanie algorytmów przetwarzania obrazu}
+\section{Tuning Image Processing Algorithms}
 
-\subsection{Parametry detekcji krawędzi}
+\subsection{Edge Detection Parameters}
 
-\subsubsection{Threshold - parametry binaryzacji}
-\textbf{Lokalizacja:} \texttt{image\_processor.py}, funkcja \texttt{detect\_edges\_threshold()}
+\subsubsection{Threshold - Binarization Parameters}
+\textbf{Location:} \texttt{image\_processor.py}, function \texttt{detect\_edges\_threshold()}
 
-\textbf{Kluczowe parametry:}
+\textbf{Key Parameters:}
 \begin{itemize}
-    \item \texttt{threshold\_value} - Wartość odcięcia (domyślnie 127)
-    \item \texttt{max\_value} - Maksymalna wartość dla pikseli powyżej progu
+\item \texttt{threshold\_value} - Cutoff value (default 127)
+\item \texttt{max\_value} - Maximum value for pixels above the threshold
 \end{itemize}
 
-\textbf{Jak zmienić:}
+\textbf{How to Change:}
 \begin{enumerate}
-    \item Otwórz plik \texttt{image\_processor.py}
-    \item Znajdź funkcję \texttt{detect\_edges\_threshold()}
-    \item Zmodyfikuj wartość \texttt{threshold\_value}
+\item Open the \texttt{image\_processor.py} file
+\item Find the \texttt{detect\_edges\_threshold()} function
+\item Modify the \texttt{threshold\_value}
 \end{enumerate}
 
-\textbf{Wpływ na system:}
+\textbf{Effect on the System:}
 \begin{itemize}
-    \item Niższa wartość - więcej wykrytych krawędzi
-    \item Wyższa wartość - mniej wykrytych krawędzi
-    \item Optymalna wartość zależy od oświetlenia zdjęcia
+\item Lower value - more edges detected
+\item Higher value - fewer edges detected
+\item The optimal value depends on the photo's lighting
 \end{itemize}
 
-\subsubsection{Canny - parametry detekcji}
-\textbf{Lokalizacja:} \texttt{image\_processor.py}, funkcja \texttt{detect\_edges\_canny()}
+\subsubsection{Canny - Detection Parameters}
+\textbf{Location:} \texttt{image\_processor.py}, function \texttt{detect\_edges\_canny()}
 
-\textbf{Kluczowe parametry:}
+\textbf{Key Parameters:}
 \begin{itemize}
-    \item \texttt{min\_threshold} - Minimalny próg (domyślnie 50)
-    \item \texttt{max\_threshold} - Maksymalny próg (domyślnie 150)
+\item \texttt{min\_threshold} - Minimum threshold (default 50)
+\item \texttt{max\_threshold} - Maximum threshold (default 150)
 \end{itemize}
 
-\textbf{Jak zmienić:}
+\textbf{How to Change:}
 \begin{enumerate}
-    \item Otwórz plik \texttt{image\_processor.py}
-    \item Znajdź funkcję \texttt{detect\_edges\_canny()}
-    \item Dostosuj wartości progów
+\item Open the \texttt{image\_processor.py} file
+\item Find the \texttt{detect\_edges\_canny()} function
+\item Adjust the threshold values
 \end{enumerate}
 
-\textbf{Wpływ na system:}
+\textbf{Effect on the System:}
 \begin{itemize}
-    \item Mniejsze różnice między progami - więcej detali
-    \item Większe różnice między progami - mniej detali
-    \item Dobiera się eksperymentalnie dla danego typu obrazu
+\item Smaller difference between thresholds - more detail
+\item Larger difference between thresholds - less detail
+\item Chosen experimentally for a given image type
 \end{itemize}
 
-\subsubsection{Adaptive - parametry adaptacyjne}
-\textbf{Lokalizacja:} \texttt{image\_processor.py}, funkcja \texttt{detect\_edges\_adaptive()}
+\subsubsection{Adaptive - Adaptive Parameters}
+\textbf{Location:} \texttt{image\_processor.py}, function \texttt{detect\_edges\_adaptive()}
 
-\textbf{Kluczowe parametry:}
+\textbf{Key Parameters:}
 \begin{itemize}
-    \item \texttt{block\_size} - Rozmiar bloku sąsiedztwa (domyślnie 11)
-    \item \texttt{C} - Stała odejmowana od średniej (domyślnie 2)
+\item \texttt{block\_size} - Neighborhood block size (default 11)
+\item \texttt{C} - Constant subtracted from the mean (default 2)
 \end{itemize}
 
-\textbf{Wpływ na system:}
+\textbf{Effect on the System:}
 \begin{itemize}
-    \item Większy block\_size - bardziej płynne przejścia
-    \item Mniejszy block\_size - bardziej szczegółowa detekcja
-    \item Parametr C wpływa na czułość detekcji
+\item Larger block\_size - smoother transitions
+\item Smaller block\_size - more detailed detection
+\item Parameter C affects detection sensitivity
 \end{itemize}
 
-\subsection{Parametry upraszczania konturów}
+\subsection{Contour Simplification Parameters}
 
-\subsubsection{Parametr epsilon approxPolyDP}
-\textbf{Lokalizacja:} \texttt{image\_processor.py}, funkcja \texttt{simplify\_contours()}
+\subsubsection{epsilon Parameter for `approxPolyDP`}
+\textbf{Location:} \texttt{image\_processor.py}, function \texttt{simplify\_contours()}
 
-\textbf{Wartość domyślna:} 0.01 (1\% długości konturu)
+\textbf{Default Value:} 0.01 (1\% of contour length)
 
-\textbf{Jak zmienić:}
+\textbf{How to Change:}
 \begin{enumerate}
-    \item Otwórz plik \texttt{image\_processor.py}
-    \item Znajdź wywołanie \texttt{cv2.approxPolyDP()}
-    \item Zmodyfikuj wartość epsilon
+\item Open the \texttt{image\_processor.py} file
+\item Find the `cv2.approxPolyDP()` call
+\item Modify the epsilon value
 \end{enumerate}
 
-\textbf{Wpływ na system:}
+\textbf{Effect on the System:}
 \begin{itemize}
-    \item Mniejsze epsilon - więcej punktów, dokładniejsze kontury
-    \item Większe epsilon - mniej punktów, prostsze kontury
-    \item Zbyt małe epsilon spowalnia rysowanie
-    \item Zbyt duże epsilon traci detale
+\item Smaller epsilon - more points, more accurate contours
+\item Larger epsilon - fewer points, simpler contours
+\item Too small epsilon slows down drawing
+\item Too large epsilon loses detail
 \end{itemize}
 
-\subsubsection{Minimalna długość konturu}
-\textbf{Lokalizacja:} \texttt{image\_processor.py}, funkcja \texttt{filter\_contours()}
+\subsubsection{Minimum Contour Length}
+\textbf{Location:} \texttt{image\_processor.py}, function \texttt{filter\_contours()}
 
-\textbf{Wartość domyślna:} 10 pikseli
+\textbf{Default Value:} 10 pixels
 
-\textbf{Jak zmienić:}
+\textbf{How to Change:}
 \begin{enumerate}
-    \item Otwórz plik \texttt{image\_processor.py}
-    \item Znajdź warunek filtrowania konturów
-    \item Dostosuj wartość minimalnej długości
+\item Open the \texttt{image\_processor.py} file
+\item Find the contour filtering condition
+\item Adjust the minimum length value
 \end{enumerate}
 
-\textbf{Wpływ na system:}
+\textbf{Effect on the System:}
 \begin{itemize}
-    \item Mniejsza wartość - więcej małych detali
-    \item Większa wartość - czystszy obraz, mniej szumu
-    \item Zależy od rozdzielczości wejściowego obrazu
+\item Smaller value - more small details
+\item Larger value - cleaner image, less noise
+\item Depends on the resolution of the input image
 \end{itemize}
 
-\subsection{Parametry wygładzania ścieżek}
+\subsection{Path Smoothing Parameters}
 
-\subsubsection{Parametry krzywej Béziera}
-\textbf{Lokalizacja:} \texttt{coordinate\_transformer.py}, funkcja \texttt{smooth\_path()}
+\subsubsection{Bézier Curve Parameters}
+\textbf{Location:} \texttt{coordinate\_transformer.py}, function \texttt{smooth\_path()}
 
-\textbf{Jak zmienić:}
+\textbf{How to Change:}
 \begin{enumerate}
-    \item Otwórz plik \texttt{coordinate\_transformer.py}
-    \item Znajdź funkcję \texttt{smooth\_path()}
-    \item Zmodyfikuj parametry interpolacji
+\item Open the \texttt{coordinate\_transformer.py} file
+\item Find the \texttt{smooth\_path()} function
+\item Modify the interpolation parameters
 \end{enumerate}
 
-\textbf{Wpływ na system:}
+\textbf{Effect on the System:}
 \begin{itemize}
-    \item Wygładza ostre kąty w konturach
-    \item Poprawia płynność ruchu robota
-    \item Może zmienić kształt detali
+\item Smooths sharp corners in contours
+\item Improves the fluidity of robot movement
+\item May change the shape of details
 \end{itemize}
 
-\section{Modyfikacja współrzędnych i bezpieczeństwa robota}
+\section{Modifying Robot Coordinates and Safety}
 
-\subsection{Parametry bezpieczeństwa dual-arm}
+\subsection{Dual-Arm Safety Parameters}
 
-\subsubsection{Bufor kolizyjny}
-\textbf{Lokalizacja:} \texttt{simple\_gui.py}, zmienna \texttt{forbidden\_buffer}
+\subsubsection{Collision Buffer}
+\textbf{Location:} \texttt{simple\_gui.py}, variable \texttt{forbidden\_buffer}
 
-\textbf{Wartość domyślna:} 40 mm
+\textbf{Default Value:} 40 mm
 
-\textbf{Jak zmienić:}
+\textbf{How to Change:}
 \begin{enumerate}
-    \item W interfejsie przejdź do Settings
-    \item Znajdź sekcję "Dual-arm Settings"
-    \item Dostosuj wartość bufora
+\item In the interface, go to Settings
+\item Find the "Dual-arm Settings" section
+\item Adjust the buffer value
 \end{enumerate}
 
-\textbf{Wpływ na system:}
+\textbf{Effect on the System:}
 \begin{itemize}
-    \item Mniejszy bufor - ramiona mogą pracować bliżej siebie
-    \item Większy bufor - większa odległość bezpieczeństwa
-    \item Zbyt mały bufor zwiększa ryzyko kolizji
-    \item Zbyt duży bufor zmniejsza efektywność obszaru
+\item Smaller buffer - arms can work closer together
+\item Larger buffer - greater safety distance
+\item Too small a buffer increases the risk of collision
+\item Too large a buffer reduces the effective work area
 \end{itemize}
 
-\subsubsection{Zakazana strefa lewego ramienia}
-\textbf{Lokalizacja:} \texttt{coordinate\_transformer.py}, funkcja \texttt{master\_slave\_assign\_contours()}
+\subsubsection{Forbidden Zone for the Left Arm}
+\textbf{Location:} \texttt{coordinate\_transformer.py}, function \texttt{master\_slave\_assign\_contours()}
 
-\textbf{Współrzędne domyślne:} (0,0) do (130,40) mm
+\textbf{Default Coordinates:} (0,0) to (130,40) mm
 
-\textbf{Jak zmienić:}
+\textbf{How to Change:}
 \begin{enumerate}
-    \item Otwórz plik \texttt{coordinate\_transformer.py}
-    \item Znajdź definicję zakazanej strefy
-    \item Dostosuj współrzędne do geometrii robota
+\item Open the \texttt{coordinate\_transformer.py} file
+\item Find the forbidden zone definition
+\item Adjust the coordinates to the robot's geometry
 \end{enumerate}
 
-\textbf{Wpływ na system:}
+\textbf{Effect on the System:}
 \begin{itemize}
-    \item Musi odpowiadać rzeczywistej geometrii robota
-    \item Zbyt mała strefa zwiększa ryzyko kolizji z podstawą
-    \item Zbyt duża strefa zmniejsza użyteczny obszar
+\item Must correspond to the robot's actual geometry
+\item Too small a zone increases the risk of collision with the base
+\item Too large a zone reduces the usable area
 \end{itemize}
 
-\subsection{Parametry ruchu robota}
+\subsection{Robot Movement Parameters}
 
-\subsubsection{Prędkości ruchu}
-\textbf{Lokalizacja:} Pliki RAPID (\texttt{Right\_arm.mod}, \texttt{Left\_arm.mod})
+\subsubsection{Movement Speeds}
+\textbf{Location:} RAPID files (\texttt{Right\_arm.mod}, \texttt{Left\_arm.mod})
 
-\textbf{Wartości domyślne:}
+\textbf{Default Values:}
 \begin{itemize}
-    \item Rysowanie: v1500 mm/s
-    \item Przemieszczanie: v1500 mm/s
+\item Drawing: v1500 mm/s
+\item Traveling: v1500 mm/s
 \end{itemize}
 
-\textbf{Jak zmienić:}
+\textbf{How to Change:}
 \begin{enumerate}
-    \item Otwórz plik RAPID odpowiedniego ramienia
-    \item Znajdź definicje prędkości
-    \item Dostosuj wartości (zachowaj ostrożność!)
+\item Open the RAPID file for the appropriate arm
+\item Find the speed definitions
+\item Adjust the values (use caution!)
 \end{enumerate}
 
+\subsubsection{Positioning Precision}
+\textbf{Location:} RAPID files
 
-\subsubsection{Precyzja pozycjonowania}
-\textbf{Lokalizacja:} Pliki RAPID
-
-\textbf{Wartości domyślne:}
+\textbf{Default Values:}
 \begin{itemize}
-    \item Strefa ruchu: z0 (bardzo precyzyjna)
-    \item Tolerancja: 0.1 mm
+\item Move zone: z0 (very precise)
+\item Tolerance: 0.1 mm
 \end{itemize}
 
-\textbf{Jak zmienić:}
+\textbf{How to Change:}
 \begin{enumerate}
-    \item Otwórz plik RAPID
-    \item Znajdź definicje \texttt{move\_zone}
-    \item Dostosuj do wymagań jakości
+\item Open the RAPID file
+\item Find the `move_zone` definitions
+\item Adjust to quality requirements
 \end{enumerate}
 
-\subsection{Parametry systemu współrzędnych}
+\subsection{Coordinate System Parameters}
 
-\subsubsection{Początek układu współrzędnych}
-\textbf{Lokalizacja:} \texttt{simple\_gui.py}, zmienna \texttt{use\_center\_origin}
+\subsubsection{Coordinate System Origin}
+\textbf{Location:} \texttt{simple\_gui.py}, variable \texttt{use\_center\_origin}
 
-\textbf{Wartości:} True (środek), False (róg)
+\textbf{Values:} True (center), False (corner)
 
-\textbf{Jak zmienić:}
+\textbf{How to Change:}
 \begin{enumerate}
-    \item W interfejsie przejdź do Settings
-    \item Znajdź opcję "Use Center Origin"
-    \item Wybierz preferowany system
+\item In the interface, go to Settings
+\item Find the "Use Center Origin" option
+\item Select the preferred system
 \end{enumerate}
 
-\textbf{Wpływ na system:}
+\textbf{Effect on the System:}
 \begin{itemize}
-    \item Center origin - początek w środku obszaru rysowania
-    \item Corner origin - początek w lewym dolnym rogu
-    \item Wpływa na interpretację współrzędnych w programach RAPID
+\item Center origin - origin is in the center of the drawing area
+\item Corner origin - origin is in the bottom-left corner
+\item Affects the interpretation of coordinates in RAPID programs
 \end{itemize}
 
-\subsubsection{Skalowanie współrzędnych}
-\textbf{Lokalizacja:} \texttt{coordinate\_transformer.py}, funkcja \texttt{transform\_paths()}
+\subsubsection{Coordinate Scaling}
+\textbf{Location:} \texttt{coordinate\_transformer.py}, function \texttt{transform\_paths()}
 
-\textbf{Jak zmienić:}
+\textbf{How to Change:}
 \begin{enumerate}
-    \item Otwórz plik \texttt{coordinate\_transformer.py}
-    \item Znajdź funkcję skalowania współrzędnych
-    \item Dostosuj współczynniki skalowania
+\item Open the \texttt{coordinate\_transformer.py} file
+\item Find the coordinate scaling function
+\item Adjust the scaling factors
 \end{enumerate}
 
-\textbf{Wpływ na system:}
+\textbf{Effect on the System:}
 \begin{itemize}
-    \item Musi odpowiadać rzeczywistym wymiarom obszaru roboczego
-    \item Błędne skalowanie powoduje błędy pozycjonowania
-    \item Ważne przy zmianie rozmiaru papieru
+\item Must correspond to the actual dimensions of the working area
+\item Incorrect scaling causes positioning errors
+\item Important when changing paper size
 \end{itemize}
 
-\section{Debugowanie i rozwiązywanie problemów}
+\section{Debugging and Troubleshooting}
 
-\subsection{Debugowanie połączenia z robotem}
+\subsection{Debugging Robot Connection}
 
-\subsubsection{Sprawdzanie dostępności robota}
-\textbf{Narzędzia:}
+\subsubsection{Checking Robot Availability}
+\textbf{Tools:}
 \begin{itemize}
-    \item Polecenie: \texttt{ping 192.168.125.1}
-    \item Sprawdza dostępność kontrolera robota
-    \item Diagnostyka problemów sieciowych
+\item Command: `ping 192.168.125.1`
+\item Checks the availability of the robot controller
+\item Diagnoses network problems
 \end{itemize}
 
-\subsubsection{Testowanie portów komunikacyjnych}
-\textbf{Lokalizacja:} \texttt{robot\_communication.py}
+\subsubsection{Testing Communication Ports}
+\textbf{Location:} \texttt{robot\_communication.py}
 
-\textbf{Jak debugować:}
+\textbf{How to Debug:}
 \begin{enumerate}
-    \item Dodaj logowanie w funkcji \texttt{connect()}
-    \item Sprawdź czy socket się otwiera
-    \item Testuj wysyłanie prostych komend
+\item Add logging in the `connect()` function
+\item Check if the socket opens
+\item Test sending simple commands
 \end{enumerate}
 
-\subsubsection{Debugowanie timeout'ów}
-\textbf{Lokalizacja:} \texttt{robot\_communication.py}, stała \texttt{START\_COMMAND\_TIMEOUT}
+\subsubsection{Debugging Timeouts}
+\textbf{Location:} \texttt{robot\_communication.py}, constant \texttt{START\_COMMAND\_TIMEOUT}
 
-\textbf{Wartość domyślna:} 90 sekund
+\textbf{Default Value:} 90 seconds
 
-\textbf{Jak zmienić:}
+\textbf{How to Change:}
 \begin{enumerate}
-    \item Otwórz plik \texttt{robot\_communication.py}
-    \item Znajdź definicję timeout'u
-    \item Zwiększ wartość dla wolniejszych połączeń (ale to i tak mega dużo czasu, ale chodzi o pozycjonowanie go jeżeli robot by miał kiedyś np szukać sam kartki tak jak wcześniej robił)
+\item Open the \texttt{robot\_communication.py} file
+\item Find the timeout definition
+\item Increase the value for slower connections (but this is already a lot of time; it's for positioning if the robot had to find the paper itself, as it did before)
 \end{enumerate}
 
-\subsection{Debugowanie przetwarzania obrazu}
+\subsection{Debugging Image Processing}
 
-\subsubsection{Wizualizacja kroków przetwarzania}
-\textbf{Lokalizacja:} \texttt{robot\_drawer.py}, metoda \texttt{show\_processing\_steps()}
+\subsubsection{Visualizing Processing Steps}
+\textbf{Location:} \texttt{robot\_drawer.py}, method \texttt{show\_processing\_steps()}
 
-\textbf{Jak włączyć:}
+\textbf{How to Enable:}
 \begin{enumerate}
-    \item Otwórz plik \texttt{robot\_drawer.py}
-    \item Odkomentuj wywołanie \texttt{show\_processing\_steps()}
-    \item Uruchom przetwarzanie obrazu
+\item Open the \texttt{robot\_drawer.py} file
+\item Uncomment the `show_processing_steps()` call
+\item Run image processing
 \end{enumerate}
 
-\subsubsection{Zapisywanie obrazów pośrednich}
-\textbf{Lokalizacja:} \texttt{image\_processor.py}
+\subsubsection{Saving Intermediate Images}
+\textbf{Location:} \texttt{image\_processor.py}
 
-\textbf{Jak dodać:}
+\textbf{How to Add:}
 \begin{enumerate}
-    \item W kluczowych miejscach dodaj \texttt{cv2.imwrite()}
-    \item Zapisz obrazy po każdym etapie przetwarzania
-    \item Porównaj z oczekiwanymi wynikami
+\item At key points, add `cv2.imwrite()`
+\item Save images after each processing stage
+\item Compare with expected results
 \end{enumerate}
 
-\subsection{Debugowanie ruchu robota}
+\subsection{Debugging Robot Movement}
 
-\subsubsection{Rejestrowanie komend wysyłanych do robota}
-\textbf{Lokalizacja:} \texttt{robot\_communication.py}
+\subsubsection{Logging Commands Sent to the Robot}
+\textbf{Location:} \texttt{robot\_communication.py}
 
-\textbf{Jak włączyć:}
+\textbf{How to Enable:}
 \begin{enumerate}
-    \item Dodaj \texttt{print()} przed każdym \texttt{send\_command()}
-    \item Loguj wszystkie wysyłane komendy
-    \item Sprawdź sekwencje ruchów
+\item Add a `print()` statement before each `send_command()`
+\item Log all sent commands
+\item Check the movement sequences
 \end{enumerate}
 
-\subsubsection{Testowanie pojedynczych ruchów}
-\textbf{Lokalizacja:} \texttt{robot\_communication.py}, metoda \texttt{send\_move()}
+\subsubsection{Testing Single Movements}
+\textbf{Location:} \texttt{robot\_communication.py}, method \texttt{send\_move()}
 
-\textbf{Jak testować:}
+\textbf{How to Test:}
 \begin{enumerate}
-    \item Utwórz prosty skrypt testowy
-    \item Testuj ruchy w bezpiecznych współrzędnych
-    \item Sprawdź odpowiedzi robota
+\item Create a simple test script
+\item Test movements in safe coordinates
+\item Check the robot's responses
 \end{enumerate}
 
-\subsection{Debugowanie trybu dual-arm}
+\subsection{Debugging Dual-Arm Mode}
 
-\subsubsection{Wizualizacja przydziału konturów}
-\textbf{Lokalizacja:} \texttt{coordinate\_transformer.py}
+\subsubsection{Visualizing Contour Assignment}
+\textbf{Location:} \texttt{coordinate\_transformer.py}
 
-\textbf{Jak debugować:}
+\textbf{How to Debug:}
 \begin{enumerate}
-    \item Wizualizacja znajduje się w settings->imput methods->open detailed path viewer->animate dual-arm paths
+\item The visualization is in settings->input methods->open detailed path viewer->animate dual-arm paths
 \end{enumerate}
 
-\subsubsection{Testowanie synchronizacji ramion}
-\textbf{Lokalizacja:} \texttt{robot\_communication.py}, metoda \texttt{draw\_paths\_dual()}
+\subsubsection{Testing Arm Synchronization}
+\textbf{Location:} \texttt{robot\_communication.py}, method \texttt{draw\_paths\_dual()}
 
-\textbf{Jak debugować:}
+\textbf{How to Debug:}
 \begin{enumerate}
-    \item Dodaj logowanie sekwencji komend
-    \item Sprawdź czasy wykonania dla obu ramion
-    \item Testuj komendy WAIT synchronizacji
+\item Add logging for the command sequences
+\item Check execution times for both arms
+\item Test WAIT synchronization commands
 \end{enumerate}
 
-\section{Rozszerzanie funkcjonalności systemu}
+\section{Extending System Functionality}
 
-\subsection{Dodawanie nowych metod detekcji krawędzi}
+\subsection{Adding New Edge Detection Methods}
 
-\subsubsection{Implementacja nowej metody}
-\textbf{Lokalizacja:} \texttt{image\_processor.py}
+\subsubsection{Implementing a New Method}
+\textbf{Location:} \texttt{image\_processor.py}
 
-\textbf{Szablon implementacji:}
+\textbf{Implementation Template:}
 \begin{enumerate}
-    \item Dodaj funkcję \texttt{detect\_edges\_[nazwa]()}
-    \item Zaimplementuj algorytm detekcji
-    \item Dodaj obsługę w funkcji głównej \texttt{load\_and\_process\_image()}
-    \item Zaktualizuj interfejs wyboru metody
+\item Add the function `detect_edges_[name]()`
+\item Implement the detection algorithm
+\item Add handling in the main function `load_and_process_image()`
+\item Update the method selection interface
 \end{enumerate}
 
-\subsubsection{Integracja z interfejsem}
-\textbf{Lokalizacja:} \texttt{simple\_gui.py}
+\subsubsection{Integrating with the Interface}
+\textbf{Location:} \texttt{simple\_gui.py}
 
-\textbf{Jak dodać:}
+\textbf{How to Add:}
 \begin{enumerate}
-    \item Dodaj nową wartość do \texttt{detection\_method}
-    \item Zaktualizuj menu wyboru w Settings
-    \item Dodaj obsługę w funkcji przetwarzania
+\item Add a new value to `detection_method`
+\item Update the selection menu in Settings
+\item Add handling in the processing function
 \end{enumerate}
 
-\subsection{Dodawanie nowych komend głosowych}
+\subsection{Adding New Voice Commands}
 
-\subsubsection{Rozszerzenie słownika komend}
-\textbf{Lokalizacja:} \texttt{voice\_commands.py}
+\subsubsection{Expanding the Command Dictionary}
+\textbf{Location:} \texttt{voice\_commands.py}
 
-\textbf{Jak dodać:}
+\textbf{How to Add:}
 \begin{enumerate}
-    \item Dodaj nową komendę do słownika rozpoznawania
-    \item Zaimplementuj obsługę w funkcji w \texttt{simple\_gui.py} w funkcji \texttt{\_handle\_command()}
-    \item Zaktualizuj dokumentację komend
+\item Add a new command to the recognition dictionary
+\item Implement handling in the function \texttt{`\_handle\_command()`} in \texttt{simple\_gui.py}
+\item Update the command documentation
 \end{enumerate}
 
-\subsubsection{Implementacja akcji komendy}
-\textbf{Lokalizacja:} \texttt{simple\_gui.py}, metoda \texttt{\_handle\_command()}
+\subsubsection{Implementing the Command Action}
+\textbf{Location:} \texttt{simple\_gui.py}, method \texttt{\_handle\_command()}
 
-\textbf{Jak dodać:}
+\textbf{How to Add:}
 \begin{enumerate}
-    \item Dodaj case dla nowej komendy
-    \item Zaimplementuj logikę działania
-    \item Dodaj obsługę błędów
+\item Add a case for the new command
+\item Implement the operational logic
+\item Add error handling
 \end{enumerate}
 
-\subsection{Dodawanie nowych stylów rysowania}
+\subsection{Adding New Drawing Styles}
 
-\subsubsection{Implementacja stylu w OpenAI}
-\textbf{Lokalizacja:} \texttt{convert\_to\_lineart.py}
+\subsubsection{Implementing the Style in OpenAI}
+\textbf{Location:} \texttt{convert\_to\_lineart.py}
 
-\textbf{Jak dodać:}
+\textbf{How to Add:}
 \begin{enumerate}
-    \item Dodaj nowy prompt dla stylu
-    \item Dostosuj parametry generowania
-    \item Testuj jakość wyjściową
+\item Add a new prompt for the style
+\item Adjust the generation parameters
+\item Test the quality in
 \end{enumerate}
 
-\subsubsection{Integracja z interfejsem}
-\textbf{Lokalizacja:} \texttt{simple\_gui.py}
+\section{System Pipeline Overview}
 
-\textbf{Jak dodać:}
+This section provides an extremely detailed, step-by-step breakdown of the entire function call pipeline in the Robot Drawing System project, from user interaction through robot execution completion.
+
+\subsection{System Architecture Overview}
+
+The system consists of 6 main modules:
+\begin{itemize}
+\item \texttt{simple\_gui.py}: Main GUI interface and orchestration
+\item \texttt{robot\_drawer.py}: High-level drawing orchestration
+\item \texttt{image\_processor.py}: Image processing and edge detection
+\item \texttt{coordinate\_transformer.py}: Coordinate transformation and optimization
+\item \texttt{robot\_communication.py}: Low-level robot TCP/IP communication
+\item \texttt{voice\_commands.py}: Voice recognition and command processing
+\item \texttt{visualizer.py}: Data visualization and plotting
+\end{itemize}
+
+\subsection{Detailed Pipeline Flow}
+
+\subsubsection{Phase 1: Application Initialization}
+
+\paragraph{GUI Startup (\texttt{simple\_gui.py})}
 \begin{enumerate}
-    \item Dodaj przycisk dla nowego stylu
-    \item Zaimplementuj funkcję konwersji
-    \item Zaktualizuj wybór stylu
+\item \texttt{SimpleRobotGUI.\_\_init\_\_()}:
+	\begin{itemize}
+	\item Creates Tkinter root window
+	\item Loads configuration from \texttt{robot\_gui\_config.json} via \texttt{\_load\_config()}
+	\item Initializes \texttt{RobotDrawer} instance with default parameters (290x210mm workspace, center origin, TSP enabled)
+	\item Sets up voice command listener with \texttt{VoiceCommandListener}
+	\item Calls \texttt{create\_simple\_interface()} to build UI
+	\item Starts connection status update loop with \texttt{root.after(100, self.\_update\_connection\_display)}
+	\end{itemize}
+
+\paragraph{Voice System Initialization (\texttt{voice\_commands.py})}
+\begin{enumerate}
+\item \texttt{VoiceCommandListener.\_\_init\_\_()}:
+	\begin{itemize}
+	\item Sets up VOSK model path (handles both development and packaged environments)
+	\item Initializes audio queue and threading components
+	\item Prepares callback system for recognized commands
+	\end{itemize}
 \end{enumerate}
 
+\subsubsection{Phase 2: Image Acquisition}
+
+\paragraph{Camera/Image Input Methods}
+
+\textbf{Method A: Robot Camera (\texttt{simple\_gui.py})}
+\begin{enumerate}
+\item User clicks "1. TAKE PICTURE" $\rightarrow$ \texttt{get\_picture\_from\_robot()}
+\item \texttt{get\_picture\_from\_robot()} $\rightarrow$ \texttt{ready\_robot\_without\_camera()} $\rightarrow$ \texttt{RobotController.start\_without\_camera()}
+\item \texttt{RobotController.start\_without\_camera()} $\rightarrow$ \texttt{\_send\_command("READY\textbackslash n")} to robot
+\item Robot responds with "OK" after initialization
+\item \texttt{get\_picture\_from\_robot()} $\rightarrow$ \texttt{\_get\_picture\_thread()} (background thread)
+\item \texttt{\_get\_picture\_thread()} $\rightarrow$ \texttt{RobotController.send\_start()} $\rightarrow$ \texttt{\_send\_command("START\textbackslash n")} or \texttt{START\_CORNER\textbackslash n} based on coordinate system
+\item Robot performs positioning and sends "OK"
+\item \texttt{RobotController.send\_start()} returns success
+\item \texttt{\_get\_picture\_thread()} $\rightarrow$ gets picture from camera \texttt{robot\_ftp\_downloader.py}
+\item \texttt{\_load\_robot\_image()} processes downloaded image
+\item \texttt{auto\_process\_image()} $\rightarrow$ \texttt{\_start\_auto\_processing()} $\rightarrow$ \texttt{process\_image()}
+\end{enumerate}
+
+\textbf{Method B: File Upload (\texttt{simple\_gui.py})}
+\begin{enumerate}
+\item User clicks file selection $\rightarrow$ \texttt{browse\_image()}
+\item \texttt{filedialog.askopenfilename()} opens file picker
+\item \texttt{browse\_image()} $\rightarrow$ \texttt{load\_preview\_image()} $\rightarrow$ \texttt{PIL.Image.open()} loads image
+\item \texttt{load\_preview\_image()} $\rightarrow$ \texttt{ImageTk.PhotoImage()} creates Tkinter-compatible image
+\item \texttt{preview\_label.configure(image=photo\_image)} displays preview
+\item \texttt{auto\_process\_image()} $\rightarrow$ \texttt{\_start\_auto\_processing()} $\rightarrow$ \texttt{process\_image()}
+\end{enumerate}
+
+\textbf{Method C: Text-to-Image Generation (\texttt{simple\_gui.py})}
+\begin{enumerate}
+\item User enters text $\rightarrow$ \texttt{quick\_text\_generate()} $\rightarrow$ \texttt{\_text\_generation\_thread()} (background)
+\item \texttt{\_text\_generation\_thread()} $\rightarrow$ AI image generation (implementation not shown)
+\item Success $\rightarrow$ \texttt{\_text\_generation\_success()} $\rightarrow$ \texttt{\_auto\_process\_generated\_image()}
+\end{enumerate}
+
+\textbf{Method D: Canvas Drawing (\texttt{simple\_gui.py})}
+\begin{enumerate}
+\item User draws on canvas $\rightarrow$ mouse events trigger \texttt{start\_canvas\_drawing()}, \texttt{draw\_on\_canvas()}, \texttt{stop\_canvas\_drawing()}
+\item \texttt{save\_drawing()} $\rightarrow$ \texttt{PIL.ImageGrab.grab()} captures canvas
+\item \texttt{use\_drawing()} $\rightarrow$ \texttt{load\_preview\_image()} processes captured image
+\end{enumerate}
+
+\subsubsection{Phase 3: Image Processing Pipeline}
+
+\paragraph{Main Processing (\texttt{simple\_gui.py} $\rightarrow$ \texttt{robot\_drawer.py} $\rightarrow$ \texttt{image\_processor.py})}
+\begin{enumerate}
+\item \texttt{process\_image()} $\rightarrow$ \texttt{\_process\_thread()} (background processing)
+\item \texttt{\_process\_thread()} $\rightarrow$ \texttt{RobotDrawer.load\_image()} with current settings:
+	\begin{itemize}
+	\item \texttt{precision}: "high", "medium", "low", etc.
+	\item \texttt{enable\_tsp}: Boolean from GUI checkbox
+	\item \texttt{detection\_method}: "canny", "threshold", "adaptive"
+	\item \texttt{logo\_settings}: Dictionary with enabled/corner/size
+	\item \texttt{protect\_logo}: True for logo processing
+	\end{itemize}
+\end{enumerate}
+
+\paragraph{Image Processing Details (\texttt{image\_processor.py})}
+\begin{enumerate}
+\item \texttt{ImageProcessor.load\_and\_process\_image()} $\rightarrow$ \texttt{extract\_edge\_following\_path()}
+\item \texttt{extract\_edge\_following\_path()}:
+	\begin{itemize}
+	\item \texttt{cv2.imread()} loads image
+	\item \texttt{cv2.rotate(ROTATE\_180)} flips image 180°
+	\item \texttt{cv2.mirror} mirrors it horizontally
+	\item \textbf{Border Padding}: \texttt{cv2.copyMakeBorder()} adds white padding (unless \texttt{protect\_logo=True})
+	\item \texttt{cv2.cvtColor(BGR2GRAY)} converts to grayscale
+	\item \texttt{cv2.GaussianBlur()} + \texttt{cv2.medianBlur()} noise reduction
+	\end{itemize}
+
+\item \textbf{Edge Detection Methods}:
+	\begin{itemize}
+	\item \textbf{Canny}: \texttt{cv2.Canny()} $\rightarrow$ \texttt{\_thin\_edges()} morphological thinning $\rightarrow$ \texttt{cv2.morphologyEx(CLOSE)}
+	\item \textbf{Threshold}: \texttt{cv2.threshold(THRESH\_BINARY + THRESH\_OTSU)}
+	\item \textbf{Adaptive}: \texttt{cv2.adaptiveThreshold(ADAPTIVE\_THRESH\_GAUSSIAN\_C)} with precision-based parameters
+	\end{itemize}
+
+\item \textbf{Contour Extraction}:
+	\begin{itemize}
+	\item \texttt{cv2.findContours(RETR\_LIST, CHAIN\_APPROX\_SIMPLE)} finds contours
+	\item \textbf{Filtering}: Remove contours $<$ \texttt{MIN\_CONTOUR\_LENGTH} (10) or $<$ area threshold (adaptive)
+	\item \textbf{Border Filtering}: \texttt{\_is\_border\_contour()} removes contours touching image edges (unless \texttt{protect\_logo=True})
+	\end{itemize}
+
+\item \textbf{Contour Simplification}:
+	\begin{itemize}
+	\item \texttt{cv2.approxPolyDP()} with adaptive epsilon based on precision and image properties
+	\item Resolution-based factor: 1000000px $\rightarrow$ 3.0, 500000px $\rightarrow$ 2.0, etc.
+	\item Scale factor normalization: \texttt{min(2.0, max(0.5, scale * 1000))}
+	\item Minimum epsilon: 0.5px, Maximum: perimeter * 0.1
+	\end{itemize}
+
+\item \textbf{Path Optimization} (if \texttt{enable\_tsp=True}):
+	\begin{itemize}
+	\item Contours sorted by length (longest first)
+	\item Returns \texttt{\{'contours': simplified\_paths, 'image\_shape': edges.shape, 'simplification\_factor': factor\}}
+	\end{itemize}
+\end{enumerate}
+
+\paragraph{Coordinate Transformation (\texttt{coordinate\_transformer.py})}
+\begin{enumerate}
+\item \texttt{CoordinateTransformer.contours\_to\_robot\_coordinates()}:
+	\begin{itemize}
+	\item Calculates scale: \texttt{min(scale\_x, scale\_y)} where \texttt{scale\_x = effective\_x / width}
+	\item \texttt{effective\_x = max\_x - 2*margin\_x}, \texttt{effective\_y = max\_y - 2*margin\_y}
+	\item Centers image: \texttt{final\_offset\_x = effective\_offset\_x + margin\_x}
+	\item \textbf{Coordinate System Conversion}:
+		\begin{itemize}
+		\item \textbf{Center Origin}: \texttt{robot\_x = (x * scale) + final\_offset\_x - (max\_x / 2)}
+		\item \textbf{Corner Origin}: \texttt{robot\_x = (x * scale) + final\_offset\_x}
+		\item Y-axis flip: \texttt{robot\_y = ((height - y) * scale) + final\_offset\_y - (max\_y / 2)}
+		\end{itemize}
+	\end{itemize}
+
+\item \textbf{Path Smoothing} (if enabled):
+	\begin{itemize}
+	\item \textbf{Bezier}: \texttt{\_smooth\_path\_bezier()} with quadratic curves
+	\item \textbf{Catmull-Rom}: \texttt{\_smooth\_path\_catmull\_rom()} with cubic splines
+	\end{itemize}
+
+\item \textbf{Point Filtering}: \texttt{\_filter\_min\_distance()} removes points closer than \texttt{MIN\_DISTANCE\_THRESHOLD} (1.0mm)
+\end{enumerate}
+
+\paragraph{Logo Processing (if enabled)}
+\begin{enumerate}
+\item \texttt{RobotDrawer.generate\_logo\_coordinates()}:
+\begin{itemize}
+\item Loads \texttt{logo\_short.png}
+\item \texttt{ImageProcessor.extract\_edge\_following\_path()} with \texttt{protect\_logo=True}
+\item Scales logo to \texttt{size\_mm} while maintaining aspect ratio
+\item Positions at top-right corner with 5mm margin
+\item \textbf{Logo Flipping}: \texttt{x = logo\_x\_offset + logo\_width\_mm - (px * scale\_factor)} (horizontal mirror)
+\item Coordinate system conversion (center/corner origin)
+\item Minimum distance filtering
+\item Appends logo contours to main drawing points
+\end{itemize}
+\end{enumerate}
+
+\subsubsection{Phase 4: Style Processing (Portrait/Carricature)}
+
+\paragraph{Portrait Mode (\texttt{simple\_gui.py} $\rightarrow$ \texttt{convert\_to\_lineart.py})}
+\begin{enumerate}
+\item User selects portrait $\rightarrow$ \texttt{set\_style\_and\_convert("portrait")}
+\item \texttt{convert\_to\_face\_drawing()} $\rightarrow$ \texttt{\_face\_drawing\_thread()} (background)
+\item \texttt{\_face\_drawing\_thread()} $\rightarrow$ AI face drawing generation
+\item Success $\rightarrow$ \texttt{\_face\_drawing\_success()} $\rightarrow$ \texttt{load\_preview\_image()} $\rightarrow$ \texttt{auto\_process\_image()}
+\end{enumerate}
+
+\paragraph{Caricature Mode (\texttt{simple\_gui.py} $\rightarrow$ \texttt{convert\_to\_lineart.py})}
+\begin{enumerate}
+\item User selects caricature $\rightarrow$ \texttt{set\_style\_and\_convert("caricature")}
+\item \texttt{convert\_to\_caricature()} $\rightarrow$ \texttt{\_caricature\_thread()} (background)
+\item \texttt{\_caricature\_thread()} $\rightarrow$ AI caricature generation
+\item Success $\rightarrow$ \texttt{\_caricature\_success()} $\rightarrow$ \texttt{load\_preview\_image()} $\rightarrow$ \texttt{auto\_process\_image()}
+\end{enumerate}
+
+\subsubsection{Phase 5: Robot Connection and Preparation}
+
+\paragraph{Connection Management (\texttt{simple\_gui.py} $\rightarrow$ \texttt{robot\_communication.py})}
+\begin{enumerate}
+\item User clicks connection toggle $\rightarrow$ \texttt{toggle\_connection()}
+\item \texttt{toggle\_connection()} $\rightarrow$ \texttt{\_connect\_thread()} (background)
+\item \texttt{\_connect\_thread()} $\rightarrow$ \texttt{RobotController.connect()}
+\item \texttt{RobotController.connect()}:
+	\begin{itemize}
+	\item \texttt{socket.socket(AF\_INET, SOCK\_STREAM)} creates sockets
+	\item \texttt{socket.connect((ip, port))} connects to port 1025 (right arm)
+	\item \texttt{socket.connect((ip, port\_l))} connects to port 1026 (left arm)
+	\item Returns success status
+	\end{itemize}
+
+\item \textbf{Robot Initialization}
+\item \texttt{RobotController.send\_start()} or \texttt{start\_without\_camera()}:
+	\begin{itemize}
+	\item Sends "START\textbackslash n" or "START\_CORNER\textbackslash n" based on coordinate system
+	\item Robot performs: positioning
+	\item Robot responds "OK" after \textasciitilde2 seconds
+	\end{itemize}
+\end{enumerate}
+
+\subsubsection{Phase 6: Drawing Execution}
+
+\paragraph{Single-Arm Drawing (\texttt{simple\_gui.py} $\rightarrow$ \texttt{robot\_drawer.py} $\rightarrow$ \texttt{robot\_communication.py})}
+\begin{enumerate}
+\item User clicks "4. START DRAWING" $\rightarrow$ \texttt{start\_drawing()} $\rightarrow$ \texttt{start\_robot\_drawing()}
+\item \texttt{start\_robot\_drawing()} $\rightarrow$ \texttt{RobotDrawer.draw()} with progress callback
+\item \texttt{RobotDrawer.draw()} $\rightarrow$ \texttt{RobotController.draw\_paths()} with batch mode
+\item \texttt{RobotController.draw\_paths()} $\rightarrow$ \texttt{\_draw\_with\_ultra\_fast\_mode()} (if batch enabled)
+\end{enumerate}
+
+\paragraph{Batch Drawing (\texttt{robot\_communication.py})}
+\begin{enumerate}
+\item \texttt{\_draw\_with\_ultra\_fast\_mode()}:
+	\begin{itemize}
+	\item \textbf{Pen Management}: \texttt{send\_pen\_up()} (already up), \texttt{time.sleep(0.02)}
+	\item \textbf{Per Contour Loop}:
+		\begin{itemize}
+		\item \texttt{should\_stop()} check for emergency stop
+		\item \texttt{\_transition\_to\_start()}: Horizontal U-shape movement
+			\begin{itemize}
+			\item \texttt{send\_between\_command("RETREAT\textbackslash n")} moves back horizontally (±80mm X)
+			\item \texttt{send\_move()} to Y-level of next contour start
+			\item \texttt{send\_move()} forward to the actual start position
+			\end{itemize}
+		\item \texttt{send\_pen\_down()}, \texttt{time.sleep(0.02)}
+		\item \texttt{send\_move()} to first point with pen down
+		\item \textbf{Batch Processing}: \texttt{send\_batch\_moves\_ultra\_fast()} for remaining points
+			\begin{itemize}
+			\item Groups points into batches (dynamic sizing based on coordinate length)
+			\item \texttt{send\_batch\_moves()} $\rightarrow$ \texttt{\_send\_command(f"BATCH,\{coords\}\textbackslash n")}
+			\item 80-character command limit handling with batch splitting
+			\end{itemize}
+		\item \texttt{send\_pen\_up()}, \texttt{send\_between\_command(next\_start)} for retreat
+		\end{itemize}
+	\item \textbf{Progress Tracking}: Updates via \texttt{progress\_callback(current\_batch, total\_batches, points\_sent, total\_points)}
+	\end{itemize}
+\end{enumerate}
+
+\paragraph{Dual-Arm Drawing (\texttt{robot\_drawer.py} $\rightarrow$ \texttt{robot\_communication.py})}
+\begin{enumerate}
+\item \texttt{RobotDrawer.draw\_dual()} (alternative path):
+	\begin{itemize}
+	\item \texttt{master\_slave\_assign\_contours()} assigns contours to right/left arms
+	\item Creates forbidden zones around master contour with circular buffers + tail extension
+	\item \texttt{RobotController.draw\_paths\_dual()} with threading
+	\item \textbf{Threaded Execution}: \texttt{t\_right} and \texttt{t\_left} threads with \texttt{threading.Barrier(2)} synchronization
+	\item \textbf{Per-Step Processing}:
+		\begin{itemize}
+		\item Collision avoidance: \texttt{\_conflicts\_with\_peer()}, \texttt{\_wait\_for\_peer\_retreat()}
+		\item \texttt{\_transition\_to\_start()} with side-specific X offsets
+		\item Simultaneous contour drawing with barrier synchronization
+		\item WAIT commands for synchronization between arms
+		\end{itemize}
+	\end{itemize}
+\end{enumerate}
+
+\subsubsection{Phase 7: Voice Command Processing}
+
+\paragraph{Voice Recognition (\texttt{voice\_commands.py})}
+\begin{enumerate}
+\item \texttt{VoiceCommandListener.start()} $\rightarrow$ \texttt{\_run()} in background thread
+\item \texttt{sd.RawInputStream()} captures audio at 16kHz
+\item \texttt{KaldiRecognizer.AcceptWaveform()} processes audio chunks
+\item \texttt{json.loads(result)} extracts recognized text
+\item If text in \texttt{commands} list $\rightarrow$ \texttt{callback(text)}
+\end{enumerate}
+
+\paragraph{Command Dispatch (\texttt{simple\_gui.py})}
+\begin{enumerate}
+\item \texttt{\_on\_voice\_command()} $\rightarrow$ \texttt{\_handle\_command()} (dispatched to main thread)
+\item \textbf{Command Mapping}:
+	\begin{itemize}
+	\item "połącz" $\rightarrow$ \texttt{toggle\_connection()}
+	\item "start" $\rightarrow$ \texttt{start\_drawing()}
+	\item "stop" $\rightarrow$ \texttt{emergency\_stop()}
+	\item "akcja" $\rightarrow$ \texttt{get\_picture\_from\_robot()}
+	\item "kamera" $\rightarrow$ \texttt{show\_camera\_preview()}
+	\item "portret" $\rightarrow$ portrait selection
+	\item "karykatura" $\rightarrow$ caricature selection
+	\item "podgląd" $\rightarrow$ \texttt{open\_detailed\_path\_window()}
+	\end{itemize}
+\end{enumerate}
+
+\subsubsection{Phase 8: Visualization and Monitoring}
+
+\paragraph{Preview Systems (\texttt{visualizer.py})}
+\begin{enumerate}
+\item \texttt{DrawingVisualizer.plot\_preview()}:
+	\begin{itemize}
+	\item \texttt{matplotlib.pyplot.figure()} creates plot
+	\item Plots each contour with different colors
+	\item Sets up centered coordinate system: \texttt{xlim(-max\_x/2, max\_x/2)}
+	\item \texttt{invert\_yaxis()} so (0,0) is top-left
+	\item Draws workspace border and center markers
+	\end{itemize}
+
+\item \texttt{show\_processing\_steps()}:
+	\begin{itemize}
+	\item Three-panel plot: Original $\rightarrow$ Edges $\rightarrow$ Robot Preview
+	\item \texttt{cv2.cvtColor(BGR2RGB)} for proper color display
+	\end{itemize}
+\end{enumerate}
+
+\paragraph{Real-time Progress (\texttt{simple\_gui.py})}
+\begin{enumerate}
+\item Progress callbacks update:
+	\begin{itemize}
+	\item \texttt{bottom\_progress\_bar['value']} for visual progress
+	\item \texttt{progress\_indicator} text updates
+	\item Status messages in \texttt{status\_text}
+	\end{itemize}
+\end{enumerate}
+
+\subsubsection{Phase 9: Error Handling and Cleanup}
+
+\paragraph{Error Scenarios}
+\begin{enumerate}
+\item \textbf{Connection Failures}: \texttt{RobotController.connect()} $\rightarrow$ \texttt{\_connection\_failed()} $\rightarrow$ UI updates
+\item \textbf{Processing Errors}: \texttt{\_process\_failed()} $\rightarrow$ error dialogs
+\item \textbf{Drawing Errors}: \texttt{\_draw\_failed()} $\rightarrow$ cleanup commands
+\item \textbf{Emergency Stop}: \texttt{emergency\_stop()} $\rightarrow$ \texttt{RobotController.send\_stop()} on both arms
+\end{enumerate}
+
+\paragraph{Cleanup Operations}
+\begin{enumerate}
+\item \texttt{SimpleRobotGUI.\_on\_close()}:
+\begin{itemize}
+\item \texttt{VoiceCommandListener.stop()}
+\item \texttt{RobotController.disconnect()} $\rightarrow$ \texttt{send\_stop()} $\rightarrow$ \texttt{socket.close()}
+\item Configuration saving via \texttt{\_save\_config()}
+\end{itemize}
+\end{enumerate}
+
+\subsection{Configuration Management}
+
+\subsubsection{Settings Persistence (\texttt{simple\_gui.py})}
+\begin{itemize}
+\item \texttt{\_load\_config()}: JSON loading with error handling
+\item \texttt{\_save\_config()}: Serializes current GUI state to \texttt{robot\_gui\_config.json}
+\item Settings include: robot IP/port, camera index, coordinate system, margins, quality, detection method, TSP, batch mode, logo settings, etc.
+\end{itemize}
 
 \end{document}
