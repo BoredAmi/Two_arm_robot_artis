@@ -7,7 +7,7 @@
 \usepackage{geometry} % For margin control
 \usepackage{float} % For [H] figure placement
 \usepackage{titlepic}
-\usepackage{hyperref} % For interactive TOC and links
+\usepackage[hidelinks]{hyperref} % For interactive TOC and links - no colored borders
 \usepackage{parskip} % For better paragraph spacing
 \usepackage{titlesec} % For customizing section titles
 \usepackage[skip=10pt]{caption} % For better figure captions
@@ -381,7 +381,7 @@ Communication between the computer and the ABB YuMi robot takes place via the TC
 \item \texttt{VoiceCommandListener} - Handles voice commands
 \end{itemize}
 
-### convert\_to\_lineart.py - OpenAI Integration
+\texttt{convert\_to\_lineart.py} - OpenAI Integration
 \textbf{Location:} Main project folder
 
 \textbf{Main Functions:}
@@ -653,7 +653,7 @@ Folder structure: \texttt{YYYYMMDD\_HHMMSS\_style/}
 \textbf{How to Change:}
 \begin{enumerate}
 \item Open the RAPID file
-\item Find the `move_zone` definitions
+\item Find the \texttt{`move\_zone`} definitions
 \item Adjust to quality requirements
 \end{enumerate}
 
@@ -737,7 +737,7 @@ Folder structure: \texttt{YYYYMMDD\_HHMMSS\_style/}
 \textbf{How to Enable:}
 \begin{enumerate}
 \item Open the \texttt{robot\_drawer.py} file
-\item Uncomment the `show_processing_steps()` call
+\item Uncomment the \texttt{`show\_processing\_steps()`} call
 \item Run image processing
 \end{enumerate}
 
@@ -758,7 +758,7 @@ Folder structure: \texttt{YYYYMMDD\_HHMMSS\_style/}
 
 \textbf{How to Enable:}
 \begin{enumerate}
-\item Add a `print()` statement before each `send_command()`
+\item Add a `print()` statement before each \texttt{`send\_command()`}
 \item Log all sent commands
 \item Check the movement sequences
 \end{enumerate}
@@ -802,9 +802,9 @@ Folder structure: \texttt{YYYYMMDD\_HHMMSS\_style/}
 
 \textbf{Implementation Template:}
 \begin{enumerate}
-\item Add the function `detect_edges_[name]()`
+\item Add the function \texttt{`detect\_edges\_[name]()`}
 \item Implement the detection algorithm
-\item Add handling in the main function `load_and_process_image()`
+\item Add handling in the main function \texttt{`load\_and\_process\_image()`}
 \item Update the method selection interface
 \end{enumerate}
 
@@ -813,7 +813,7 @@ Folder structure: \texttt{YYYYMMDD\_HHMMSS\_style/}
 
 \textbf{How to Add:}
 \begin{enumerate}
-\item Add a new value to `detection_method`
+\item Add a new value to \texttt{`detection\_method`}
 \item Update the selection menu in Settings
 \item Add handling in the processing function
 \end{enumerate}
@@ -884,7 +884,7 @@ The system consists of 6 main modules:
 	\item Calls \texttt{create\_simple\_interface()} to build UI
 	\item Starts connection status update loop with \texttt{root.after(100, self.\_update\_connection\_display)}
 	\end{itemize}
-
+\end{enumerate}
 \paragraph{Voice System Initialization (\texttt{voice\_commands.py})}
 \begin{enumerate}
 \item \texttt{VoiceCommandListener.\_\_init\_\_()}:
@@ -1209,13 +1209,219 @@ The system consists of 6 main modules:
 \end{itemize}
 \end{enumerate}
 
-\subsection{Configuration Management}
+\section{Settings Explanations}
 
-\subsubsection{Settings Persistence (\texttt{simple\_gui.py})}
+This section provides detailed explanations for every setting available in the application's Settings window (accessible via the Settings button). The settings are organized by tab for easy reference.
+
+\subsection{Input Methods Tab}
+
+\subsubsection{Camera Index}
+\textbf{Description:} Selects which camera device to use for photo capture.\\
+\textbf{Options:} Integer values (0, 1, 2, etc.) representing different camera devices connected to your computer.\\
+\textbf{Default:} 0 (usually the built-in webcam).\\
+\textbf{Usage:} If you have multiple cameras (e.g., external USB webcam), change this to select the desired one. Use the "Test Camera" button to verify the selection.\\
+\textbf{Impact:} Affects which camera is used for taking photos in the main interface.
+
+\subsubsection{Test Camera Button}
+\textbf{Description:} Opens a preview window to test the selected camera.\\
+\textbf{Usage:} Click to verify the camera is working and adjust positioning before taking photos.\\
+\textbf{Impact:} Helps ensure the camera is properly configured before use.
+
+\subsection{Processing Tab}
+
+\subsubsection{Quality}
+\textbf{Description:} Controls the precision of image processing and contour simplification.\\
+\textbf{Options:} High, Medium, Low.\\
+\textbf{Default:} High.\\
+\textbf{Usage:} Higher quality preserves more detail but takes longer to process and may result in more complex robot paths. Lower quality is faster but may lose fine details.\\
+\textbf{Impact:} Affects processing time, contour accuracy, and robot drawing complexity.
+
+\subsubsection{Detection Method}
+\textbf{Description:} Chooses the algorithm for binarization edges in the image.\\
+\textbf{Options:} Threshold, Canny, Adaptive.\\
+\textbf{Default:} Adaptive.\\
+\textbf{Usage:} Threshold is simple and fast for good lighting. Canny detects edges based on brightness changes. Adaptive automatically adjusts parameters for varying lighting conditions.\\
+\textbf{Impact:} Determines how well the system identifies drawable contours from the image.
+
+\subsubsection{Use Batch Mode}
+\textbf{Description:} Enables sending multiple movement commands to the robot at once.\\
+\textbf{Options:} Checked/Unchecked.\\
+\textbf{Default:} True.\\
+\textbf{Usage:} Batch mode groups commands for faster transmission. Disable only if experiencing communication issues.\\
+\textbf{Impact:} Significantly speeds up drawing by reducing network overhead.
+
+\subsubsection{Use Center Origin}
+\textbf{Description:} Sets the coordinate system origin.\\
+\textbf{Options:} Checked/Unchecked.\\
+\textbf{Default:} True.\\
+\textbf{Usage:} When checked, (0,0) is at the center of the drawing area. When unchecked, (0,0) is at the bottom-left corner.\\
+\textbf{Impact:} Affects how coordinates are interpreted by the robot's RAPID program.
+
+\subsubsection{Enable Logo}
+\textbf{Description:} Adds a logo to the drawing.\\
+\textbf{Options:} Checked/Unchecked.\\
+\textbf{Default:} False.\\
+\textbf{Usage:} When enabled, a logo is automatically added to the top-right of the drawing.\\
+\textbf{Impact:} Personalizes the output but may increase processing time.
+
+\subsubsection{Logo Size}
+\textbf{Description:} Sets the size of the logo in millimeters.\\
+\textbf{Options:} Numeric value (e.g., 20).\\
+\textbf{Default:} 20.\\
+\textbf{Usage:} Adjust based on desired logo prominence in the final drawing.\\
+\textbf{Impact:} Larger logos may cover more of the drawing area.
+
+\subsubsection{Enable Frame Filtering}
+\textbf{Description:} Removes contours that touch the image edges.\\
+\textbf{Options:} Checked/Unchecked.\\
+\textbf{Default:} False.\\
+\textbf{Usage:} Enable to clean up images with borders or frames that shouldn't be drawn.\\
+\textbf{Impact:} Reduces unwanted contours from image borders.
+
+\subsection{Connection Tab}
+
+\subsubsection{Robot IP}
+\textbf{Description:} The IP address of the ABB YuMi robot controller.\\
+\textbf{Options:} Valid IP address (e.g., 192.168.125.1).\\
+\textbf{Default:} 192.168.125.1.\\
+\textbf{Usage:} Enter the IP address provided by your robot's network configuration.\\
+\textbf{Impact:} Required for establishing communication with the robot.
+
+\subsubsection{Robot Port}
+\textbf{Description:} The TCP port for the right arm of the robot.\\
+\textbf{Options:} Numeric port number.\\
+\textbf{Default:} 1025.\\
+\textbf{Usage:} Usually 1025 for the right arm. Change only if your robot uses different ports.\\
+\textbf{Impact:} Must match the robot's RAPID program configuration.
+
+\subsubsection{Robot Port L}
+\textbf{Description:} The TCP port for the left arm of the robot.\\
+\textbf{Options:} Numeric port number.\\
+\textbf{Default:} 1026.\\
+\textbf{Usage:} Usually 1026 for the left arm. Change only if your robot uses different ports.\\
+\textbf{Impact:} Must match the robot's RAPID program configuration for dual-arm mode.
+
+\subsection{Drawing Tab}
+
+\subsubsection{Max X}
+\textbf{Description:} Maximum width of the drawing area in millimeters.\\
+\textbf{Options:} Numeric value.\\
+\textbf{Default:} 290.\\
+\textbf{Usage:} Set to match your paper or drawing surface width.\\
+\textbf{Impact:} Defines the horizontal bounds of the robot's workspace.
+
+\subsubsection{Max Y}
+\textbf{Description:} Maximum height of the drawing area in millimeters.\\
+\textbf{Options:} Numeric value.\\
+\textbf{Default:} 210.\\
+\textbf{Usage:} Set to match your paper or drawing surface height.\\
+\textbf{Impact:} Defines the vertical bounds of the robot's workspace.
+
+\subsubsection{Margin X}
+\textbf{Description:} Horizontal safety margin in millimeters.\\
+\textbf{Options:} Numeric value.\\
+\textbf{Default:} 10.\\
+\textbf{Usage:} Increases to add more space from edges, decreases for larger drawing area.\\
+\textbf{Impact:} Prevents the robot from drawing too close to the edges.
+
+\subsubsection{Margin Y}
+\textbf{Description:} Vertical safety margin in millimeters.\\
+\textbf{Options:} Numeric value.\\
+\textbf{Default:} 10.\\
+\textbf{Usage:} Increases to add more space from edges, decreases for larger drawing area.\\
+\textbf{Impact:} Prevents the robot from drawing too close to the edges.
+
+\subsubsection{Brush Size}
+\textbf{Description:} Size of the drawing tool in millimeters.\\
+\textbf{Options:} Numeric value.\\
+\textbf{Default:} 3.\\
+\textbf{Usage:} Adjust based on your pen or marker size for accurate path planning.\\
+\textbf{Impact:} Affects spacing between drawing points.
+
+\subsubsection{Dual Arm Mode}
+\textbf{Description:} Enables drawing with both robot arms simultaneously.\\
+\textbf{Options:} Checked/Unchecked.\\
+\textbf{Default:} True.\\
+\textbf{Usage:} Enable for faster drawing with two arms. Disable for single-arm operation.\\
+\textbf{Impact:} Requires proper robot configuration and increases drawing speed.
+
+\subsubsection{Forbidden Buffer}
+\textbf{Description:} Safety buffer around each arm in dual-arm mode.\\
+\textbf{Options:} Numeric value in millimeters.\\
+\textbf{Default:} 40.\\
+\textbf{Usage:} Increase for more safety, decrease for closer arm operation.\\
+\textbf{Impact:} Prevents arm collisions in dual-arm mode.
+
+\subsection{Advanced Tab}
+
+\subsubsection{Text Prompt}
+\textbf{Description:} Default text prompt for AI image generation.\\
+\textbf{Options:} Text string.\\
+\textbf{Default:} Empty.\\
+\textbf{Usage:} Enter a base prompt that will be used when generating images from text.\\
+\textbf{Impact:} Provides a starting point for text-to-image conversion.
+
+\section{API Configuration and Setup}
+
+\subsection{Changing the OpenAI API Key}
+
+The application uses OpenAI's API for image generation (portrait and caricature modes). To use this feature, you need a valid OpenAI API key.
+
+\subsubsection{How to Get an OpenAI API Key}
+\begin{enumerate}
+\item Go to \url{https://platform.openai.com/}
+\item Sign up or log in to your OpenAI account
+\item Navigate to the API Keys section
+\item Click "Create new secret key"
+\item Copy the generated key
+\end{enumerate}
+
+\subsubsection{How to Set the API Key in the Application}
+\begin{enumerate}
+\item Open the \texttt{convert\_to\_lineart.py} file in your project
+\item Look for the line where the API key is defined
+\item Replace the key with your own API key
+\item Save the file
+\end{enumerate}
+
+
+\subsubsection{Troubleshooting API Issues}
 \begin{itemize}
-\item \texttt{\_load\_config()}: JSON loading with error handling
-\item \texttt{\_save\_config()}: Serializes current GUI state to \texttt{robot\_gui\_config.json}
-\item Settings include: robot IP/port, camera index, coordinate system, margins, quality, detection method, TSP, batch mode, logo settings, etc.
+\item \textbf{Error: Invalid API Key} - Double-check that you've copied the key correctly
+\item \textbf{Error: Insufficient Credits} - Check your OpenAI account balance
+\item \textbf{Error: Rate Limit Exceeded} - Wait a few minutes before trying again
 \end{itemize}
+
+
+\subsection{Compiling to Executable (.exe)}
+
+To create a standalone executable from your Python code:
+
+\subsubsection{Using PyInstaller}
+\begin{enumerate}
+\item Ensure PyInstaller is installed: \texttt{pip install pyinstaller}
+\item Run the build command:
+\begin{verbatim}
+pyinstaller.exe .\RobotDrawingSystem.spec
+\end{verbatim}
+\item The executable will be created in the \texttt{dist} folder as \texttt{RobotDrawingSystem.exe}
+\end{enumerate}
+
+\subsubsection{What the .spec File Does}
+The \texttt{RobotDrawingSystem.spec} file contains:
+\begin{itemize}
+\item Main script: \texttt{simple\_gui.py}
+\item Included data files: \texttt{logo\_inlader.jpg}, \texttt{vosk-model-small-pl-0.22}
+\item Hidden imports: \texttt{vosk}, \texttt{vosk.Model}, etc.
+\item Build options: onefile, console=False, icon settings
+\end{itemize}
+
+\subsubsection{Customizing the Build}
+\begin{itemize}
+\item \textbf{Add files:} Edit the \texttt{datas} list in the .spec file
+\item \textbf{Change icon:} Replace \texttt{insta.png} with your icon file
+\item \textbf{Debug mode:} Set \texttt{debug=True} for troubleshooting
+\end{itemize}
+
 
 \end{document}

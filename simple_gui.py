@@ -213,7 +213,7 @@ class SimpleRobotGUI:
         self.config = self._load_config()
 
         self.root = tk.Tk()
-        self.root.title("🤖 Robot Drawing System - EXPO MODE")
+        self.root.title("🤖 Robot Drawing System")
         self.root.geometry(f"{self.WINDOW_WIDTH}x{self.WINDOW_HEIGHT}")
         self.root.configure(bg=self.COLORS['background'])
 
@@ -1948,11 +1948,7 @@ class SimpleRobotGUI:
                 font=('Arial', 11, 'bold'), relief='flat', padx=20, pady=10, cursor='hand2')
         draw_btn.pack(side=tk.LEFT, padx=(0, 10))
         
-        # Templates button
-        templates_btn = self.create_standard_button(draw_controls, text="📋 Shape Templates", 
-                command=self.show_templates, bg='#607D8B', fg='white',
-                font=('Arial', 11, 'bold'), relief='flat', padx=20, pady=10, cursor='hand2')
-        templates_btn.pack(side=tk.LEFT)
+        
         
         # AI Generation Section
         ai_section = tk.LabelFrame(main_frame, text="AI Image Generation", font=('Arial', 12, 'bold'),
@@ -2055,6 +2051,20 @@ class SimpleRobotGUI:
         """Create image processing settings tab"""
         main_frame = tk.Frame(parent, bg='white', padx=20, pady=20)
         main_frame.pack(fill=tk.BOTH, expand=True)
+        # Binarization Method
+        binarization_section = tk.LabelFrame(main_frame, text="Binarization Method", font=('Arial', 11, 'bold'),
+                                         bg='white', padx=15, pady=10)
+        binarization_section.pack(fill=tk.X, pady=(0, 15))
+
+        tk.Label(binarization_section, text="Binarization Algorithm:", font=('Arial', 10, 'bold'), 
+                bg='white').pack(anchor='w', pady=(0, 5))
+
+        detection_frame = tk.Frame(binarization_section, bg='white')
+        detection_frame.pack(fill=tk.X)
+        
+        for i, (text, value) in enumerate([("Adaptive", "adaptive"), ("Threshold", "threshold"), ("Canny Edge", "canny")]):
+            tk.Radiobutton(detection_frame, text=text, variable=self.detection_method, value=value,
+                          bg='white', font=('Arial', 10), command=self.on_detection_method_change).pack(side=tk.LEFT, padx=(0, 20))
         
         # Quality Settings
         quality_section = tk.LabelFrame(main_frame, text="Quality Settings", font=('Arial', 11, 'bold'), 
@@ -2070,21 +2080,6 @@ class SimpleRobotGUI:
         for i, (text, value) in enumerate([("Standard", "medium"), ("High", "high"), ("Ultra", "highest")]):
             tk.Radiobutton(quality_frame, text=text, variable=self.quality_var, value=value,
                           bg='white', font=('Arial', 10), command=self.on_quality_change).pack(side=tk.LEFT, padx=(0, 20))
-        
-        # Detection Method
-        detection_section = tk.LabelFrame(main_frame, text="Edge Detection Method", font=('Arial', 11, 'bold'),
-                                         bg='white', padx=15, pady=10)
-        detection_section.pack(fill=tk.X, pady=(0, 15))
-        
-        tk.Label(detection_section, text="Detection Algorithm:", font=('Arial', 10, 'bold'), 
-                bg='white').pack(anchor='w', pady=(0, 5))
-        
-        detection_frame = tk.Frame(detection_section, bg='white')
-        detection_frame.pack(fill=tk.X)
-        
-        for i, (text, value) in enumerate([("Adaptive", "adaptive"), ("Threshold", "threshold"), ("Canny Edge", "canny")]):
-            tk.Radiobutton(detection_frame, text=text, variable=self.detection_method, value=value,
-                          bg='white', font=('Arial', 10), command=self.on_detection_method_change).pack(side=tk.LEFT, padx=(0, 20))
         
         # Frame Filtering
         frame_section = tk.LabelFrame(main_frame, text="Border Processing", font=('Arial', 11, 'bold'),
@@ -2194,12 +2189,7 @@ class SimpleRobotGUI:
                                    bg='white', padx=15, pady=10)
         opt_section.pack(fill=tk.X, pady=(0, 15))
         
-        tsp_checkbox = tk.Checkbutton(opt_section, text="Enable TSP optimization (shorter drawing paths)", 
-                                     variable=self.enable_tsp, bg='white', font=('Arial', 10),
-                                     command=self.on_tsp_change)
-        tsp_checkbox.pack(anchor='w', pady=(0, 5))
-        
-        batch_checkbox = tk.Checkbutton(opt_section, text="Use batch command mode (faster transmission)", 
+        batch_checkbox = tk.Checkbutton(opt_section, text="Use batch command mode (send multiple points at once)", 
                                        variable=self.use_batch_mode, bg='white', font=('Arial', 10),
                                        command=self.on_batch_mode_change)
         batch_checkbox.pack(anchor='w')
