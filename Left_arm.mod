@@ -147,7 +147,7 @@ MODULE Module1
                 MoveL Offs(base_position,310,0,current_z),fast_speed,move_zone,tool1 \WObj:=current_wobject;
                 SendResponse("OK");
             ELSEIF StrMatch(cmd, 1, "RETREAT")=1 THEN
-                retreat_position := Offs(target_position,80,0,current_z);
+                retreat_position := Offs(target_position,100,0,current_z);
                 MoveL retreat_position,fast_speed,move_zone,tool1 \WObj:=current_wobject;
                 
                 ! Update target position to retreat position to avoid return movement
