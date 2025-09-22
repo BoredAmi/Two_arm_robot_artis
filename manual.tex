@@ -7,7 +7,7 @@
 \usepackage{geometry} % For margin control
 \usepackage{float} % For [H] figure placement
 \usepackage{titlepic}
-\usepackage[hidelinks]{hyperref} % For interactive TOC and links - no colored borders
+\usepackage[hidelinks]{hyperref} % For interactive TOC and links
 \usepackage{parskip} % For better paragraph spacing
 \usepackage{titlesec} % For customizing section titles
 \usepackage[skip=10pt]{caption} % For better figure captions
@@ -32,7 +32,7 @@
 
 \subsection{Preparation for Calibration}
 \subsubsection{Robot Positioning}
-With the robot turned off, position it for calibration as shown in the pictures (visible gears and indicators).
+With the robot turned off, position it for calibration as shown in the pictures (visible teeth and indicators).
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.45\linewidth]{kalibracja_1.jpeg}
@@ -149,11 +149,11 @@ Press **Start Drawing** to begin the drawing process.
 \end{figure}
 \subsection{Voice Commands}
 \begin{itemize}
-\item \textbf{Camera} - turn on the camera
-\item \textbf{Action} - take a photo
-\item \textbf{Portrait} - create a portrait
-\item \textbf{Caricature} - create a caricature
-\item \textbf{Connect} - connect to the robot
+\item \textbf{Kamera} - turn on the camera
+\item \textbf{Akcja} - take a photo
+\item \textbf{Portret} - create a portrait
+\item \textbf{Karykatura} - create a caricature
+\item \textbf{Połącz} - connect to the robot
 \item \textbf{Start} - start
 \item \textbf{Stop} - stop
 \end{itemize}
@@ -167,7 +167,7 @@ Press **Start Drawing** to begin the drawing process.
 \item Check if the robot is turned on and in automatic mode.
 \item Make sure the Ethernet cable is correctly connected between the computer and the robot.
 \item Verify the robot's IP address (default is 192.168.125.1) and ports (1025 for the right arm, 1026 for the left).
-\item Check your computer's firewall settings—ensure that TCP connections on ports 1025 and 1026 are allowed.
+\item Check your computer's firewall settings ensure that TCP connections on ports 1025 and 1026 are allowed.
 \item Restart the application on both the robot and the computer.
 \end{itemize}
 
@@ -176,7 +176,7 @@ Press **Start Drawing** to begin the drawing process.
 
 \textbf{Solution:}
 \begin{itemize}
-\item Make sure the robot is in the calibration position (visible gears and indicators in the photos).
+\item Make sure the robot is in the calibration position (visible teeth and indicators in the photos).
 \item Acknowledge all errors on the robot panel using the "Acknowledge errors" button.
 \item Switch to manual mode, then return to automatic mode.
 \item Set the "pointer to main" on both arms.
@@ -199,9 +199,9 @@ Press **Start Drawing** to begin the drawing process.
 
 \textbf{Solution:}
 \begin{itemize}
-\item Check your internet connection—a stable link is required.
+\item Check your internet connection a stable link is required.
 \item Ensure that the OpenAI API key is correctly configured in the application.
-\item Check the API usage limit—if it's exceeded, wait or top up your account.
+\item Check the API usage limit if it's exceeded, wait or top up your account.
 \item Try again with the same photo or take a new one.
 \item If the error persists, check the status of OpenAI services.
 \end{itemize}
@@ -211,10 +211,10 @@ Press **Start Drawing** to begin the drawing process.
 
 \textbf{Solution:}
 \begin{itemize}
-\item Try a different edge detection method (threshold, canny, or adaptive) in the settings.
+\item Try a different bineralization detection method (threshold, canny, or adaptive) in the settings.
 \item Fine-tune the quality parameters (higher quality for better results, but longer processing time).
-\item Take a better photo—ensure good lighting and sharpness.
-\item Check if the image is too complex; simplify the background or position.
+\item Take a better photo ensure good lighting and sharpness.
+\item Check if the image is too complex, simplify the background or position.
 \end{itemize}
 
 \subsection{Drawing Errors}
@@ -247,7 +247,7 @@ Press **Start Drawing** to begin the drawing process.
 \item Check the terminal for any errors.
 \item Verify that all required libraries are installed (e.g., OpenCV, Matplotlib, Shapely).
 \item Run the application from the command line to see detailed errors.
-\item Check RAM availability—processing large images requires resources.
+\item Check RAM availability processing large images requires resources.
 \item Update Python to version 3.8+.
 \item If the error persists, restart the computer and try again.
 \end{itemize}
@@ -265,13 +265,13 @@ Press "Acknowledge" whenever they appear.
 \section{FAQ}
 
 \subsection{How does the entire drawing process work?}
-The whole process begins with a photo taken by a camera connected to the computer. This photo is then sent via the OpenAI API with a chosen prompt (portrait or caricature) to generate a new image in the selected style. The returned image is processed using one of three edge detection methods (threshold, canny, or adaptive), simplified to contours, rotated, and optimized for the drawing path. Finally, the ABB YuMi robot draws the image based on the generated coordinates.
+The whole process begins with a photo taken by a camera connected to the computer. This photo is then sent via the OpenAI API with a chosen prompt (portrait or caricature) to generate a new image in the selected style. The returned image is processed using one of three bineralization methods (threshold, canny, or adaptive), simplified to contours, rotated, and optimized for the drawing path. Finally, the ABB YuMi robot draws the image based on the generated coordinates.
 
 \subsection{What are the image processing methods?}
-The system offers three edge detection methods:
+The system offers three bineralization methods:
 \begin{itemize}
 \item - \textbf{Threshold}: Simple binarization of the image with a rigidly set brightness cutoff (good for good lighting). 1 where it's darker, 0 where it's lighter.
-\item \textbf{Canny}: Finds changes in brightness. Where there are changes, we get 1; where there are no changes, we get 0.
+\item \textbf{Canny}: Finds changes in brightness. Where there are changes, we get 1, where there are no changes, we get 0.
 \item \textbf{Adaptive}: The same as Threshold, but it automatically selects the parameters (more universal).
 \end{itemize}
 
@@ -279,13 +279,13 @@ The system offers three edge detection methods:
 We can get much nicer, simpler lines to create the best image for drawing. Otherwise, the robot would work for an extremely long time to draw every shadow in the hair, etc.
 
 \subsection{How exactly do we convert a binary image to contours?}
-After applying one of the three edge detection methods (threshold, canny, or adaptive), the image becomes binary—black and white, where white pixels represent edges and black is the background. We then use an algorithm that scans the image and identifies connected groups of white pixels as contours. Each contour is a list of coordinate points (x,y) that describe the shape of the line. The contours are simplified using `approxPolyDP()` with an epsilon parameter to reduce the number of points without losing the shape—this is crucial for efficiency because the robot doesn't have to draw every single pixel. Finally, the contours are filtered: small artifacts are removed, and large contours are split into segments for better control.
+After applying one of the three bineralization methods (threshold, canny, or adaptive), the image becomes binary black and white, where white pixels represent edges and black is the background. We then use an algorithm that scans the image and identifies connected groups of white pixels as contours. Each contour is a list of coordinate points (x,y) that describe the shape of the line. The contours are simplified using `approxPolyDP()` with an epsilon parameter to reduce the number of points without losing the shape this is crucial for efficiency because the robot doesn't have to draw every single pixel. Finally, the contours are filtered: small artifacts are removed, and large contours are split into segments for better control.
 
 \subsection{How does creating the drawing path along the contour work?}
-When we have contours as lists of points, the system creates a drawing path, treating each contour as a route. The points are connected in a sequence, creating a continuous line. For fluidity, we use smoothing—a Bézier algorithm interpolates the points, eliminating sharp corners. We can optionally enable TSP (Traveling Salesman Problem), which optimizes the order of drawing contours, minimizing the travel time between them (e.g., drawing the nearest contour next). The path is scaled to the robot's coordinates (e.g., 290x210 mm) with safety margins. In dual-arm mode, the paths are split between the arms, and each point is assigned a movement time for synchronization.
+When we have contours as lists of points, the system creates a drawing path, treating each contour as a route. The points are connected in a sequence, creating a continuous line. For fluidity, we use smoothing a Bézier algorithm interpolates the points, eliminating sharp corners. We can optionally enable TSP (Traveling Salesman Problem), which optimizes the order of drawing contours, minimizing the travel time between them (e.g., drawing the nearest contour next). The path is scaled to the robot's coordinates (e.g., 290x210 mm) with safety margins. In dual-arm mode, the paths are split between the arms, and each point is assigned a movement time for synchronization.
 
 \subsection{How does the system intelligently split work between two robot arms?}
-In dual-arm mode, the system uses an advanced master-slave assignment algorithm, but note—the master and slave roles are not fixed! The system dynamically decides which arm becomes the "operation brain" (master) and which is the "support" (slave), depending on the contour's position, but they usually switch roles with each contour. Special zones are key: the left arm has a forbidden zone (0,0 to 130,40 mm), so it always avoids this area to prevent collision with the robot base. The algorithm uses a collision buffer (default 40 mm)—a circular "safety bubble" around the master and a "tail" from this "bubble" towards the master's side of the paper, which the slave cannot enter. The algorithm checks for the overlap of contour polygons with these buffers, intelligently assigning tasks to avoid collisions. Additionally, contours are sorted by position: the closer arm gets priority. The arms travel in a sharp U-shape between contours to avoid collisions during transitions and to limit the time the robots spend very close to each other. All this together allows for two-arm drawing.
+In dual-arm mode, the system uses an advanced master-slave assignment algorithm, but note the master and slave roles are not fixed! The system dynamically decides which arm becomes the "operation brain" (master) and which is the "support" (slave), depending on the contour's position, but they usually switch roles with each contour. Special zones are key: the left arm has a forbidden zone (0,0 to 130,40 mm), so it always avoids this area to prevent collision with the robot base. The algorithm uses a collision buffer (default 40 mm) a circular "safety bubble" around the master and a "tail" from this "bubble" towards the master's side of the paper, which the slave cannot enter. The algorithm checks for the overlap of contour polygons with these buffers, intelligently assigning tasks to avoid collisions. Additionally, contours are sorted by position: the closer arm gets priority. The arms travel in a sharp U-shape between contours to avoid collisions during transitions and to limit the time the robots spend very close to each other. All this together allows for two-arm drawing.
 
 \subsection{How does communication between the computer and the robot work?}
 Communication between the computer and the ABB YuMi robot takes place via the TCP/IP protocol. The computer connects to the robot on two ports: 1025 for the right arm and 1026 for the left arm. Text commands are sent, such as "MOVE,x,y" to move an arm, "BATCH$,x_1,y_1,x_2,y_2$,..." to send a group of points, and "PEN UP" and "PEN DOWN" to control the tool. In dual-arm mode, arm synchronization is achieved using thread barriers and "WAIT" commands. The batch mode groups points into packets (maximum 15 points), which increases efficiency. The system handles errors through timeouts, retries, and disconnection detection. The robot confirms command execution with an "OK" response.
@@ -355,9 +355,9 @@ Communication between the computer and the ABB YuMi robot takes place via the TC
 \textbf{Main Functions:}
 \begin{itemize}
 \item \texttt{load\_and\_process\_image()} - Main processing function
-\item \texttt{detect\_edges\_threshold()} - Edge detection using threshold method
-\item \texttt{detect\_edges\_canny()} - Edge detection using Canny method
-\item \texttt{detect\_edges\_adaptive()} - Adaptive edge detection
+\item \texttt{detect\_edges\_threshold()} - bineralization using threshold method
+\item \texttt{detect\_edges\_canny()} - bineralization using Canny method
+\item \texttt{detect\_edges\_adaptive()} - Adaptive bineralization
 \item \texttt{find\_contours()} - Finds contours
 \item \texttt{simplify\_contours()} - Simplifies contours
 \end{itemize}
@@ -440,7 +440,6 @@ Folder structure: \texttt{YYYYMMDD\_HHMMSS\_style/}
 \textbf{Key Parameters:}
 \begin{itemize}
 \item Port: 1025
-\item Working range: full area (290×210 mm)
 \item Speed: v1500 mm/s
 \end{itemize}
 
@@ -450,13 +449,12 @@ Folder structure: \texttt{YYYYMMDD\_HHMMSS\_style/}
 \textbf{Key Parameters:}
 \begin{itemize}
 \item Port: 1026
-\item Forbidden zone: (0,0) to (130,40) mm
 \item Speed: v1500 mm/s
 \end{itemize}
 
 \section{Tuning Image Processing Algorithms}
 
-\subsection{Edge Detection Parameters}
+\subsection{bineralization Parameters}
 
 \subsubsection{Threshold - Binarization Parameters}
 \textbf{Location:} \texttt{image\_processor.py}, function \texttt{detect\_edges\_threshold()}
@@ -646,7 +644,7 @@ Folder structure: \texttt{YYYYMMDD\_HHMMSS\_style/}
 
 \textbf{Default Values:}
 \begin{itemize}
-\item Move zone: z0 (very precise)
+\item Move zone: z0
 \item Tolerance: 0.1 mm
 \end{itemize}
 
@@ -726,7 +724,7 @@ Folder structure: \texttt{YYYYMMDD\_HHMMSS\_style/}
 \begin{enumerate}
 \item Open the \texttt{robot\_communication.py} file
 \item Find the timeout definition
-\item Increase the value for slower connections (but this is already a lot of time; it's for positioning if the robot had to find the paper itself, as it did before)
+\item Increase the value for slower connections (but this is already a lot of time, it's for positioning if the robot had to find the paper itself, as it did before)
 \end{enumerate}
 
 \subsection{Debugging Image Processing}
@@ -758,7 +756,6 @@ Folder structure: \texttt{YYYYMMDD\_HHMMSS\_style/}
 
 \textbf{How to Enable:}
 \begin{enumerate}
-\item Add a `print()` statement before each \texttt{`send\_command()`}
 \item Log all sent commands
 \item Check the movement sequences
 \end{enumerate}
@@ -795,7 +792,7 @@ Folder structure: \texttt{YYYYMMDD\_HHMMSS\_style/}
 
 \section{Extending System Functionality}
 
-\subsection{Adding New Edge Detection Methods}
+\subsection{Adding New bineralization Methods}
 
 \subsubsection{Implementing a New Method}
 \textbf{Location:} \texttt{image\_processor.py}
@@ -862,7 +859,7 @@ The system consists of 6 main modules:
 \begin{itemize}
 \item \texttt{simple\_gui.py}: Main GUI interface and orchestration
 \item \texttt{robot\_drawer.py}: High-level drawing orchestration
-\item \texttt{image\_processor.py}: Image processing and edge detection
+\item \texttt{image\_processor.py}: Image processing and bineralization
 \item \texttt{coordinate\_transformer.py}: Coordinate transformation and optimization
 \item \texttt{robot\_communication.py}: Low-level robot TCP/IP communication
 \item \texttt{voice\_commands.py}: Voice recognition and command processing
@@ -882,7 +879,9 @@ The system consists of 6 main modules:
 	\item Initializes \texttt{RobotDrawer} instance with default parameters (290x210mm workspace, center origin, TSP enabled)
 	\item Sets up voice command listener with \texttt{VoiceCommandListener}
 	\item Calls \texttt{create\_simple\_interface()} to build UI
-	\item Starts connection status update loop with \texttt{root.after(100, self.\_update\_connection\_display)}
+	\item Starts connection status update loop with 
+    
+    \texttt{root.after(100, self.\_update\_connection\_display)}
 	\end{itemize}
 \end{enumerate}
 \paragraph{Voice System Initialization (\texttt{voice\_commands.py})}
@@ -902,7 +901,9 @@ The system consists of 6 main modules:
 \textbf{Method A: Robot Camera (\texttt{simple\_gui.py})}
 \begin{enumerate}
 \item User clicks "1. TAKE PICTURE" $\rightarrow$ \texttt{get\_picture\_from\_robot()}
-\item \texttt{get\_picture\_from\_robot()} $\rightarrow$ \texttt{ready\_robot\_without\_camera()} $\rightarrow$ \texttt{RobotController.start\_without\_camera()}
+\item \texttt{get\_picture\_from\_robot()} $\rightarrow$ \texttt{ready\_robot\_without\_camera()} $\rightarrow$ 
+
+\texttt{RobotController.start\_without\_camera()}
 \item \texttt{RobotController.start\_without\_camera()} $\rightarrow$ \texttt{\_send\_command("READY\textbackslash n")} to robot
 \item Robot responds with "OK" after initialization
 \item \texttt{get\_picture\_from\_robot()} $\rightarrow$ \texttt{\_get\_picture\_thread()} (background thread)
@@ -961,14 +962,18 @@ The system consists of 6 main modules:
 	\item \texttt{cv2.imread()} loads image
 	\item \texttt{cv2.rotate(ROTATE\_180)} flips image 180°
 	\item \texttt{cv2.mirror} mirrors it horizontally
-	\item \textbf{Border Padding}: \texttt{cv2.copyMakeBorder()} adds white padding (unless \texttt{protect\_logo=True})
+	\item \textbf{Border Padding}: \texttt{cv2.copyMakeBorder()} adds white padding 
+    
+    (unless \texttt{protect\_logo=True})
 	\item \texttt{cv2.cvtColor(BGR2GRAY)} converts to grayscale
 	\item \texttt{cv2.GaussianBlur()} + \texttt{cv2.medianBlur()} noise reduction
 	\end{itemize}
 
-\item \textbf{Edge Detection Methods}:
+\item \textbf{Bineralization Methods}:
 	\begin{itemize}
-	\item \textbf{Canny}: \texttt{cv2.Canny()} $\rightarrow$ \texttt{\_thin\_edges()} morphological thinning $\rightarrow$ \texttt{cv2.morphologyEx(CLOSE)}
+	\item \textbf{Canny}: \texttt{cv2.Canny()} $\rightarrow$ \texttt{\_thin\_edges()} morphological thinning $\rightarrow$ 
+    
+    \texttt{cv2.morphologyEx(CLOSE)}
 	\item \textbf{Threshold}: \texttt{cv2.threshold(THRESH\_BINARY + THRESH\_OTSU)}
 	\item \textbf{Adaptive}: \texttt{cv2.adaptiveThreshold(ADAPTIVE\_THRESH\_GAUSSIAN\_C)} with precision-based parameters
 	\end{itemize}
@@ -1016,7 +1021,9 @@ The system consists of 6 main modules:
 	\item \textbf{Catmull-Rom}: \texttt{\_smooth\_path\_catmull\_rom()} with cubic splines
 	\end{itemize}
 
-\item \textbf{Point Filtering}: \texttt{\_filter\_min\_distance()} removes points closer than \texttt{MIN\_DISTANCE\_THRESHOLD} (1.0mm)
+\item \textbf{Point Filtering}: \texttt{\_filter\_min\_distance()} removes points closer than
+
+\texttt{MIN\_DISTANCE\_THRESHOLD} (1.0mm)
 \end{enumerate}
 
 \paragraph{Logo Processing (if enabled)}
@@ -1371,8 +1378,21 @@ The application uses OpenAI's API for image generation (portrait and caricature 
 \begin{enumerate}
 \item Go to \url{https://platform.openai.com/}
 \item Sign up or log in to your OpenAI account
-\item Navigate to the API Keys section
-\item Click "Create new secret key"
+\item Go to dashboard 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{dash.png}
+\end{figure}
+\item  Go to API keys section
+\begin{figure}{H}
+    \centering
+    \includegraphics[width=0.7\linewidth]{api_key.png}
+\end{figure}
+\item Click "Create new secret key" and use those settings:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{creation.png}
+\end{figure}
 \item Copy the generated key
 \end{enumerate}
 
