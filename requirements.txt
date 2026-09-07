@@ -1,0 +1,10 @@
+numpy
+Pillow
+opencv-python
+matplotlib
+shapely
+requests
+openai
+python-dotenv
+sounddevice
+vosk

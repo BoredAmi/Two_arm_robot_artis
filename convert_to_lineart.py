@@ -7,7 +7,19 @@ import os
 import shutil
 from datetime import datetime
 
-client = OpenAI(api_key="***REMOVED-OPENAI-KEY***")
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+api_key = os.environ.get("OPENAI_API_KEY")
+if not api_key:
+    raise RuntimeError(
+        "OPENAI_API_KEY environment variable is not set. "
+        "Set it in your shell or in a local .env file (see .env.example)."
+    )
+client = OpenAI(api_key=api_key)
 
 # Predefined prompts for different styles
 PROMPTS = {
